@@ -80,7 +80,11 @@ fixed from within the paradigm. \emph{Overall, code transformations
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
 \desc{Discussion} C++ templates [CITE] are not general-purpose sugars,
-because they cannot take code as an argument.  Instead, they are used
+because they cannot take code as an argument. Thus you cannot, for
+example, express a sugar that takes an expression \code{e} and expands
+it to \code{e + 1}.
+
+Instead, C++ templates are used
 primarily to instantiate polymorphic code by replacing type parameters
 with concrete types.  Let's use the following template declaration,
 taken from [CITE: pg344], as a running example. It declares a function
