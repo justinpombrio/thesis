@@ -1,0 +1,206 @@
+% Related work:
+% Object representation of scope during translation (coined "scope graph"):
+%   http://www.lirmm.fr/~ducour/Doc-objets/ECOOP/papers/0276/02760071.pdf
+% MetaOcaml & related work by Walid Taha
+% Interesting sugary languages: Dylan, Julia, Nim
+% From Joe, "See S8. And also the whole paper.":
+%   https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/compiling-without-continuations.pdf
+% PHOAS?
+%   Chipala ICFP'08 https://archive.alvb.in/msc/10_infomepcs1/literature/PHOAS_Chlipala.pdf
+% Extensible Grammars for Language Specialization (must CITE)
+%   Cardelli, Matthes, Abadi - DigEquipRC
+
+\RequirePackage{silence} % :-\
+    \WarningFilter{scrbook}{Usage of package `titlesec'}
+    \WarningFilter{titlesec}{Non standard sectioning command detected}
+\documentclass[
+  11pt,
+  paper=letter,
+  footinclude=true,
+  headinclude=true,
+  american
+]{scrbook}
+
+\usepackage[T1]{fontenc}
+\usepackage[
+  linedheaders=true,
+  parts=true
+]{classicthesis/classicthesis} % ,manychapters
+
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xargs}
+\usepackage{xspace}
+\usepackage{semantic}
+\usepackage{cleveref}
+\usepackage{color}
+\usepackage{alltt}
+\usepackage{listings}
+\usepackage{multicol}
+\usepackage{bussproofs}
+
+
+
+% Theorems
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{assumption}{Assumption}
+
+\lstset{basicstyle=\ttfamily,breaklines=true}
+\lstset{framextopmargin=50pt,frame=bottomline}
+
+% Formatting
+\newcommand{\desc}[1]{\noindent\textit{#1:} }
+\newenvironment{jtable}
+{\begin{center}\begin{tabular}{l l l @{\quad}l}}
+{\end{tabular}\end{center}}
+               
+
+% Common math notation
+\newcommand{\ddd}{\;\dots\;}
+\newcommand{\dd}{\,...\,}
+
+% Common math notation
+\newcommand{\Exists}[1]{\exists{#1}.\,\,}
+\newcommand{\ExistsUnique}[1]{\exists!{#1}.\,\,}
+\newcommand{\NotExists}[1]{\not\exists{#1}.\,\,}
+\newcommand{\Forall}[1]{\forall{#1}.\,\,}
+\newcommand{\NotForall}[1]{\not\forall{#1}.\,\,}
+\newcommand{\SetSuchThat}[2]{\{#1 \;|\; #2\}}
+\newcommand{\domain}[1]{\textit{domain}(#1)}
+\newcommand{\DisjUnion}{\,\dot\cup\,}
+\newcommand{\To}{\Rightarrow}
+
+% Common code notation
+\newcommand{\code}[1]{\texttt{#1}}
+\newenvironment{codes}
+  {\begin{alltt}\leftskip=1.5em} % \small
+  {\end{alltt}}
+
+% Math names
+\newcommand{\op}[2]{\textit{#1}(#2)}
+\newcommand{\opName}[1]{\textit{#1}}
+\newcommand{\name}[1]{\textit{#1}}
+\newcommand{\constName}[1]{\texttt{#1}}
+
+% Expressions & Grammars
+\newcommand{\lit}[1]{\textbf{#1}}
+\newcommand{\expr}[2]{(#1\,#2)}
+\newcommand{\var}[1]{\textrm{\textsc{#1}}}
+
+% Grammars
+\newcommand{\exprs}[3]{(#1\,#2\,#3^{*})}
+\newcommand{\production}[2]{#1 \leftarrow #2}
+\newcommand{\saysG}[3]{#1 \vdash #2\,:\,#3}
+
+\definecolor{goodRed}{rgb} {0.70, 0.37, 0.41} % LAB (50, 35, 10)
+\definecolor{goodBlue}{rgb}{0.04, 0.50, 0.70} % LAB (50, -10, -35)
+\hypersetup{
+  colorlinks=false,
+  %citecolor=goodBlue,
+  %linkcolor=goodRed
+  citebordercolor=goodBlue,
+  linkbordercolor=goodRed
+  }
+
+
+\begin{document}
+
+\author{Justin Pombrio}
+\title{Resugaring: Restoring the Abstractions that Syntactic Sugar is Supposed to Provide}
+\maketitle
+
+\part{Syntactic Sugar}
+\include{chapters/chapter01}
+\include{chapters/chapter02}
+\include{chapters/chapter03}
+
+
+
+
+
+
+\chapter{Appendix}
+
+\subsection{Terms}
+
+We will call \textsc{ast} terms \emph{expressions} and write them in
+s-expression form. Atomic terms are either variables or literals
+(i.e. syntactic constants), and compound terms are built with
+\emph{term constructors} $P$:
+
+\begin{jtable}
+  $e$
+  &$::=$& $\lit{lit}$ &(literal) \\
+  &$|$&   $\var{x}$ &(variable) \\
+  &$|$&   $\expr{P}{e_1 ... e_n}$ &(\textsc{ast} node)
+\end{jtable}
+
+\subsection{Tree Grammars}
+
+A \emph{tree grammar} [CITE] is to trees as a context-free grammar is
+to strings. Thus it can be viewed either as a set of instructions for
+how to iteratively and nondeterministically rewrite a starting
+\emph{nonterminal} to a final tree; \emph{or} it can be viewed as a
+specification of a grammar that a tree may or may not follow. We will
+take the latter view.
+
+Definitionally, a tree grammar consists of a number of
+\emph{productions} that map \emph{nonterminals} $s$ to
+\name{patterns}:
+\begin{jtable}
+  $G$
+  &$::=$& $\left\{ \begin{array}{l}
+    \production{s_1}{\name{pattern}_1} \\
+    \ddd \\
+    \production{s_n}{\name{pattern}_n}
+    \end{array}\right.$ \\
+  \\
+  $\name{pattern}$
+  &$::=$& $\expr{P}{s_1 \dd s_n}$ &(regular pattern) \\
+  &$|$&
+  $\exprs{P}{s_1 \dd s_n}{s_{n+1}}$
+  &(ellipses pattern) \\
+  &$|$&   $\constName{literal}$ &(matches literals) \\
+  &$|$&   $\constName{var}$ &(matches variables)
+\end{jtable}
+
+The \emph{meaning} of a tree grammar (again, we are viewing the
+grammar as a \emph{specification}) is that for each production
+``$\production{s}{\name{pattern}}$'', if a term matches the
+\name{pattern}, then it also matches the nonterminal $s$. Formally:
+
+\[
+\fbox{$\saysG{G}{e}{s}$}
+\]
+
+\[
+\inference
+    [G-literal]
+    {}
+    {\saysG{G}{\lit{lit}}{\constName{literal}}}
+\quad
+\inference
+    [G-variable]
+    {}
+    {\saysG{G}{\var{x}}{\constName{variable}}}
+\]
+    
+\[
+\inference
+    [G-node]
+    {\Forall{i \in 1..n} \saysG{G}{e_i}{s_i} \\
+      \production{s}{\expr{P}{s_1 \dd s_n}} \in G}
+    {\saysG{G}{\expr{P}{e_1 \dd e_n}}{s}}
+\quad
+\inference
+    [G-ellipses]
+    {\Forall{i \in 1..n} \saysG{G}{e_i}{s_i} \\
+      \Forall{j \in 1..k} \saysG{G}{e_{n+j}}{s} \\
+      \production{s}{\exprs{P}{s_1 \dd s_n}{s}} \in G}
+    {\saysG{G}{\expr{P}{e_1 \dd e_n \dd e_{n+k}}}{s}}
+\]
+
+\end{document}

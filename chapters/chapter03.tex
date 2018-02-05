@@ -1,0 +1,944 @@
+
+% Formatting
+\newenvironment{prooftable}
+{~\\\begin{tabular}{r l @{\quad} l}}
+{\end{tabular}~\\}
+
+% Terminology
+\newcommand{\AST}{\textsc{ast}\xspace}
+
+% Derivations
+\newcommand{\saysE}[3]{#1 \vdash #2 : #3}
+\newcommand{\saysP}[4]{#1;#2 \vdash #3 : #4}
+\newcommand{\saysR}[4]{#1 \vdash #2 : #3 \to #4}
+\newcommand{\saysS}[3]{#1 \vdash #2 : #3}
+\newcommand{\saysStep}[3]{#1 \vdash #2 \rightsquigarrow #3}
+\newcommand{\saysSteps}[3]{#1 \vdash #2 \rightsquigarrow^{*} #3}
+\newcommand{\saysCase}[4]{#1 \vdash #2 \rightsquigarrow #3 \text{ by  case } #4}
+\newcommand{\saysNotCase}[4]{#1 \not\vdash #2 \rightsquigarrow #3 \text{ by  case } #4}
+\newcommand{\saysScope}[6]{#1 \vdash #2 : #3 ; #4 ; #5 ; #6}
+\newcommand{\saysCanBind}[3]{#1 \vdash #2 \sim_{bind} #3}
+\newcommand{\saysCanShadow}[3]{#1 \vdash #2 \sim_{shadow} #3}
+
+\newcommandx*{\Inference}[3][1=\empty]{\inference[#1]{#2}{#3}\vspace{1.5em}}
+\newcommand{\IS}{\vspace{0.25em}} % Not enough space by default...
+\newcommandx*{\RZero}[1]{\AxiomC{$#1$}}
+\newcommandx*{\ROne}[2][1=\empty]{\LeftLabel{\small{#1}}\UnaryInfC{$#2$}}
+\newcommandx*{\RTwo}[2][1=\empty]{\LeftLabel{\small{#1}}\BinaryInfC{$#2$}}
+\newcommandx*{\RThree}[2][1=\empty]{\LeftLabel{\small{#1}}\TrinaryInfC{$#2$}}
+\newcommandx*{\RFour}[2][1=\empty]{\LeftLabel{\small{#1}}\QuaternaryInfC{$#2$}}
+\newcommandx*{\RFive}[2][1=\empty]{\LeftLabel{\small{#1}}\QuinaryInfC{$#2$}}
+
+% Terms, Patterns, Rules, Envs
+\newcommand{\con}[2]{\{#1\,#2\}}
+\newcommand{\app}[2]{(#1\,#2)}
+\newcommand{\variable}[4]{
+  {#3}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
+\newcommandx*{\decl}[3][1=\empty, 3=\empty]{\variable{#1}{#2}{#3}{d}}
+\newcommandx*{\refn}[3][1=\empty, 3=\empty]{\variable{#1}{#2}{#3}{r}}
+\newcommand{\cons}[2]{#1, #2}
+\newcommand{\rep}[2]{#1\ {*}\_{#2}}
+\newcommand{\varindex}[2]{{#1}\_{#2}}
+\newcommand{\pvarA}{\alpha}
+\newcommand{\pvarB}{\beta}
+\newcommand{\pvarC}{\gamma}
+\newcommand{\dsrule}[2]{\code{sugar}\;#1 = \{#2\}}
+\newcommand{\dsrulefancy}[3]{\code{sugar}\;#1 =
+  \begin{cases}
+    #2 \\
+    \quad ... \\
+    #3
+  \end{cases}
+}
+\newcommand{\case}[4]{#1;#2;#3 \To #4}
+\newcommand{\emptyEnv}{\{\}}
+\newcommand{\emptySubs}{\{\}}
+\newcommand{\consEnv}[3]{#1:#2,\,#3}
+
+% Scope
+\newcommand{\bind}[3]{\texttt{bind } #3 \texttt{ in } #2 \ensuremath{\in #1}}
+\newcommand{\prov}[2]{\texttt{provide } #2 \ensuremath{\in #1}}
+
+% Evaluation
+\newcommand{\saysSubs}[4]{#1 \vdash #2 \bullet #3 = #4}
+\newcommand{\saysMatch}[4]{#1 \vdash #2 / #3 = #4}
+
+% Types
+\newcommand{\Refn}{\textrm{Refn}}
+\newcommand{\Decl}{\textrm{Decl}}
+\newcommand{\String}{\textrm{String}}
+
+
+\chapter{Resugaring for Pyret}
+
+\section{Example}
+
+\subsection{Define-struct}
+
+\paragraph{Core AST}
+\begin{codes}
+Stmts:
+| [\{splicing-begin stmts:Stmts\} @rest:Stmts]
+   binding stmts in rest
+   providing stmts, rest
+
+| [\{let x:Var v:Expr\} @rest:Stmts]
+   binding x in rest
+
+| [\{fun f:Var args:Args body:Expr\} @rest:Stmts]
+   binding args in body, rest in body
+   providing f, rest
+
+ALTERNATIVELY:
+
+Stmts:
+| \{splicing-begin stmts:Stmts rest:Stmts\}
+   binding stmts in rest
+   providing stmts, rest
+
+| \{let x:Var v:Expr rest:Stmts\}
+   binding x in rest
+
+| \{fun f:Var args:Args body:Expr rest:Stmts\}
+   binding args in body, rest in body
+   providing f, rest
+
+| \{end\}
+
+Params:
+| \{param x:Var rest:Params\}
+| \{end\}
+\end{codes}
+
+\paragraph{Auxiliary AST}
+\begin{codes}
+IStructFields:
+| [field:IStructField ...fields:IStructFields]
+  providing field, fields
+
+IStructField:
+| \{i-struct-field field:Str get:Var set:Var\}
+  providing get, set
+\end{codes}
+
+\paragraph{Surface AST}
+\begin{codes}
+SurfStmts:
+  .....
+| [(define-struct name:Var fields:StructFields) @rest:SurfStmts]
+  binding name in rest, fields in rest
+  providing name, fields, rest
+
+StructFields:
+| [field:StructField ...fields:StructFields]
+  providing field, fields
+
+StructField:
+| (struct-field field:Str get:Var set:Var)
+  providing get, set
+\end{codes}
+
+\paragraph{Desugaring Rules}
+\begin{codes}
+   [(struct-field field:Str get:Var set:Var) @rest:IStructFields]
+=> [\{i-struct-field field get set\} @rest]
+  
+   [(define-struct name:Var
+      [(struct-field field:Str get:Var set:Var) ...]) @rest:SurfStmts]
+=> [\{fun name [x ...] \{record [\{record-field field x\} ...]\}\}
+    \{splicing-begin [\{fun get [rec] \{record-get rec field\}\} ...]\}
+    \{splicing-begin [\{fun set [rec val] \{record-set rec field val\}\} ...]\}
+    @rest]
+\end{codes}
+
+\subsection{Pyret For Expressions}
+
+To handle Pyret for-expressions, we need to do two things.
+First, when a for-expression binding (e.g. \code{n from 0}) desugars,
+it will simply return its binding (\code{n}) and its value (\code{0})
+to the for-expression. It can do so with the desugaring rule:
+\begin{codes}
+   (s-for-bind l:Loc b:Bind v:Expr)
+=> \{for-bind b v\}
+\end{codes}
+where \code{ForBind} is a new type:
+\begin{codes}
+  ForBind ::= \{for-bind Bind Expr\}
+
+with list scope:
+  [\{for-bind b v\} ...]
+  export b
+  export ...
+\end{codes}
+
+Then for-expressions can be implemented with the desugaring rule:
+\begin{codes}
+   (s-for l:Loc
+          iter:Expr
+          [\{ForBind bind:Bind value:Expr\} ...]@binds
+          ann:Ann
+          body:Expr
+          blocky:Bool)
+=> \{Lambda l (CONCAT "for-body<" (FORMAT l false) ">")
+     [] [bind ...] ann "" body None None blocky\}
+with scope:
+  bind binds in body
+\end{codes}
+
+Notice that \code{s-for} is pattern matching against the results of
+desugaring the \code{s-for-bind}s. The \code{(CONCAT ...)} stuff is to
+compute at compile time a name for this lambda, which is what Pyret
+currently does.
+
+\section{Expressions}
+
+\begin{jtable}
+core name $C$ &$::=$& \textit{name} & core syntactic construct name \\
+surface name $m$ &$::=$& \textit{name} & surface syntactic construct name \\
+expression $e$ &$::=$& $\con{C}{e_1 ... e_n}$ & core syntactic construct \\
+  &$|$& $\app{m}{e_1 ... e_n}$ & surface syntactic construct \\
+  &$|$& $[e_1 ... e_n]$ & list \\
+  &$|$& $string$ & string literal \\
+  &$|$& $\refn[i]{x}$ $|$ $\decl[i]{x}$  & variable \\
+value $v$ &$::=$& $e$ & with no sugar invocations \\
+\end{jtable}
+
+
+
+\section{Expansion}
+
+\begin{jtable}
+ellipsis label $l$ &$::=$& \textit{name} & ellipsis label \\
+%shape $\dot{e}$ &$::=$& ...e... & (same cases as $e$) \\
+%  &$|$& $\bullet$ & hole \\
+pattern $p$ &$::=$& $\pvarA$ & pattern variable \\
+  &$|$& $\con{C}{p_1 ... p_n}$ & syntactic construct \\
+  &$|$& $\app{m}{p_1 ... p_n}$ & sugar invocation \\
+  &$|$& $[ps]$ & list \\
+  &$|$& $string$ & string literal \\
+  &$|$& $\refn[i]{x}$ $|$ $\decl[i]{x}$  & variable \\
+seq. pattern $ps$ &$::=$& $\epsilon$ & empty sequence \\
+  &$|$& $\cons{p}{ps}$ & cons \\
+  &$|$& $\rep{p}{l}$ & ellipsis with label $l$ \\
+fresh vars $F$ &$::=$& $\{x,...\}$ & fresh variable set \\
+type env. $\Gamma$ &$::=$&
+$\begin{cases}
+  \pvarA:t, ... \\
+  i \mapsto [\Gamma], ...
+\end{cases}$ \\
+substitution $\gamma$ &$::=$&
+$\begin{cases}
+  \pvarA \mapsto e, ... \\
+  l \mapsto [\gamma ... \gamma], ... \\
+  x \mapsto x, ...
+\end{cases}$
+\end{jtable}
+
+\begin{jtable}
+rewrite case $c$ &$::=$&
+  $\case{(p_1,\,...,\,p_k)}{\Gamma}{F}{p'}$ \\
+desugaring rule $r$ &$::=$&
+  $\dsrule{m}{c_1,...,c_n}$ \\
+desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
+\end{jtable}
+
+\subsection{Matching and Substitution}
+
+\begin{figure}
+\fbox{$\saysMatch{F}{e}{p}{\gamma}$}
+\begin{multicols}{2}
+  \Inference[m-pvar]{}{
+    \saysMatch{F}{e}{\pvarA}{\{\pvarA \mapsto e\}}
+  }
+
+  \Inference[m-capture]{
+    x \not\in F
+  }{
+    \saysMatch{F}{x}{x}{\{\}}
+  }
+
+  \Inference[m-fresh]{
+    x \in F
+  }{
+    \saysMatch{F}{y}{x}{\{x \mapsto y\}}
+  }
+
+  \Inference[m-str]{}{
+    \saysMatch{F}{string}{string}{\{\}}
+  }
+
+  \Inference[m-empty]{}{
+    \saysMatch{F}{[\phantom{.}]}{\epsilon}{\{\}}
+  }
+
+  \Inference[m-cons]{
+    \saysMatch{F}{e_1}{p}{\gamma_1} \\
+    \saysMatch{F}{[e_2,...,e_n]}{ps}{\gamma_s} \\
+    \gamma_1 \DisjUnion \gamma_2 = \gamma
+  }{
+    \saysMatch{F}{[e_1 ... e_n]}{p,ps}{\gamma}
+  }
+\end{multicols}
+\vspace{1em}
+
+\Inference[m-con]{
+  \saysMatch{F}{e_1}{p_1}{\gamma_1} \;\cdots\; \saysMatch{F}{e_n}{p_n}{\gamma_n}
+  \gamma_1 \DisjUnion ... \DisjUnion \gamma_n = \gamma
+}{
+  \saysMatch{F}{\con{C}{e_1 ... e_n}}{\con{C}{p_1 ... p_n}}{\gamma}
+}
+
+\Inference[m-star]{
+  \saysMatch{F}{e_1}{p}{\gamma_1} \;\cdots\; \saysMatch{F}{e_n}{p}{\gamma_n}
+}{
+  \saysMatch{F}{[e_1 ... e_n]}{[\rep{p}{l}]}{\{l \mapsto [\gamma_1 ... \gamma_n]\}}
+}
+
+\fbox{$\saysSubs{F}{\gamma}{p}{e}$}
+\begin{multicols}{2}
+  \Inference[s-pvar]{
+    \pvarA \mapsto e \in \gamma
+  }{
+    \saysSubs{F}{\gamma}{\pvarA}{e}
+  }
+
+  \Inference[s-str]{}{
+    \saysSubs{F}{\gamma}{string}{string}
+  }
+
+  \Inference[s-capture]{
+    x \not\in F
+  }{
+    \saysSubs{F}{\gamma}{x}{x}
+  }
+
+  \Inference[s-fresh]{
+    x \in F & x \mapsto y \in \gamma
+  }{
+    \saysSubs{F}{\gamma}{x}{y}
+  }
+
+  \Inference[s-empty]{}{
+    \saysSubs{F}{\gamma}{[\epsilon]}{[\phantom{.}]}
+  }
+
+  \Inference[s-cons]{
+    \saysSubs{F}{\gamma}{p}{e_1} \\
+    \saysSubs{F}{\gamma}{[ps]}{[e_2,...,e_n]}
+  }{
+    \saysSubs{F}{\gamma}{[p,ps]}{[e_1 e_2 ... e_n]}
+  }
+\end{multicols}
+\vspace{1em}
+
+\Inference[s-star]{
+  l \mapsto [\gamma_1 ... \gamma_n] \in \gamma \\
+  \saysSubs{F}{\gamma_1}{p}{e_1} \;\cdots\; \saysSubs{F}{\gamma_n}{p}{e_n}
+}{
+  \saysSubs{F}{\gamma}{[\rep{p}{l}]}{[e_1 ... e_n]}
+}
+
+\Inference[s-con]{
+  \saysSubs{F}{\gamma}{p_1}{e_1} \;\cdots\; \saysSubs{F}{\gamma}{p_n}{e_n}
+}{
+  \saysSubs{F}{\gamma}{\con{C}{p_1 ... p_n}}{\con{C}{e_1 ... e_n}}
+}
+
+\Inference[s-sugar]{
+  \saysSubs{F}{\gamma}{p_1}{e_1} \;\cdots\; \saysSubs{F}{\gamma}{p_n}{e_n}
+}{
+  \saysSubs{F}{\gamma}{\app{m}{p_1 ... p_n}}{\app{m}{e_1 ... e_n}}
+}
+
+\caption{Matching and Substitution}
+\end{figure}
+
+\begin{lemma}[matching and substitution]
+  Matching and substitution are inverses:
+%  $\saysSubs{F}{\gamma}{p}{e}$, then $\saysMatch{F}{e}{p}{\gamma}$.
+\end{lemma}
+\begin{proof}
+  Induct on $p$.
+  [FILL]
+\end{proof}
+%However, the reverse is not true. Matching does not undo substitution,
+%because substitution in non-deterministic (because it generates fresh
+%variables).
+
+\subsection{Expansion}
+
+See \cref{fig:expansion}.
+[TODO: Replace step with something that looks like desugaring.]
+[TODO: Replace $v$ with something that looks like core terms.]
+
+\begin{figure}
+  \Inference[eval-ctx]{
+    \saysStep{L}{e}{e'}
+  }{
+    \saysStep{L}{E[e]}{E[e']}
+  }
+  \Inference[eval-expand]{
+    L = G,rs &
+    \dsrule{m}{c_1 ... c_n} \in G \IS\\
+    \saysCase{L}{\app{m}{e_1 ... e_n}}{e''}{c_i} \IS\\
+    \saysNotCase{L}{\app{m}{e_1 ... e_n}}{e'}{c_j} \text{ for any } j<i
+  }{
+    \saysStep{L}{\app{m}{e_1 ... e_n}}{e'}
+  }
+  \Inference[eval-case]{
+    \saysMatch{L}{e_i}{p_i}{\gamma_i} \text{ for each $i$} \IS \\
+    \gamma' \text{ gives fresh names to the variables in $F$} \\
+    \gamma_1 \DisjUnion ... \DisjUnion \gamma_n \DisjUnion \gamma' = \gamma \\
+    \saysSubs{F}{\gamma}{p'}{e'}
+  }{
+    \saysCase{L}{\app{m}{e_1 ... e_n}}{e'}{(p_1,...,p_n);\Gamma;F \To p'}
+  }
+  \caption{Expansion}
+  \label{fig:expansion}
+\end{figure}
+
+[FILL] One expansion rule. Note expansion contexts.
+
+
+
+\section{AST Checking} % Or Syntype Checking
+
+\begin{jtable}
+ast defn. $G$ &$::=$& $A \mapsto \{t_1, ... t_n\}$
+  & (with no production $A_1 \mapsto A_2$) \\
+syntactic category $A$ &$::=$& \textit{name} \\
+syntax type $t$ &$::=$& $A$ & syntactic category \\
+  &$|$& $\con{C}{t_1 ... t_n}$ & syntactic construct \\
+  &$|$& $[t]$ & list \\
+  &$|$& String & string literal \\
+  &$|$& Decl & variable declaration \\
+  &$|$& Refn & variable reference \\
+language $L$ &$::=$& $G, rs$
+\end{jtable}
+
+Lemma: If rules grammar check, then e obeys Surf implies ds(e) obeys
+Core.
+
+Lemma: Normalizing a grammar does not change its language.
+
+\paragraph{Exhaustion Checking}
+We perform exhaustion checking to make sure that sugars cover all
+possible cases of their arguments, but do not give the algorithm here.
+It works by looking at \emph{shapes}: a shape is a pattern that
+contains types in place of pattern variables. It is straightforward to
+check whether an expression matches a shape, and to convert a pattern
+into a shape. Exhaustion checking uses the fact that the expressions
+that do \emph{not} match a shape can be expressed as a union of shapes.
+[TODO: prove]
+
+\begin{figure}
+
+\fbox{$\saysE{L}{e}{t}$}
+
+\begin{multicols}{2}
+  
+  \Inference[e-con]{
+    A \mapsto \con{C}{t_1 ... t_n} \in L \\
+    \saysE{L}{e_1}{t_1} \;\cdots\; \saysE{L}{e_n}{t_n}
+  }{
+    \saysE{L}{\con{C}{e_1 ... e_n}}{A}
+  }
+
+  \Inference[e-refn]{}{
+    \saysE{L}{\refn{x}}{\Refn}
+  }
+
+  \Inference[e-decl]{}{
+    \saysE{L}{\decl{x}}{\Decl}
+  }
+
+  \Inference[e-str]{}{
+    \saysE{L}{\textit{string}}{\String}
+  }
+
+  \Inference[e-list]{
+    \saysE{L}{e_1}{t} \;\cdots\; \saysE{L}{e_n}{t}
+  }{
+    \saysE{L}{[e_1 ... e_n]}{[t]}
+  }
+
+  \Inference[e-sugar]{
+    \saysR{L}{m}{t_1,...,t_n}{t} \\
+    \saysE{L}{e_1}{t_1} \;\cdots\; \saysE{L}{e_n}{t_n}
+  }{
+    \saysE{L}{\app{m}{e_1 ... e_n}}{t}
+  }
+\end{multicols}
+
+\fbox{$\saysP{L}{\Gamma}{p}{t}$}
+
+\begin{multicols}{2}
+
+  \Inference[p-pvar]{
+    \pvarA : t \in \Gamma
+  }{
+    \saysP{L}{\Gamma}{\pvarA}{t}
+  }
+
+  \Inference[p-refn]{}{
+    \saysP{L}{\Gamma}{x}{\Refn}
+  }
+
+  \Inference[p-decl]{}{
+    \saysP{L}{\Gamma}{x}{\Decl}
+  }
+
+  \Inference[p-str]{}{
+    \saysP{L}{\Gamma}{\textit{string}}{\String}
+  }
+
+  \Inference[p-con]{
+    A \mapsto \con{C}{t_1 ... t_n} \in L \\
+    \saysP{L}{\Gamma}{p_1}{t_1} \;\cdots\; \saysP{L}{\Gamma}{p_n}{t_n}
+  }{
+    \saysP{L}{\Gamma}{\con{C}{p_1 ... p_n}}{A}
+  }
+
+  \Inference[p-sugar]{
+    \saysR{L}{m}{t_1,...,t_n}{t} \\
+    \saysP{L}{\Gamma}{p_1}{t_1} \;\cdots\; \saysP{L}{\Gamma}{p_n}{t_n}
+  }{
+    \saysP{L}{\Gamma}{\app{m}{p_1 ... p_n}}{t}
+  }
+
+  \Inference[p-empty]{}{
+    \saysP{L}{\Gamma}{[\epsilon]}[t]
+  }
+
+  \Inference[p-cons]{
+    \saysP{L}{\Gamma}{p}{t} \\
+    \saysP{L}{\Gamma}{[ps]}{[t]}
+  }{
+    \saysP{L}{\Gamma}{[\cons{p}{ps}]}{[t]}
+  }
+
+  \Inference[p-star]{
+    l \mapsto [\Gamma'] \in \Gamma & \saysP{L}{\Gamma'}{p}{t}
+  }{
+    \saysP{L}{\Gamma}{[\rep{p}{l}]}{[t]}
+  }
+\end{multicols}
+
+\fbox{$\saysR{L}{m}{t,...,t}{t}$}
+\Inference[g-sugar]{
+  \dsrulefancy
+      {m}
+      {(p_{11},...,p_{1n});\Gamma_1;F_1 \To p_1'}
+      {(p_{k1},...,p_{kn});\Gamma_k;F_k \To p_k'}
+      \in L \\
+  \text{The cases are exhaustive over $t_1,...,t_n$ in $G$} \\
+  \saysP{L}{\Gamma_{i}}{p_{ij}}{t_j}
+    \text{ for each $i \in 1..k, j \in 1..n$} \\
+  \saysP{L}{\Gamma_{i}}{p_i'}{t}
+    \text{ for each $i \in 1..k$}
+}{
+  \saysR{L}{m}{t_1,...,t_n}{t}
+}
+
+\fbox{$\saysS{L}{\gamma}{\Gamma}$}
+\Inference[$\gamma$-env]{
+  \saysE{L}{e_1}{t_1} \;\cdots\; \saysE{e_n}{t_n} \\
+  \saysS{L}{\gamma_{11}}{\Gamma_1} \;\cdots\; \saysS{L}{\gamma_{1j}}{\Gamma_1} \\
+  ... \\
+  \saysS{L}{\gamma_{m1}}{\Gamma_m} \;\cdots\; \saysS{L}{\gamma_{mk}}{\Gamma_m} \\
+}{
+  \saysS{L}{
+    \begin{cases}
+      \pvarA_1 \mapsto e_1,\,...,\,\pvarA_n \mapsto e_n \\
+      i_1 \mapsto [\gamma_{11},\,...,\,\gamma_{1j}] \\
+      ... \\
+      i_m \mapsto [\gamma_{m1},\,...,\,\gamma_{mk}]
+    \end{cases}
+  }{
+    \Gamma',
+    \begin{cases}
+      \pvarA_1: t_1,\,...,\,\pvarA_n: t_n, \\
+      %\pvarA_1': t_1',\,...,\,\pvarA_{n'}': t_{n'}' \\
+      i_1 \mapsto [\Gamma_1],\,...,\,i_m \mapsto [\Gamma_m], \\
+      %i_1' \mapsto [\Gamma_1'],\,...,\,i_{m'}' \mapsto [\Gamma_{m'}']
+    \end{cases}
+  }
+}
+
+\caption{Grammar Checking}
+\end{figure}
+
+\subsection{Type Soundness}
+
+We prove soundness by way of progress + preservation:
+\begin{theorem}[Soundness]
+  If $\saysE{L}{e}{t}$, then
+  $\saysSteps{L}{e}{v}$ where $\saysE{L}{v}{t}$, or $e$ runs forever.
+\end{theorem}
+\begin{proof}
+\Cref{thm:progress} (progress) and \cref{thm:preservation}
+(preservation) together imply that either:
+(i) $e$ is a value, or (ii) $\saysStep{L}{e}{e'}$ and $\saysE{L}{e'}{t}$.
+Apply this repeatedly. Either $e$ eventually steps to a value $v$, and
+has remained the same type $t$ throughout the evaluation, or $e$ never
+halts.
+\end{proof}
+
+\begin{lemma}[Progress] \label{thm:progress}
+  If $\saysE{L}{e}{t}$, then
+  $\saysStep{L}{e}{e'}$, or $e$ is a value.
+\end{lemma}
+\begin{proof}
+  First, verify that our evaluation contexts include every case that
+  isn't a value. Thus either $e$ is a value and we are done, or $e$
+  contains a redex: $e=E[\app{m}{e_1 ... e_n}]$.
+  In the latter case, we will show that $e$ can take a step because
+  the eval-expand rule applies. There are two premises that need to be
+  satisfied:
+  \begin{itemize}
+    \item First, we must show that $m$ is bound in $L$. Since $e$
+      type-checked, it must be: the only rule which can type-check a
+      sugar invocation is p-sugar; this in turn must use rule
+      g-sugar; finally g-sugar requires that $m \in L$.
+    \item Second, we must show that the pattern match of $e_1,...,e_n$
+      succeeds on any case $(p_1,...,p_n);\Gamma;F$ of the desugaring
+      rule. By \cref{thm:exhaustion}, it does.
+  \end{itemize}
+\end{proof}
+
+\begin{assumption}[Exhaustion] \label{thm:exhaustion}
+  If the set of cases in a desugaring rule are exhaustive over
+  $t_1,...,t_n$ according to our exhaustion checking algorithm, then
+  for every possible argument list $e_1,...,e_n$ that matches the
+  given types (i.e., $\saysE{L}{e_1}{t_1},...,\saysE{L}{e_n}{t_n}$),
+  there is a case $c_i$ such that $e_1,...,e_n$ successfully matches
+  against $c_i$. [TODO: prove]
+\end{assumption}
+\begin{proof}
+  \emph{Not given}. We have not stated our exhaustion checking
+  algorithm here, and so cannot prove it correct. We believe it is
+  straightforward (if tedious).
+\end{proof}
+
+\begin{lemma}[Preservation] \label{thm:preservation}
+  If $\saysE{L}{e}{t}$ and $\saysStep{L}{e}{e'}$, then $\saysE{L}{e'}{t}$.
+\end{lemma}
+\begin{proof}
+  Since $e$ can take an expansion step, it must have a redex (via
+  eval-ctx): $e = E[\app{m}{e_1 ... e_n}]$. And furthermore (by eval-expand) $m$
+  must be bound in $L$, and there must be a first case of $m$ that
+  matches $e$.  Call it $c_i = (p_1,...,p_n);\Gamma \To p'$. Then:
+  \begin{prooftable}
+  By eval-case: & $\saysMatch{L}{e_i}{p_i}{\gamma_i}$
+    for some $\gamma_i$ for each $i$ & (1) \\
+  and & $\saysSubs{F}{\gamma_i \DisjUnion ...
+    \DisjUnion \gamma_n}{p'}{e'}$ & (2) \\
+  and & $\saysStep{L}{E[e]}{E[e']}$ \\
+  By e-sugar: & $\saysE{L}{\app{m}{e_1 ... e_n}}{t}$ \\
+  and & $\saysR{L}{m}{t_1 ... t_n}{t}$ \\
+  and & $\saysE{L}{e_i}{t_i}$ for each $i$ & (3) \\
+  By g-sugar: & $\saysP{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (4) \\
+  and & $\saysP{L}{\Gamma}{p'}{t}$ & (5)
+  \end{prooftable}
+  By \cref{thm:matching} with (1), (3), and (4),
+  $\saysS{\gamma_i}{\Gamma}$ for each $i$. By \cref{thm:union},
+  $\saysS{\gamma_1 \DisjUnion ... \gamma_n}{\Gamma}$.
+  Finally, by \cref{thm:substitution} with that last fact together
+  with (2) and (5), $\saysE{L}{e'}{t}$.
+\end{proof}
+
+\begin{lemma}[Union of Substitutions] \label{thm:union}
+  If $\saysS{L}{\gamma_1}{\Gamma}$ and $\saysS{L}{\gamma_2}{\Gamma}$,
+  then $\saysS{L}{\gamma_1 \DisjUnion \gamma_2}{\Gamma}$.
+\end{lemma}
+\begin{proof}
+  [TODO]
+\end{proof}
+
+\begin{lemma}[Matching] \label{thm:matching}
+  If $\saysP{L}{\Gamma}{p}{t}$
+  and $\saysE{L}{e}{t}$
+  and $\saysMatch{F}{e}{p}{\gamma}$,
+  then $\saysS{L}{\gamma}{\Gamma}$
+\end{lemma}
+\begin{proof}
+  Induction on $p$.
+  \begin{description}
+  \item[$p = string$]
+    \begin{prooftable}
+      By p-str: & $\saysP{L}{\Gamma}{string}{\String}$ & fixes $t$ \\
+      By m-str: & $\saysMatch{F}{string}{\String}{\emptySubs}$
+        & fixes $\gamma$
+    \end{prooftable}
+    Finally, by $\gamma$-env, $\saysS{F}{\emptySubs}{\Gamma}$
+    (this applies for any $\Gamma$).
+  \item[$p = x \not\in F$] (Analogous.)
+  \item[$p = x \in F$] By p-refn or p-decl, 
+    $\Gamma = \{\}$ and $t$ is {\Refn} or {\Decl}.
+    By m-fresh, $e = y$ for some fresh name $y$, and $\gamma = \{\}$.
+    And the conclusion follows: $\saysS{L}{\{\}}{\{\}}$. [TODO]
+  \item[$p = \pvarA$]
+    \begin{prooftable}
+      By p-pvar: & $\saysP{L}{\Gamma}{\pvarA}{t}$ & fixes $t$ \\
+      and & $\pvarA: t \in \Gamma$ & (1) \\
+      By m-pvar: & $\saysMatch{F}{e}{\alpha}{\{\pvarA \mapsto e\}}$
+        & fixes $\gamma$
+    \end{prooftable}
+    Finally, using $\gamma$-env on the premise $\saysE{L}{e}{t}$
+    gives that $\saysS{L}{\gamma}{\{\pvarA: t\}},\Gamma'$ for any
+    $\Gamma'$. By (1), this is the form of $\Gamma$, so we can set
+    $\Gamma'$ such that $\Gamma = {\{\pvarA: t\}},\Gamma'$, and we are done.
+  \item[$p = \con{C}{p_1 ... p_n}$]
+    \begin{prooftable}
+      By p-con: & $\saysP{L}{\Gamma}{\con{C}{p_1 ... p_n}}{A}$ & fixes $t$ \\
+      and & $A \mapsto \con{C}{t_1 ... t_n} \in L$ \\
+      and & $\saysP{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (1) \\
+      By m-con: &
+        $\saysMatch{F}{\con{C}{e_1 ... e_n}}{\con{C}{p_1 ... p_n}}{\gamma}$
+        & fixes $e$ \\
+      and & $\saysMatch{F}{e_i}{p_i}{\gamma_i}$ for each $i$ & (2) \\
+      and & $\gamma = \gamma_1 \DisjUnion ... \DisjUnion \gamma_n$ \\
+      By e-con: & $\saysE{L}{\con{C}{e_1 ... e_n}}{A}$ \\
+      and & $\saysE{L}{e_i}{t_i}$ for each $i$ & (3) \\
+    \end{prooftable}
+    Applying the I.H. to (1), (2), and (3) yeilds that
+    $\saysS{L}{\gamma_i}{\Gamma}$.
+    By \cref{thm:union}, $\saysS{L}{\gamma}{\Gamma}$.
+  \item[$p = \app{m}{p_1 ... p_n}$] [FILL]
+  \item[$p = [\epsilon{]}$] [TODO] By m-empty, $\gamma = \{\}$.
+    By p-empty, $\Gamma = \{\}$. The goal follows: $\saysS{L}{\{\}}{\{\}}$.
+  \item[$p = [p,ps{]}$] [FILL]
+  \item[$p = [\rep{p}{l'}{]}$]
+    \begin{prooftable}
+      By p-star: & $\saysP{L}{\Gamma}{\rep{p}{l'}}{[t]}$ & fixes $t$ \\
+      and & $l' \mapsto [\Gamma'] \in \Gamma$ & (1) \\
+      and & $\saysP{L}{\Gamma'}{p}{t}$ & (2) \\
+      By m-star: & $\saysMatch{F}{[e_1 ... e_n]}{[\rep{p}{l}]}
+        {\{l' \mapsto [\gamma_1 \DisjUnion ... \gamma_n]\}}$
+        & fixes $e$, $\gamma$ \\
+      and & $\saysMatch{F}{e_i}{p}{\gamma_i}$ for each $i$ & (3) \\
+      By e-list: & $\saysE{L}{[e_1 ... e_n]}{[t]}$ \\
+      and & $\saysE{L}{e_i}{t_i}$ & (4)
+    \end{prooftable}
+    By the I.H. together with (2), (3), and (4),
+    $\saysS{L}{\gamma_i}{\Gamma'}$ for each $i$.
+    By \cref{thm:union},
+    $\saysS{L}{\gamma_1 \DisjUnion ... \gamma_n}{\Gamma'}$.
+    Finally, by $\gamma$-env,
+    $\saysS{L}{\{l' \mapsto [\gamma_1 \DisjUnion ... \gamma_n]\}}
+      {\{l' \mapsto [\Gamma']\}}$, which is compatible with the
+      specification of $\Gamma$ in (1).
+  \end{description}
+\end{proof}
+
+\begin{lemma}[Substitition] \label{thm:substitution}
+  If $\saysS{L}{\gamma}{\Gamma}$
+  and $\saysP{L}{\Gamma}{p}{t}$,
+  and $\saysSubs{F}{\gamma}{p}{e}$,
+  then $\saysE{L}{e}{t}$.
+\end{lemma}
+\begin{proof}
+  Induction on $p$.
+  \begin{description}
+  \item[$p = string$]
+  \item[$p = string$] By s-str, $\saysSubs{F}{\gamma}{p}{string}$, so $e=string$.
+    By p-str, $\saysP{L}{\Gamma}{p}{\String}$, so $t=\String$.
+    Finally, by e-str, $\saysE{L}{e}{\String}$ as desired.
+  \item[$p = x \not\in F$] (Analogous.)
+  \item[$p = x \in F$] By s-fresh, $e = y$ for some fresh name $y$.
+    By p-refn or p-decl, $t$ is either {\Refn} or {\Decl}.
+    Our goal $\saysE{L}{y}{t}$ follows by either e-refn or e-decl,
+    respectively.
+  \item[$p = \pvarA$] By rule s-pvar, $\pvarA \mapsto e \in \gamma$.
+    By $\gamma$-env, $\alpha \mapsto t \in \Gamma$ and $\saysE{L}{e}{t}$.
+    Which is our goal; we are done.
+    (Note that by $\gamma$-env, $\Gamma$ may have many \emph{other},
+    unnecessary, bindings to pattern variables, but it must \emph{at least}
+    contain a correct binding for $\alpha$.)
+  \item[$p = \con{C}{p_1 ... p_n}$]
+    \begin{prooftable}
+      By p-con: & $\saysP{L}{\Gamma}{\con{C}{p_1 ... p_n}}{A}$ & fixes $t$ \\
+      and & $A \mapsto \con{C}{t_1 ... t_n} \in L$ & (1) \\
+      and & $\saysP{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (2) \\
+      By s-con: & $\saysSubs{F}{\gamma}{\con{C}{p_1 ... p_n}}{\con{C}{e_1 ... e_n}}$
+        & fixes $e$ \\
+      and & $\saysSubs{F}{\gamma}{p_i}{e_i}$ for each $i$ & (3)
+    \end{prooftable}
+    Using the I.H. with (2) and (3) gives that
+    $\saysE{L}{e_i}{t_i}$ for each $i$.
+    Using e-con on that fact together with (1) gives that
+    $\saysE{L}{\con{C}{e_1 ... e_n}}{A}$, so we are done.
+  \item[$p = \app{m}{p_1 ... p_n}$]
+    \begin{prooftable}
+      By s-sugar: & $\saysSubs{F}{\gamma}{\app{m}{p_1 ... p_n}}{\app{m}{e_1 ... e_n}}$
+        & fixes $e$ \\
+      and & $\saysSubs{F}{\gamma}{p_i}{e_i}$ for each $i$ & (1) \\
+      By p-sugar: & $\saysP{L}{\Gamma}{\app{m}{p_1 ... p_n}}{t}$
+        & fixes $t$ \\
+      and & $\saysP{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (2) \\
+      and & $\saysR{L}{m}{t_1,...,t_n}{t}$ & (3)
+    \end{prooftable}
+    Using the I.H. with (1) and (2) gives that
+    $\saysE{L}{e_i}{t_i}$ for each $i$.
+    Finally, using e-sugar on that fact together with (3) gives that
+    $\saysE{L}{\app{m}{e_1 ... e_n}}{t}$.
+  \item[$p = [\epsilon{]}$]
+    By s-empty, $\saysSubs{F}{\gamma}{p}{[]}$, so $e=[]$.
+    By p-empty, $\saysP{L}{\emptyEnv}{[\epsilon]}{[t]}$ (for some $t$).
+    Finally, by e-list, $\saysE{L}{[]}{[t]}$.
+  \item[$p = [p,ps{]}$]
+    \begin{prooftable}
+      By s-cons: & $\saysSubs{F}{\gamma}{p}{e_1}$ & (1) \\
+      and & $\saysSubs{F}{\gamma}{[ps]}{[e_2 ... e_n]}$ & (2) \\
+      and & $\saysSubs{F}{\gamma}{[p, ps]}{[e_1 e_2 ... e_n]}$ & fixes $e$ \\
+      By p-cons: & $\saysP{L}{\Gamma}{p}{t}$ & (3) \\
+      and & $\saysP{L}{\Gamma}{[ps]}{[t]}$ & (4) \\
+      and & $\saysP{L}{\Gamma}{[p, ps]}{[t]}$ & fixes $t$
+    \end{prooftable}
+    We can apply the I.H. using (1) and (3) and the assumption
+    $\saysS{L}{\gamma}{\Gamma}$ to get that $\saysE{L}{e_1}{t}$.
+    Likewise, the I.H. with (2) and (4) gives
+    $\saysE{L}{[e_2 ... e_n]}{[t]}$.
+    By e-list (in reverse), $\saysE{L}{e_2}{t} \cdots \saysE{L}{e_n}{t}$.
+    Finally, by e-list (forward), $\saysE{L}{[e_1 e_2 ... e_n]}{[t]}$.
+  \item[$p = [\rep{p}{l}{]}$]
+    \begin{prooftable}
+      By s-star: & $\saysSubs{F}{\gamma}{[\rep{p}{l}]}{[e_1 ... e_n]}$ & fixes $e$ \\
+      and & $l \mapsto [\gamma_1 ... \gamma_n] \in \gamma$ \\
+      and & $\saysSubs{F}{\gamma_i}{p}{e_i}$ for each $i$ & (1) \\
+      By $\gamma$-env: & $l \mapsto [\Gamma'] \in \Gamma$ \\
+      and & $\saysS{L}{\gamma_i}{\Gamma'}$ for each $i$ & (2) \\
+      By p-star: & $\saysP{L}{\Gamma}{[\rep{p}{l}]}{[t]}$ & fixes $t$ \\
+      and & $\saysP{L}{\Gamma'}{p}{t}$ & (3)
+    \end{prooftable}
+    Using the I.H. with (1), (2), and (3) proves that
+    $\saysE{L}{e_i}{t}$.
+    Then, by e-list, $\saysE{L}{[e_1 ... e_n]}{[t]}$ as desired.
+  \end{description}
+\end{proof}
+
+\section{Scope Checking}
+
+(See \cref{fig:scope}.)
+
+\begin{figure}
+\fbox{$\saysScope{\Sigma}{e}
+  {\{\decl{x}\}}
+  {\{\refn{x}\}}
+  {\{\decl{x}\}}
+  {\{\refn{x}\mapsto\decl{x}\}}$}
+
+\Inference[scope-e-decl]{}{
+  \saysScope{\Sigma}{\decl{x}}{\{\decl{x}\}}{\{\}}{\{\decl{x}\}}{\{\}}
+}
+
+\Inference[scope-e-refn]{}{
+  \saysScope{\Sigma}{\refn{x}}{\{\}}{\{\refn{x}\}}{\{\}}{\{\}}
+}
+
+\Inference[scope-e-con]{
+  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
+  \saysScope{\Sigma}{e_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
+  S = \SetSuchThat{
+    \decl[a]{x} \mapsto \decl[b]{x}
+  }{
+    \decl[a]{x} \in P_i,\;
+    \decl[b]{x} \in P_j,\;
+    \bind{\sigma}{i}{j}
+  } \IS\\
+  B = \SetSuchThat{
+    \refn[a]{x} \mapsto \decl[b]{x}
+  }{
+    \refn[a]{x} \in R_i,\;
+    \decl[b]{x} \in P_j,\;
+    \bind{\sigma}{i}{j},\;
+    \decl[b]{x} \not\in \domain{S}
+  } \IS\\
+  R = \SetSuchThat{
+    \refn[a]{x}
+  }{
+    \refn[a]{x} \in R_i,\;
+    \NotExists{\decl[b]{x}}{\refn[a]{x} \mapsto \decl[b]{x} \in B\}}
+  } \IS\\
+  P = \SetSuchThat{
+    \decl[a]{x}
+  }{
+    \decl[a]{x} \in P_i,\;
+    \prov{\sigma}{i},\;
+    \decl[a]{x} \not\in \domain{S}
+  }
+}{
+  \saysScope{\Sigma}{\con{C}{e_1 ... e_n}}{P}{R}{B}
+}
+
+
+\Inference[scope-p-con]{
+  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
+  \saysScope{\Sigma}{p_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
+  S = \SetSuchThat{
+    a \mapsto b
+  }{
+    a \in P_i,\;
+    b \in P_j,\;
+    \bind{\sigma}{i}{j},\;
+    \saysCanShadow{F}{a}{b}
+  } \IS\\
+  B = \SetSuchThat{
+    a \mapsto b
+  }{
+    a \in R_i,\;
+    b \in P_j,\;
+    \bind{\sigma}{i}{j},\;
+    b \not\in \domain{S},\;
+    \saysCanBind{F}{a}{b}
+  } \IS\\
+  R = \SetSuchThat{
+    a
+  }{
+    a \in R_i,\;
+    (\NotExists{b}{a \mapsto b \in B\}}
+    \text{ or $a$ is a pattern var})
+  } \IS\\
+  P = \SetSuchThat{
+    a
+  }{
+    a \in P_i,\;
+    \prov{\sigma}{i},\;
+    a \not\in \domain{S}
+  }
+}{
+  \saysScope{\Sigma}{\con{C}{p_1 ... p_n}}{P}{R}{B}
+}
+
+Two checks to make: fresh vars don't bind to non-fresh vars, and named
+vars only bind to vars of the same name:
+\begin{multicols}{3}
+  \Inference{}{
+    \saysCanBind{F}{\refn[1]{x}}{\decl[2]{x}}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \saysCanBind{F}{\refn[1]{x}}{\pvarA}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \saysCanBind{F}{\pvarA}{\decl[1]{x}}
+  }
+  \Inference{}{
+    \saysCanBind{F}{\pvarA}{\pvarB}
+  }
+  \Inference{}{
+    \saysCanShadow{F}{\decl[1]{x}}{\decl[2]{x}}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \saysCanShadow{F}{\decl[1]{x}}{\pvarA}
+  }
+\end{multicols}
+
+\caption{Scope Checking Rules}
+\label{fig:scope}
+\end{figure}

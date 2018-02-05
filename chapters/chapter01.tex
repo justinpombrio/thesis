@@ -1,0 +1,201 @@
+\chapter{Syntactic Sugar}
+
+\section{What is it?}
+
+% http://www.cs.cmu.edu/~crary/819-f09/Landin64.pdf
+The term \emph{syntactic sugar} was introduced by Peter Landin in
+1964[CITE]. It refers to surface syntactic forms that are provided for
+convenience, but could instead be written using the syntax of the rest
+of the language. This captures the spirit and purpose of syntactic
+sugar, but is not discriminating enough to be a useful definition.
+I will define syntactic sugar as follows:
+%% [TODO: definition must (i) rule out functions, (ii) rule out
+%%   metaprogramming, (iii) include Racket macros, which are non-local
+%%   and non-phase-specific.]
+\begin{quote}
+  A syntactic construct in an implementation of a programming language
+  is \emph{syntactic sugar} if it is translated at compile time into
+  the syntax of the rest of the language.
+\end{quote}
+%% \begin{quote}
+%%   'A construct in a language is called ``syntactic sugar'' if it can be
+%%   removed from the language without any effect on what the language
+%%   can do: functionality and expressive power will remain the same.' (Wikipedia)
+%% \end{quote}
+
+The name suggests that syntactic sugar is inessential: it ``sweetens''
+the language to make it more palatable, but does not otherwise change
+its substance. The name also naturally leads to related terminology:
+\emph{desugaring} is the removal of syntactic sugar by expanding it;
+and \emph{resugaring} is a term I am introducing for the restoration
+of information that was lost during desugaring.
+
+\section{What is it Good for?}
+
+Syntactic sugar is used to define abstractions. But languages have
+other ways to define abstractions already: functions, classes, data
+definitions, etc. If an abstraction can be implemented using these
+features, it's almost always better to do so. Thus:
+\begin{quote}
+  Syntactic sugar should only be used to implement an abstraction if
+  it cannot be implemented in the core language directly.
+\end{quote}
+
+Therefore, to find places where it is a \emph{good} idea to use sugar,
+we can just look for things that most programming languages
+\emph{cannot} abstract over:
+\begin{enumerate}
+  \item In most languages, variable names are first order and cannot
+    be manipulated at run-time (e.g., a variable cannot be passed as
+    an argument to a function: if you attempt to do so, the thing the
+    variable is bound to will be passed instead). Therefore, creating
+    new binding constructs is a good use for syntactic sugar in most
+    languages. However, in R[CITE] variable names can be abstracted
+    over (e.g. \code{assign("x", 3); x} prints 3), and so sugar isn't
+    necessary for this purpose.
+  \item Most languages force the arguments to a function to be
+    evaluated when it is called, rather than allowing the function to
+    choose whether to
+    evaluate them or not. Thus if an abstraction requires delaying
+    evaluation, it is a good candidate to be a sugar. However, Haskell
+    has lazy evaluation, and thus does not need sugars for this purpose.
+  \item Most languages cannot manipulate data definitions at run-time:
+    e.g., field names cannot be dynamically constructed. Thus creating
+    new data definition constructs (e.g., a way to define state
+    machines) is a good use case for sugars. However, in Python field
+    names are first class (e.g., they can be added or assigned using
+    \code{setattr}), so sugars are not needed to abstract over fields
+    in data definitions.
+    % e.g.:
+    %\code{class C: pass; c = C(); setattr(c, ``x'', 3); print(c.x)}
+    \footnote{
+    It may sound like I am suggesting that everything should be
+    manipulatable at run-time. I am not. The more
+    things which are fixed at compile time (variable names, field
+    names, etc.), the more (i) programmers can reason about their
+    programs; (ii) tools can reason about programs; (iii) compilers
+    can optimize programs (without herculean effort). It is
+    \emph{good} that sugar is sometimes necessary.
+  }
+\end{enumerate}
+
+Overall, syntactic sugar is a way to \emph{extend a language}.
+In a limited sense, this is what functions are for as well.
+Functions, however, are limited: they cannot take a variable as an
+argument, delay evaluation, introduce new syntax, etc. This is where
+sugar shines.
+
+
+\subsection{A Thousand Grains of Sugar}
+
+There are many axes on which desugaring mechanisms vary:
+\begin{enumerate}
+  \item Desugaring is a syntax-to-syntax transformation, but what is
+    the representation of syntax? There is a big difference between
+    transformations on the \emph{text} of the program vs. its
+    \emph{concrete surface syntax} vs. its \emph{abstract surface
+      syntax}.
+  \item Are sugars defined by developers of the language (and thus
+    relatively fixed), or by users of the language (and thus flexible)? % macros?
+  \item What is the metalanguage? That is, in what language are sugars
+    written? Is it the same language the programs are written in, thus
+    allowing sugars and code to be interspersed, or a different
+    language?
+  \item In what order are constructs desugared? Most importantly, are
+    nested sugars evaluated from the \emph{innermost to outermost}, or
+    from \emph{outermost to innermost}?
+  \item How many \emph{phases} of desugaring are there? Can there be
+    more than one?
+  \item How \emph{safe} is it? Can desugaring produce syntactically
+    invalid code? Can it produce an unbound variable, or accidentally
+    capture a variable? Can it produce code that contains a type error?
+\end{enumerate}
+
+There is one big cluster of desugaring systems that should be called
+out by name: macro systems. They can be loosely defined as:
+\begin{quote}
+  \emph{Macros} are user-defined sugars.
+\end{quote}
+In practice, macro systems tend to share several features: (i) by
+definition, they are user-defined; (ii) the metalanguage is the
+programming language itself [CHECK]; and (iii) the evaluation order is
+usually outside-in [CHECK]. [CHECK: others?]
+
+\subsection{Syntax Representation}
+
+There are many ways to represent a program. The most prevalent are as
+\emph{text} and as a \emph{tree}. Programs are most commonly
+\emph{saved as} and \emph{edited as} text (notable exceptions include
+visual and block based language/editors), and they are most commonly
+\emph{internally represented as} trees (notable exceptions include
+assembly, whose code is linear, and Forth, which does not have a
+parsing phase).
+
+Desugaring systems may be based on either representation.
+\emph{However, text is a terrible representation for desugaring rules.}
+The semantics of a language is almost always defined in terms of its
+(abstract syntax) tree representation. Thus, insofar as a programmer
+as a programmer is forced to think of their program as text rather
+than as a tree, they are being distracted from its semantics. There
+are well-known examples of bugs that arise in text-based desugaring
+rules unless they are written in a very defensive style: I discuss
+these in \ref{sec:cpre}.
+
+There are variations among tree representations as well: desugaring
+rules may work over the concrete syntax of the language, or over its
+abstract syntax. I discuss this further in [REF].
+
+\subsection{Language-defined or User-defined}
+
+Sugars may either be specified and implemented as part of the
+language, or they may be defined by users. For example, Haskell list
+comprehensions are defined by the Haskell spec [CITE] and implemented
+in the compiler(s); thus they are language-defined. Template Haskell
+sugars [CITE], on the other hand, can be defined (and used) in any
+Haskell program; thus they are user-defined. The difference between the two
+is whether sugar is only a convenient method of simplifying language
+design, or whether users are given the power to extend the language
+themselves.
+
+When sugars are user-defined, it raises difficulties with tools such
+as editors that need to support the new syntax. For example, if sugars
+are language-defined then an editor can just support the full
+language. If they are user-defined, however, how can an editor provide
+correct indentation, syntax highlighting, etc.?
+
+Different languages work around this problem in different ways. Lisps
+mostly avoid the problem by mostly not having syntax. They don't
+\emph{entirely} avoid the problem, though. For example, the DrRacket editor for
+Racket [CITE] allows indentation schemes to be set on a per-macro
+basis (because different syntactic forms, while purely parenthetical,
+still have varying nesting patterns that should be indented
+differently), and it displays arrows showing where variables are bound
+by being macro-aware and expanding the program (see [REF]).
+[FILL: SugarJ, other examples]
+
+[FILL: resugaring in general]
+
+[TODO: macro-defining-macros]
+
+
+\subsection{Metalanguage}
+
+
+\subsection{Evaluation Strategy}
+% https://dl.acm.org/citation.cfm?id=1440085
+% GRAMMARS WITH MACRO-LIKE PRODUCTIONS (Fischer)
+
+There are two major evaluation strategies used in desugaring systems.
+They loosely correspond to eager and lazy runtime evaluation, but
+differ in some important ways described below, so I will instead refer
+to them by their original names [CITE]: Outside-in (\textsc{oi}) and
+Inside-out (\textsc{io}) evaluation:
+\begin{description}
+\item[\textsc{oi}] evaluation is similar to lazy evaluation.
+  However, it has an unusual property: [FILL]
+\item[\textsc{io}] evaluation is similar to eager evaluation. It has [FILL]
+\end{description}
+
+\subsection{Number of Phases}
+
+\subsection{Safety} [TODO]: AST safety, scope-safety, type-safety

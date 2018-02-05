@@ -1,0 +1,169 @@
+\chapter{Desugaring in the Wild}
+
+.[TODO: State version of each system discussed]
+
+\section{C Preprocessor} \label{sec:cpre}
+
+
+\desc{Evaluation Strategy} IO
+
+\desc{Authorship} User-defined
+
+\desc{Representation} Token stream
+
+\desc{Safety} [FILL]
+
+% https://gcc.gnu.org/onlinedocs/cpp/
+% Not Turing complete: https://gcc.gnu.org/onlinedocs/cpp/Self-Referential-Macros.html
+% Evaluation strategy: https://gcc.gnu.org/onlinedocs/cpp/Macro-Arguments.html
+\desc{Discussion}
+The C Preprocessor (hereafter \textsc{cpp}) [CITE] is a \emph{text
+  preprocessor}: a source-to-source transformation that operates at
+the level of text. (More precisely, it operates on a token stream, in
+which the tokens are approximately those of the C language). It is
+usually run before compilation for C or C++ programs, but it is not
+very language specific, and can be used for other purposes as well.
+\textsc{Cpp} is not Turing complete, by a simple mechanism: if a macro
+invokes itself (directly or indirectly), the recursive invocation
+will not be expanded.
+
+%https://stackoverflow.com/questions/14041453/why-are-preprocessor-macros-evil-and-what-are-the-alternatives
+A number of issues arise from the fact that \textsc{cpp} operates on tokens, and
+is thus unaware of the higher-level syntax of C [CITE].
+As an example, consider this innocent looking
+\textsc{cpp} desugaring rule that defines an alias for subtraction:
+\begin{codes}
+  #define SUB(a, b) a - b
+\end{codes}
+This rule is completely broken. Suppose it is used as follows:
+\begin{codes}
+  SUB(0, 2 - 1))
+\end{codes}
+This will expand to \code{0 - 2 - 1} and evaluate to \code{-3}.
+We can revise the rule to fix this:
+\begin{codes}
+  #define SUB(a, b) (a) - (b)
+\end{codes}
+This will fix the last example, but it is still broken. Consider:
+\begin{codes}
+  SUB(5, 3) * 2
+\end{codes}
+This will expand to \code{5 - 3 * 2} and evaluate to \code{-1}.
+The rule can be fully fixed by another set of parentheses:
+\begin{codes}
+  #define SUB(a, b) ((a) - (b))
+\end{codes}
+In general, both the inside boundary of a rule (the arguments \code{a}
+and \code{b}), and the outside boundary (the whole \textsc{rhs}) need
+to be protected to ensure that the expansion is parsed correctly. If
+the sugar is used in expression position, as in the \code{SUB}
+example, this can be done with parentheses. In other positions,
+different tricks must be used: e.g., a rule meant to be used in
+statement position can be wrapped in \code{do \{...\} while(0)}.
+Software developers should not need to know this.
+
+There are other issues that arise with text-based transformations as
+well, such as variable capture. Furthermore, all of these issues are
+inherent to text-based transformations, and essentially cannot be
+fixed from within the paradigm. \emph{Overall, code transformations
+  should never operate at the level of text.}
+
+\section{C++ Templates} \label{sec:cpp}
+
+\desc{Representation} Concrete Syntax
+
+\desc{Authorship} User-defined
+
+\desc{Evaluation Strategy} IO
+
+\desc{Safety} [FILL]
+
+% http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
+\desc{Discussion} C++ templates [CITE] are not general-purpose sugars,
+because they cannot take code as an argument.  Instead, they are used
+primarily to instantiate polymorphic code by replacing type parameters
+with concrete types.  Let's use the following template declaration,
+taken from [CITE: pg344], as a running example. It declares a function
+to compute the area of a circle, that can be instantiated with
+different possible (presumably numeric) types \code{T}:
+\begin{codes}
+template<class T>
+T circular_area(T r) \{
+  return pi<T> * r * r;
+\}
+\end{codes}
+
+Besides function definitions, several other kinds of declarations can
+be templated, including methods, classes, structs, and type aliases.
+The behavior of each is similar. A template may be invoked by passing
+arguments in angle brackets. An invoked template acts like the
+kind of thing the template declared, and can be used in the same
+positions. Thus, e.g., a \code{struct} template should be invoked in type
+position; and our running function template example should be invoked
+in expression position to make a function, which can then be called:
+\begin{codes}
+  float area = circular_area<float>(1);
+\end{codes}
+When a template is invoked like this, a copy of the template
+definition is made, with the template parameters replaced with the
+concrete arguments.\marginpar{
+  If a template is invoked multiple times with the same parameters,
+  only one copy of the code will be made, however.
+}
+In our example, this produces the code:
+\begin{codes}
+float circular_area(float r) \{
+  return pi<float> * r * r;
+\}
+\end{codes}
+
+So far we have only described type parameters, but templates can also
+take other kinds of parameters, including primitive values (such as
+numbers) and other templates. The ability to manipulate numbers and
+invoke other templates at compile time make C++ templates powerful
+and, unsurprisingly, Turing complete. However, templates \emph{cannot}
+be parameterized over code, and thus are not general-purpose sugars.
+For example, most of the examples in this thesis cannot be written as
+C++ templates.
+
+Template expansion uses IO evaluation order. This is important because
+it is possible
+to define both a generic template, that applies most of the time, and
+a specialized template, that applies if a parameter has a particular
+value. For example, this could be used to make a \code{HashMap} use a different
+implementation if its keys are \code{int}s. Thus it is important that
+a template see the concrete type (e.g. \code{int}) that is passed to
+it, even if this type is the result of another template expansion.
+
+
+\section{Rust Macros} \label{sec:rust}
+
+\desc{Representation} Concrete Syntax
+
+\desc{Authorship} User-defined
+
+\desc{Evaluation Strategy} OI
+
+\desc{Safety} [FILL]
+
+%https://doc.rust-lang.org/1.2.0/book/macros.html
+\desc{Discussion}
+
+
+\section{Haskell Templates} \label{sec:haskell}
+
+\desc{Representation} Concrete or Abstract Syntax
+
+\desc{Authorship} User-defined
+
+\desc{Evaluation Strategy} IO
+
+\desc{Safety} AST safe. Scope unsafe. Type unsafe.
+
+%https://hackage.haskell.org/package/template-haskell-2.10.0.0/docs/Language-Haskell-TH-Syntax.html#t:Lit
+%https://stackoverflow.com/questions/10857030/whats-so-bad-about-template-haskell
+\desc{Discussion}
+NOTES:
+\begin{itemize}
+  \item Must be defined in separate file
+\end{itemize}
