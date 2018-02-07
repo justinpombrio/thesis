@@ -49,6 +49,7 @@
 % More nice things
 \usepackage{cleveref}
 \usepackage{color}
+%\usepackage{inconsolata}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -107,17 +108,15 @@
   {\begin{alltt}\leftskip=1.5em} % \small
   {\end{alltt}}
 
-% PL Formatting
-\newcommand{\TypeLabel}[2]{
-  \setlength{\fboxsep}{2pt}\fbox{$#1 \mapsto #2$}
-}
-
 % PL Notation
 \newcommand{\CoreStep}{{\rule{0pt}{1.2\baselineskip}{\ensuremath\longrightarrow}}}
 \newcommand{\SurfStep}{{\rule{0pt}{1.2\baselineskip}{\ensuremath\dashrightarrow}}}
-% (inference rules)
+% Inference Rules
 \newcommandx*{\Inference}[3][1=\empty]{\inference[#1]{#2}{#3}\vspace{1.5em}}
 \newcommand{\IS}{\vspace{0.25em}} % Not enough space by default...
+\newcommand{\TypeLabel}[1]{
+  \setlength{\fboxsep}{3pt}\fbox{$#1$}~\\
+}
 
 % Judgements
 \newcommand{\SaysSubs}[4]{#1 \vdash #2 \bullet #3 = #4}
@@ -191,6 +190,8 @@
 % Math Terminology
 \newcommand{\Domain}[1]{\ConstrIt{domain}{#1}}
 
+% Resugaring Terminology
+\newcommand{\Tool}{\textit{Resugarer}\xspace}
 
 
 
@@ -216,7 +217,12 @@
 \part{Desugaring for Pyret}
 \include{chapters/desugaring-for-pyret}
 \part{Resugaring}
-
+\include{chapters/resugar-eval}
+% Chapter: Resugaring steps
+% Chapter: Resugaring scope
+% Chapter: Resugaring types
+% Chapter: Implementation
+% Chapter: Conclusion/future work
 
 
 

@@ -1,0 +1,187 @@
+\chapter{Resugaring Evaluation Sequences}
+
+In this chapter, we tackle the challenge of combining syntactic sugar
+with semantics[CITE, CITE]. Given a set of desugaring rules, of the
+form shown in [REF], we show how to \emph{resugar program execution}:
+to \emph{automatically} convert an evaluation sequence in the core
+language into a representative evaluation sequence in the surface
+syntax. Each step in the surface language emulates one or more steps
+in the core language. The computed steps hide the transformation, thus
+maintaining the abstraction provided by the surface language.
+
+The chief challenge is to remain faithful to the original
+semantics---we can't change the meaning of a program!---and to ensure
+that the internals of the code introduced by the syntactic sugar does
+not leak into the output. Our chief mechanisms for achieving this are
+to (i) perform static checks on the desugaring definitions to ensure
+they fall into the subset we can handle [TODO], and (ii) rewrite the
+reduction relation with instrumentation to track the origin of terms.
+These ideas are implemented in \Tool [LINK] (see also our prototypes from
+prior publications [LINK, LINK]), and we formally verify key properties
+of our approach, given simplifying assumptions, in the Coq proof
+assistant.
+
+
+\section{Our Approach}
+
+We aim to compute sensible evaluation sequences in a surface language,
+while remaining faithful to the core language's semantics.  One approach
+would be to attempt to construct a lifted (to the surface language)
+reduction-relation directly. It is unclear, however, how to do this
+without making deep assumptions about the core language evaluator
+(for instance, assuming that it is defined as a term-rewriting system that can be composed
+with desugaring).
+
+Our approach instead makes minimal assumptions about the
+evaluator, treating it as a black-box (since it is often a complex
+program that we may not be able to modify).
+We assume only that we have access to a \emph{stepper} that
+provides a sequence of evaluation steps (augmented with some
+meta information) in the \emph{core} language. In 
+\cref{sec:reval-lang} we show how to obtain such a stepper from a generic,
+black-box
+evaluator with a strategy that can be implemented by pre-processing
+the program before evaluation.
+
+Our high-level approach is to follow the evaluation steps in the core
+language, find surface-level representations of some of the core
+terms, and emit them. Not every core-level term will have a
+surface-level representation; these steps will be skipped in the
+output. The evaluation sequence shown, then, is the sequence of
+surface-level representations of the core terms that were not
+skipped. Central to this approach are three properties:
+
+\begin{description}
+\item[Emulation] Each term in the generated surface evaluation
+  sequence desugars into the core term which it is meant to represent
+  (up to term isomorphism).
+\item[Abstraction] Code introduced by desugaring is never revealed in the
+  surface evaluation sequence, and code originating from the original
+  input program is never hidden by resugaring.
+\item[Coverage] Resugaring is attempted on every core step, and as few
+  core steps are skipped as possible.
+\item[Hygiene] [FILL]
+\end{description}
+[TODO: preview more precise definitions?]
+
+\section{Informal Solution Overview}
+\label{sec:reval-exposition}
+
+We first present the techniques used by our solution, and some subtleties,
+informally. We choose a familiar desugaring example: the rewriting
+of \Code{Or}, as used in languages like Lisp and Scheme. We assume
+the surface language has \Code{Or} as a construct, while the core does
+not. We present our examples using a traditional infix concrete syntax.
+
+% Unexpansion
+\subsection{Finding Surface Representations Preserving Emulation}
+
+We start by defining a simple, binary version of \Code{Or} (that
+let-binds its first argument in case it has side-effects):
+\begin{Codes}
+Or(x, y) -> Let([Binding("t", x)],
+                If(Id("t"), Id("t"), y)));
+\end{Codes}
+[TODO: Update example and remove this paragraph]
+This is the actual transformation syntax processed by [TODO]
+inspired by that of Stratego~\cite{stratego}.
+Nodes' names are written in title-case and their subnodes follow in parentheses,
+lists are surrounded by square brackets, and variables are written in
+lowercase. We call the whole production a \emph{transformation rule}, or
+\emph{rule} for short; the
+part to the left of the arrow is its
+\emph{\Sc{lhs}} (left-hand-side), and the part after the arrow its
+\emph{\Sc{rhs}}.
+When the \Sc{lhs} of a rule matches a term, this induces
+bindings for the variables in the \Sc{lhs}, which are then substituted
+in the \Sc{rhs}. The full definition of transformations is given
+in \cref{sec:reval-transformations}.
+In this section we focus on abstract syntax and ignore
+the mapping to it from concrete syntax.
+
+Consider the surface term \Code{not(true) OR not(false)}. After
+desugaring, this would evaluate as follows in the core language
+(assuming a typical call-by-value evaluator):
+\begin{Codes}
+    let t = not(true) in
+      if t then t else not(false)
+\CoreStep let t = false in
+      if t then t else not(false)
+\CoreStep if false then false else not(false)
+\CoreStep not(false)
+\CoreStep true
+\end{Codes}
+In the surface language, we would wish to see this as (using dashed
+arrows to denote reconstructed steps):
+\begin{Codes}
+    not(true) OR not(false)
+\SurfStep false OR not(false)
+\SurfStep not(false)
+\SurfStep true
+\end{Codes}
+The first two terms in the core evaluation sequence are precisely the
+expansions of the first two steps in the (hypothetical) surface evaluation
+sequence. This suggests
+we can \emph{unexpand} core terms into surface terms by running rules ``in
+reverse'': matching against the \Sc{rhs} and substituting into the
+corresponding \Sc{lhs}.
+(To preserve emulation, unexpansion must be an inverse of expansion: we
+prove that this is so in \cref{sec:reval-inverses}.)
+We will now show how the last two steps
+may come about.
+
+\subsection{Maintaining Abstraction}
+\label{sec:reval-exposition-tagging}
+
+When unexpanding, we should only unexpand code that
+originated from a transformation. If the surface program itself is
+\begin{Codes}
+let t = not(true) in
+  if t then t else not(false)
+\end{Codes}
+it should not unexpand into \Code{not(true) OR not(false)}:
+this would be confusing and break the second clause of the Abstraction property.
+
+We therefore augment each subterm in a core term
+with a list of \emph{tags}, which indicate whether a term
+originated in the original source or from the transformation.%
+\footnote{Whereas the tags used in hygienic macro
+  expansion~\cite{hygienic-macros} specify time steps,
+  the tags in resugaring specify which sugar the
+  code originated from.}
+Unexpansion attempts to process terms marked as
+originating from a transformation rule; this
+unexpansion will fail if the tagged term no longer has the form of
+the rule's \Sc{rhs}. When that happens, we conclude that there is no
+surface representation of the core term and skip the step.
+
+To illustrate this, we revisit the same core evaluation sequence as
+before. Compound terms that originated from the source are underlined, and
+``\Code{Or: }'' is a tag on the desugared expression that indicate it
+originated from the \Code{Or} sugar:
+\begin{Codes}
+    \{Or: let t = \underline{not(true)} in
+      if t then t else \underline{not(false)}\}
+\CoreStep \{Or: let t = false in
+      if t then t else \underline{not(false)}\}
+\CoreStep \{Or: if false then false else \underline{not(false)}\}
+\CoreStep \underline{not(false)}
+\CoreStep true
+\end{Codes}
+The tags on the first three steps suggest that \Code{Or}'s transformation
+rule be applied in reverse. The first two steps can be unexpanded because
+they match the \Sc{rhs} of \Code{Or}, whereas the third
+does not match the \Sc{rhs} and is therefore skipped,
+yielding no surface step.  The last two steps are not tagged and are
+therefore included in the surface evaluation sequence as-is.
+
+
+\section{SCRATCH}
+
+If a term is shown in the reconstructed surface evaluation sequence, then
+each non-atomic part of it originated from the original program and
+has honest tags. (Assuming that evaluation does not modify tags.)
+
+%If $\Desugar{C} \stepsCore \Desugar{C'}$,
+%then $\forall E,t_1,...,t_k$,
+%$E[C[t_1,...,t_k]] \stepsSurf E[C'[t_1,...,t_k]]$

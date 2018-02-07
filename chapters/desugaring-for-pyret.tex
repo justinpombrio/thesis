@@ -174,7 +174,7 @@ desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
 \subsection{Matching and Substitution}
 
 \begin{figure}
-\fbox{$\SaysMatch{F}{e}{p}{\gamma}$}
+\TypeLabel{\SaysMatch{F}{e}{p}{\gamma}}
 \begin{multicols}{2}
   \Inference[m-pvar]{}{
     \SaysMatch{F}{e}{\PVarA}{\{\PVarA \mapsto e\}}
@@ -223,7 +223,7 @@ desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
   \SaysMatch{F}{[e_1 ... e_n]}{[\Rep{p}{l}]}{\{l \mapsto [\gamma_1 ... \gamma_n]\}}
 }
 
-\fbox{$\SaysSubs{F}{\gamma}{p}{e}$}
+\TypeLabel{\SaysSubs{F}{\gamma}{p}{e}}
 \begin{multicols}{2}
   \Inference[s-pvar]{
     \PVarA \mapsto e \in \gamma
@@ -362,7 +362,7 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
 
 \begin{figure}
 
-\fbox{$\SaysExpr{L}{e}{t}$}
+\TypeLabel{\SaysExpr{L}{e}{t}}
 
 \begin{multicols}{2}
   
@@ -399,7 +399,7 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
   }
 \end{multicols}
 
-\fbox{$\SaysPatt{L}{\Gamma}{p}{t}$}
+\TypeLabel{\SaysPatt{L}{\Gamma}{p}{t}}
 
 \begin{multicols}{2}
 
@@ -453,7 +453,7 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
   }
 \end{multicols}
 
-\fbox{$\SaysRule{L}{m}{t,...,t}{t}$}
+\TypeLabel{\SaysRule{L}{m}{t,...,t}{t}}
 \Inference[g-sugar]{
   \DsRuleFancy
       {m}
@@ -469,7 +469,7 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
   \SaysRule{L}{m}{t_1,...,t_n}{t}
 }
 
-\fbox{$\SaysEnv{L}{\gamma}{\Gamma}$}
+\TypeLabel{\SaysEnv{L}{\gamma}{\Gamma}}
 \Inference[$\gamma$-env]{
   \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{e_n}{t_n} \\
   \SaysEnv{L}{\gamma_{11}}{\Gamma_1} \;\cdots\; \SaysEnv{L}{\gamma_{1j}}{\Gamma_1} \\
@@ -751,11 +751,11 @@ halts.
 (See \cref{fig:scope}.)
 
 \begin{figure}
-\fbox{$\SaysScope{\Sigma}{e}
+\TypeLabel{\SaysScope{\Sigma}{e}
   {\{\Decl{x}\}}
   {\{\Refn{x}\}}
   {\{\Decl{x}\}}
-  {\{\Refn{x}\mapsto\Decl{x}\}}$}
+  {\{\Refn{x}\mapsto\Decl{x}\}}}
 
 \Inference[scope-e-decl]{}{
   \SaysScope{\Sigma}{\Decl{x}}{\{\Decl{x}\}}{\{\}}{\{\Decl{x}\}}{\{\}}
