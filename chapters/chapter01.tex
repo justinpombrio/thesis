@@ -51,7 +51,7 @@ we can just look for things that most programming languages
     variable is bound to will be passed instead). Therefore, creating
     new binding constructs is a good use for syntactic sugar in most
     languages. However, in R[CITE] variable names can be abstracted
-    over (e.g. \code{assign("x", 3); x} prints 3), and so sugar isn't
+    over (e.g. \Code{assign("x", 3); x} prints 3), and so sugar isn't
     necessary for this purpose.
   \item Most languages force the arguments to a function to be
     evaluated when it is called, rather than allowing the function to
@@ -64,10 +64,10 @@ we can just look for things that most programming languages
     new data definition constructs (e.g., a way to define state
     machines) is a good use case for sugars. However, in Python field
     names are first class (e.g., they can be added or assigned using
-    \code{setattr}), so sugars are not needed to abstract over fields
+    \Code{setattr}), so sugars are not needed to abstract over fields
     in data definitions.
     % e.g.:
-    %\code{class C: pass; c = C(); setattr(c, ``x'', 3); print(c.x)}
+    %\Code{class C: pass; c = C(); setattr(c, ``x'', 3); print(c.x)}
     \footnote{
     It may sound like I am suggesting that everything should be
     manipulatable at run-time. I am not. The more

@@ -5,18 +5,18 @@
 \section{C Preprocessor} \label{sec:cpre}
 
 
-\desc{Evaluation Strategy} IO
+\Desc{Evaluation Strategy} IO
 
-\desc{Authorship} User-defined
+\Desc{Authorship} User-defined
 
-\desc{Representation} Token stream
+\Desc{Representation} Token stream
 
-\desc{Safety} [FILL]
+\Desc{Safety} [FILL]
 
 % https://gcc.gnu.org/onlinedocs/cpp/
 % Not Turing complete: https://gcc.gnu.org/onlinedocs/cpp/Self-Referential-Macros.html
 % Evaluation strategy: https://gcc.gnu.org/onlinedocs/cpp/Macro-Arguments.html
-\desc{Discussion}
+\Desc{Discussion}
 The C Preprocessor (hereafter \textsc{cpp}) [CITE] is a \emph{text
   preprocessor}: a source-to-source transformation that operates at
 the level of text. (More precisely, it operates on a token stream, in
@@ -32,34 +32,34 @@ A number of issues arise from the fact that \textsc{cpp} operates on tokens, and
 is thus unaware of the higher-level syntax of C [CITE].
 As an example, consider this innocent looking
 \textsc{cpp} desugaring rule that defines an alias for subtraction:
-\begin{codes}
+\begin{Codes}
   #define SUB(a, b) a - b
-\end{codes}
+\end{Codes}
 This rule is completely broken. Suppose it is used as follows:
-\begin{codes}
+\begin{Codes}
   SUB(0, 2 - 1))
-\end{codes}
-This will expand to \code{0 - 2 - 1} and evaluate to \code{-3}.
+\end{Codes}
+This will expand to \Code{0 - 2 - 1} and evaluate to \Code{-3}.
 We can revise the rule to fix this:
-\begin{codes}
+\begin{Codes}
   #define SUB(a, b) (a) - (b)
-\end{codes}
+\end{Codes}
 This will fix the last example, but it is still broken. Consider:
-\begin{codes}
+\begin{Codes}
   SUB(5, 3) * 2
-\end{codes}
-This will expand to \code{5 - 3 * 2} and evaluate to \code{-1}.
+\end{Codes}
+This will expand to \Code{5 - 3 * 2} and evaluate to \Code{-1}.
 The rule can be fully fixed by another set of parentheses:
-\begin{codes}
+\begin{Codes}
   #define SUB(a, b) ((a) - (b))
-\end{codes}
-In general, both the inside boundary of a rule (the arguments \code{a}
-and \code{b}), and the outside boundary (the whole \textsc{rhs}) need
+\end{Codes}
+In general, both the inside boundary of a rule (the arguments \Code{a}
+and \Code{b}), and the outside boundary (the whole \textsc{rhs}) need
 to be protected to ensure that the expansion is parsed correctly. If
-the sugar is used in expression position, as in the \code{SUB}
+the sugar is used in expression position, as in the \Code{SUB}
 example, this can be done with parentheses. In other positions,
 different tricks must be used: e.g., a rule meant to be used in
-statement position can be wrapped in \code{do \{...\} while(0)}.
+statement position can be wrapped in \Code{do \{...\} while(0)}.
 Software developers should not need to know this.
 
 There are other issues that arise with text-based transformations as
@@ -70,44 +70,44 @@ fixed from within the paradigm. \emph{Overall, code transformations
 
 \section{C++ Templates} \label{sec:cpp}
 
-\desc{Representation} Concrete Syntax
+\Desc{Representation} Concrete Syntax
 
-\desc{Authorship} User-defined
+\Desc{Authorship} User-defined
 
-\desc{Evaluation Strategy} IO
+\Desc{Evaluation Strategy} IO
 
-\desc{Safety} [FILL]
+\Desc{Safety} [FILL]
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
-\desc{Discussion} C++ templates [CITE] are not general-purpose sugars,
+\Desc{Discussion} C++ templates [CITE] are not general-purpose sugars,
 because they cannot take code as an argument. Thus you cannot, for
-example, express a sugar that takes an expression \code{e} and expands
-it to \code{e + 1}.
+example, express a sugar that takes an expression \Code{e} and expands
+it to \Code{e + 1}.
 
 Instead, C++ templates are used
 primarily to instantiate polymorphic code by replacing type parameters
 with concrete types.  Let's use the following template declaration,
 taken from [CITE: pg344], as a running example. It declares a function
 to compute the area of a circle, that can be instantiated with
-different possible (presumably numeric) types \code{T}:
-\begin{codes}
+different possible (presumably numeric) types \Code{T}:
+\begin{Codes}
 template<class T>
 T circular_area(T r) \{
   return pi<T> * r * r;
 \}
-\end{codes}
+\end{Codes}
 
 Besides function definitions, several other kinds of declarations can
 be templated, including methods, classes, structs, and type aliases.
 The behavior of each is similar. A template may be invoked by passing
 arguments in angle brackets. An invoked template acts like the
 kind of thing the template declared, and can be used in the same
-positions. Thus, e.g., a \code{struct} template should be invoked in type
+positions. Thus, e.g., a \Code{struct} template should be invoked in type
 position; and our running function template example should be invoked
 in expression position to make a function, which can then be called:
-\begin{codes}
+\begin{Codes}
   float area = circular_area<float>(1);
-\end{codes}
+\end{Codes}
 When a template is invoked like this, a copy of the template
 definition is made, with the template parameters replaced with the
 concrete arguments.\marginpar{
@@ -115,11 +115,11 @@ concrete arguments.\marginpar{
   only one copy of the code will be made, however.
 }
 In our example, this produces the code:
-\begin{codes}
+\begin{Codes}
 float circular_area(float r) \{
   return pi<float> * r * r;
 \}
-\end{codes}
+\end{Codes}
 
 So far we have only described type parameters, but templates can also
 take other kinds of parameters, including primitive values (such as
@@ -134,39 +134,39 @@ Template expansion uses IO evaluation order. This is important because
 it is possible
 to define both a generic template, that applies most of the time, and
 a specialized template, that applies if a parameter has a particular
-value. For example, this could be used to make a \code{HashMap} use a different
-implementation if its keys are \code{int}s. Thus it is important that
-a template see the concrete type (e.g. \code{int}) that is passed to
+value. For example, this could be used to make a \Code{HashMap} use a different
+implementation if its keys are \Code{int}s. Thus it is important that
+a template see the concrete type (e.g. \Code{int}) that is passed to
 it, even if this type is the result of another template expansion.
 
 
 \section{Rust Macros} \label{sec:rust}
 
-\desc{Representation} Concrete Syntax
+\Desc{Representation} Concrete Syntax
 
-\desc{Authorship} User-defined
+\Desc{Authorship} User-defined
 
-\desc{Evaluation Strategy} OI
+\Desc{Evaluation Strategy} OI
 
-\desc{Safety} [FILL]
+\Desc{Safety} [FILL]
 
 %https://doc.rust-lang.org/1.2.0/book/macros.html
-\desc{Discussion}
+\Desc{Discussion}
 
 
 \section{Haskell Templates} \label{sec:haskell}
 
-\desc{Representation} Concrete or Abstract Syntax
+\Desc{Representation} Concrete or Abstract Syntax
 
-\desc{Authorship} User-defined
+\Desc{Authorship} User-defined
 
-\desc{Evaluation Strategy} IO
+\Desc{Evaluation Strategy} IO
 
-\desc{Safety} AST safe. Scope unsafe. Type unsafe.
+\Desc{Safety} \Sc{ast} safe. Scope unsafe. Type unsafe.
 
 %https://hackage.haskell.org/package/template-haskell-2.10.0.0/docs/Language-Haskell-TH-Syntax.html#t:Lit
 %https://stackoverflow.com/questions/10857030/whats-so-bad-about-template-haskell
-\desc{Discussion}
+\Desc{Discussion}
 NOTES:
 \begin{itemize}
   \item Must be defined in separate file

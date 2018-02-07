@@ -21,80 +21,39 @@
   american
 ]{scrbook}
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Packages
+
 \usepackage[T1]{fontenc}
 \usepackage[
   linedheaders=true,
   parts=true
 ]{classicthesis/classicthesis} % ,manychapters
 
+% More symbols
 \usepackage{amsthm}
 \usepackage{amsmath}
 \usepackage{amssymb}
+% More commands
 \usepackage{xargs}
 \usepackage{xspace}
-\usepackage{semantic}
-\usepackage{cleveref}
-\usepackage{color}
-\usepackage{alltt}
+\usepackage{xifthen}
+% More environments
 \usepackage{listings}
 \usepackage{multicol}
+\usepackage{alltt}
+\usepackage{semantic}
 \usepackage{bussproofs}
+% More nice things
+\usepackage{cleveref}
+\usepackage{color}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Settings
 
-% Theorems
-\newtheorem{definition}{Definition}
-\newtheorem{theorem}{Theorem}
-\newtheorem{lemma}{Lemma}
-\newtheorem{assumption}{Assumption}
-
-\lstset{basicstyle=\ttfamily,breaklines=true}
-\lstset{framextopmargin=50pt,frame=bottomline}
-
-% Formatting
-\newcommand{\desc}[1]{\noindent\textit{#1:} }
-\newenvironment{jtable}
-{\begin{center}\begin{tabular}{l l l @{\quad}l}}
-{\end{tabular}\end{center}}
-               
-
-% Common math notation
-\newcommand{\ddd}{\;\dots\;}
-\newcommand{\dd}{\,...\,}
-
-% Common math notation
-\newcommand{\Exists}[1]{\exists{#1}.\,\,}
-\newcommand{\ExistsUnique}[1]{\exists!{#1}.\,\,}
-\newcommand{\NotExists}[1]{\not\exists{#1}.\,\,}
-\newcommand{\Forall}[1]{\forall{#1}.\,\,}
-\newcommand{\NotForall}[1]{\not\forall{#1}.\,\,}
-\newcommand{\SetSuchThat}[2]{\{#1 \;|\; #2\}}
-\newcommand{\domain}[1]{\textit{domain}(#1)}
-\newcommand{\DisjUnion}{\,\dot\cup\,}
-\newcommand{\To}{\Rightarrow}
-
-% Common code notation
-\newcommand{\code}[1]{\texttt{#1}}
-\newenvironment{codes}
-  {\begin{alltt}\leftskip=1.5em} % \small
-  {\end{alltt}}
-
-% Math names
-\newcommand{\op}[2]{\textit{#1}(#2)}
-\newcommand{\opName}[1]{\textit{#1}}
-\newcommand{\name}[1]{\textit{#1}}
-\newcommand{\constName}[1]{\texttt{#1}}
-
-% Expressions & Grammars
-\newcommand{\lit}[1]{\textbf{#1}}
-\newcommand{\expr}[2]{(#1\,#2)}
-\newcommand{\var}[1]{\textrm{\textsc{#1}}}
-
-% Grammars
-\newcommand{\exprs}[3]{(#1\,#2\,#3^{*})}
-\newcommand{\production}[2]{#1 \leftarrow #2}
-\newcommand{\saysG}[3]{#1 \vdash #2\,:\,#3}
-
+% Colors
 \definecolor{goodRed}{rgb} {0.70, 0.37, 0.41} % LAB (50, 35, 10)
 \definecolor{goodBlue}{rgb}{0.04, 0.50, 0.70} % LAB (50, -10, -35)
 \hypersetup{
@@ -103,7 +62,145 @@
   %linkcolor=goodRed
   citebordercolor=goodBlue,
   linkbordercolor=goodRed
-  }
+}
+
+% LstListing
+\lstset{basicstyle=\ttfamily,breaklines=true}
+\lstset{framextopmargin=50pt,frame=bottomline}
+
+% Theorems
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{assumption}{Assumption}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Commands
+
+% General Formatting
+\newcommand{\Sc}[1]{\textsc{#1}\xspace}
+\newcommand{\Desc}[1]{\noindent\textit{#1:} }
+\newenvironment{Table}
+  {\begin{center}\begin{tabular}{l l l @{\quad}l}}
+  {\end{tabular}\end{center}}
+\newenvironment{ProofTable}
+  {~\\\begin{tabular}{r l @{\quad} l}}
+  {\end{tabular}~\\}
+
+% Math Notation
+\newcommand{\ddd}{\;\dots\;}
+\newcommand{\dd}{\,...\,}
+\newcommand{\Exists}[1]{\exists{#1}.\,\,}
+\newcommand{\ExistsUnique}[1]{\exists!{#1}.\,\,}
+\newcommand{\NotExists}[1]{\not\exists{#1}.\,\,}
+\newcommand{\Forall}[1]{\forall{#1}.\,\,}
+\newcommand{\NotForall}[1]{\not\forall{#1}.\,\,}
+\newcommand{\SetSuchThat}[2]{\{#1 \;|\; #2\}}
+\newcommand{\DisjUnion}{\,\dot\cup\,}
+\newcommand{\To}{\Rightarrow}
+
+% Code notation
+\newcommand{\Code}[1]{\texttt{#1}}
+\newenvironment{Codes}
+  {\begin{alltt}\leftskip=1.5em} % \small
+  {\end{alltt}}
+
+% PL Formatting
+\newcommand{\TypeLabel}[2]{
+  \setlength{\fboxsep}{2pt}\fbox{$#1 \mapsto #2$}
+}
+
+% PL Notation
+\newcommand{\CoreStep}{{\rule{0pt}{1.2\baselineskip}{\ensuremath\longrightarrow}}}
+\newcommand{\SurfStep}{{\rule{0pt}{1.2\baselineskip}{\ensuremath\dashrightarrow}}}
+% (inference rules)
+\newcommandx*{\Inference}[3][1=\empty]{\inference[#1]{#2}{#3}\vspace{1.5em}}
+\newcommand{\IS}{\vspace{0.25em}} % Not enough space by default...
+
+% Judgements
+\newcommand{\SaysSubs}[4]{#1 \vdash #2 \bullet #3 = #4}
+\newcommand{\SaysMatch}[4]{#1 \vdash #2 / #3 = #4}
+\newcommand{\SaysExpr}[3]{#1 \vdash #2 : #3}
+\newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
+\newcommand{\SaysRule}[4]{#1 \vdash #2 : #3 \to #4}
+\newcommand{\SaysEnv}[3]{#1 \vdash #2 : #3}
+\newcommand{\SaysStep}[3]{#1 \vdash #2 \rightsquigarrow #3}
+\newcommand{\SaysSteps}[3]{#1 \vdash #2 \rightsquigarrow^{*} #3}
+\newcommand{\SaysCase}[4]{#1 \vdash #2 \rightsquigarrow #3 \text{ by  case } #4}
+\newcommand{\SaysNotCase}[4]{#1 \not\vdash #2 \rightsquigarrow #3 \text{ by  case } #4}
+\newcommand{\SaysScope}[6]{#1 \vdash #2 : #3 ; #4 ; #5 ; #6}
+\newcommand{\SaysCanBind}[3]{#1 \vdash #2 \sim_{bind} #3}
+\newcommand{\SaysCanShadow}[3]{#1 \vdash #2 \sim_{shadow} #3}
+
+% Syntypes
+\newcommand{\TRefn}{\textrm{Refn}}
+\newcommand{\TDecl}{\textrm{Decl}}
+\newcommand{\TString}{\textrm{String}}
+
+% Scope
+\newcommand{\Bind}[3]{\texttt{bind } #3 \texttt{ in } #2 \ensuremath{\in #1}}
+\newcommand{\Prov}[2]{\texttt{provide } #2 \ensuremath{\in #1}}
+
+% Expressions
+\newcommand{\Core}[2]{\{#1\,#2\}}
+\newcommand{\Surf}[2]{(#1\,#2)}
+\newcommand{\Variable}[4]{
+  {#3}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
+\newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
+\newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
+% Patterns
+\newcommand{\PVarA}{\alpha}
+\newcommand{\PVarB}{\beta}
+\newcommand{\PVarC}{\gamma}
+% SeqPatterns
+\newcommand{\Cons}[2]{#1, #2}
+\newcommand{\Rep}[2]{#1\ {*}\_{#2}}
+% Desugaring Rules
+\newcommand{\DsRule}[2]{\Code{sugar}\;#1 = \{#2\}}
+\newcommand{\DsRuleFancy}[3]{\Code{sugar}\;#1 =
+  \begin{cases}
+    #2 \\
+    \quad ... \\
+    #3
+  \end{cases}
+}
+\newcommand{\DsRuleCase}[4]{#1;#2;#3 \To #4}
+% Environments
+\newcommand{\EmptyEnv}{\{\}}
+\newcommand{\ConsEnv}[3]{#1:#2,\,#3}
+% Substitutions
+\newcommand{\EmptySubs}{\{\}}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Terminology
+
+\newcommand{\Constr}[2]{\ifthenelse{\isempty{#2}}{#1}{#1(#2)}}
+\newcommand{\ConstrTt}[2]{\Constr{\texttt{#1}}{#2}}
+\newcommand{\ConstrIt}[2]{\Constr{\textit{#1}}{#2}}
+\newcommand{\ConstrCal}[2]{\Constr{\mathcal{#1}}{#2}}
+
+\newcommand{\ConstrSub}[3]{\ifthenelse{\isempty{#2}}{#1}{#1_{#2}(#3)}}
+\newcommand{\ConstrSubTt}[3]{\ConstrSub{\texttt{#1}}{#2}{#3}}
+\newcommand{\ConstrSubIt}[3]{\ConstrSub{\textit{#1}}{#2}{#3}}
+\newcommand{\ConstrSubCal}[3]{\ConstrSub{\mathcal{#1}}{#2}{#3}}
+
+% Math Terminology
+\newcommand{\Domain}[1]{\ConstrIt{domain}{#1}}
+
+
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Thesis
 
 
 \begin{document}
@@ -124,6 +221,18 @@
 
 \chapter{Appendix}
 
+
+% Expressions & Grammars
+\newcommand{\lit}[1]{\textbf{#1}}
+\newcommand{\expr}[2]{(#1\,#2)}
+\newcommand{\var}[1]{\textrm{\textsc{#1}}}
+
+% Grammars
+\newcommand{\exprs}[3]{(#1\,#2\,#3^{*})}
+\newcommand{\production}[2]{#1 \leftarrow #2}
+\newcommand{\saysG}[3]{#1 \vdash #2\,:\,#3}
+
+
 \subsection{Terms}
 
 We will call \textsc{ast} terms \emph{expressions} and write them in
@@ -131,12 +240,12 @@ s-expression form. Atomic terms are either variables or literals
 (i.e. syntactic constants), and compound terms are built with
 \emph{term constructors} $P$:
 
-\begin{jtable}
+\begin{Table}
   $e$
   &$::=$& $\lit{lit}$ &(literal) \\
   &$|$&   $\var{x}$ &(variable) \\
   &$|$&   $\expr{P}{e_1 ... e_n}$ &(\textsc{ast} node)
-\end{jtable}
+\end{Table}
 
 \subsection{Tree Grammars}
 
@@ -149,28 +258,28 @@ take the latter view.
 
 Definitionally, a tree grammar consists of a number of
 \emph{productions} that map \emph{nonterminals} $s$ to
-\name{patterns}:
-\begin{jtable}
+\emph{patterns}:
+\begin{Table}
   $G$
   &$::=$& $\left\{ \begin{array}{l}
-    \production{s_1}{\name{pattern}_1} \\
+    \production{s_1}{\emph{pattern}_1} \\
     \ddd \\
-    \production{s_n}{\name{pattern}_n}
+    \production{s_n}{\emph{pattern}_n}
     \end{array}\right.$ \\
   \\
-  $\name{pattern}$
+  $\emph{pattern}$
   &$::=$& $\expr{P}{s_1 \dd s_n}$ &(regular pattern) \\
   &$|$&
   $\exprs{P}{s_1 \dd s_n}{s_{n+1}}$
   &(ellipses pattern) \\
-  &$|$&   $\constName{literal}$ &(matches literals) \\
-  &$|$&   $\constName{var}$ &(matches variables)
-\end{jtable}
+  &$|$&   $\emph{literal}$ &(matches literals) \\
+  &$|$&   $\emph{var}$ &(matches variables)
+\end{Table}
 
 The \emph{meaning} of a tree grammar (again, we are viewing the
 grammar as a \emph{specification}) is that for each production
-``$\production{s}{\name{pattern}}$'', if a term matches the
-\name{pattern}, then it also matches the nonterminal $s$. Formally:
+``$\production{s}{\emph{pattern}}$'', if a term matches the
+\emph{pattern}, then it also matches the nonterminal $s$. Formally:
 
 \[
 \fbox{$\saysG{G}{e}{s}$}
@@ -180,12 +289,12 @@ grammar as a \emph{specification}) is that for each production
 \inference
     [G-literal]
     {}
-    {\saysG{G}{\lit{lit}}{\constName{literal}}}
+    {\saysG{G}{\lit{lit}}{\emph{literal}}}
 \quad
 \inference
     [G-variable]
     {}
-    {\saysG{G}{\var{x}}{\constName{variable}}}
+    {\saysG{G}{\var{x}}{\emph{variable}}}
 \]
     
 \[
