@@ -143,12 +143,15 @@
 \newcommand{\Prov}[2]{\texttt{provide } #2 \ensuremath{\in #1}}
 
 % Expressions
-\newcommand{\Core}[2]{\{#1\,#2\}}
-\newcommand{\Surf}[2]{(#1\,#2)}
+\newcommand{\Con}[2]{(\Variable{u}{}{C}{}\,#2)}
+\newcommand{\Core}[2]{(\Variable{u}{}{C}{core}\,#2)}
+\newcommand{\Aux}[2]{(\Variable{u}{}{C}{aux}\,#2)}
+\newcommand{\Surf}[2]{(\Variable{u}{}{C}{surf}\,#2)}
 \newcommand{\Variable}[4]{
   {#3}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
+\newcommand{\Const}{const}
 % Patterns
 \newcommand{\PVarA}{\alpha}
 \newcommand{\PVarB}{\beta}
@@ -211,6 +214,10 @@
 \title{Resugaring: Restoring the Abstractions that Syntactic Sugar is Supposed to Provide}
 \maketitle
 
+% Terminology (steal from ICFP resugar eval seq.):
+%   Core vs. Surface
+%   Declaration vs. Reference
+
 \part{Syntactic Sugar}
 \include{chapters/intro}
 \include{chapters/desugaring-systems}
@@ -219,6 +226,7 @@
 \part{Resugaring}
 \include{chapters/resugar-eval}
 % Chapter: Resugaring steps
+%   Must extend terms with values and tags!
 % Chapter: Resugaring scope
 % Chapter: Resugaring types
 % Chapter: Implementation

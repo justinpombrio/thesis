@@ -1,5 +1,66 @@
-\chapter{Resugaring for Pyret}
+\chapter{Desugaring, Formally}
 
+In this chapter, I give formal definitions for \Sc{ast}s and
+desugaring that will be used throughout the rest of the thesis.  Most
+relevantly, I assume that desugaring is given as a set of
+pattern-based rewrite rules (a la Racket's \Code{syntax-rules}
+[CITE]). This is important because it will form an expressive limit on
+resugaring. My techniques for resugaring evaluation sequences [REF] and
+resugaring scope rules [REF] work on the kind of desugaring rules
+given here, but no more. The chapter on resugaring type systems [REF]
+will further restrict the allowed desuarging rules.
+
+\section{ASTs}
+
+For the purposes of resugaring, I place two requirements on
+\textsc{ast}s. First, the \Sc{ast} must distinguish between variable
+\emph{declarations} (i.e., binding sites) $\Decl{x}$, and variable
+\emph{references} (i.e., uses) $\Refn{x}$. Second, each variable and
+node in the \Sc{ast} must have a unique identity $u$ that
+distinguishes it from other occurrences of the same variable or node.
+(Exactly why these requirements are necessary will become clear in
+[REF] and [REF].)
+With this taken into account, the definition of \textsc{ast}s is
+straightforward:
+\marginpar{
+  ~\\\vspace{1em}
+  Why are 'lists' necessary---can't they just be represented by
+  \Sc{ast} nodes? We will shortly (REF) require \Sc{ast} nodes to have
+  fixed arity.
+}
+\begin{Table}
+constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
+ast $e$ &$::=$& $\Const$ & syntactic constant \\
+  &$|$& $\Con{C}{e_1 \dd e_n}$ & \Sc{ast} node $u$ \\
+%  &$|$& $\Core{C}{e_1 \dd e_n}$ & core syntactic construct \\
+%  &$|$& $\Aux{C}{e_1 \dd e_n}$ & auxilliary syntactic construct \\
+%  &$|$& $\Surf{C}{e_1 \dd e_n}$ & surface syntactic construct \\
+  &$|$& $[e_1 \dd e_n]$ & list \\
+  &$|$& $\Refn[u]{x}$  & variable reference \\
+  &$|$& $\Decl[u]{x}$  & variable declaration \\
+%value $v$ &$::=$& $e$ & with no sugar invocations \\
+\end{Table}
+
+\section{Desugaring}
+
+[FILL: pattern-based rules, matching/subs; copy prose]
+
+\section{AST Signatures}
+
+Language's \textsc{ast}s typically have well-formedness criteria that
+restrict how they can be put together. For example, perhaps
+expressions can only occur within statements; statements occur only
+within blocks; or data definitions can only occur at the top
+level. These restrictions are \emph{usually} but not always (e.g.,
+Racket [CITE] - marginpar?) enforced by parsing.
+
+These well-formedness conditions can (largely) be captured by giving
+each syntactic construct a \emph{signature} that assigns it an
+\emph{arity} and a \emph{sort}, and specifies the sorts that its
+children must have.
+
+
+\newpage
 \section{Example}
 
 \subsection{Define-struct}
@@ -120,17 +181,6 @@ compute at compile time a name for this lambda, which is what Pyret
 currently does.
 
 \section{Expressions}
-
-\begin{Table}
-core name $C$ &$::=$& \textit{name} & core syntactic construct name \\
-surface name $m$ &$::=$& \textit{name} & surface syntactic construct name \\
-expression $e$ &$::=$& $\Core{C}{e_1 ... e_n}$ & core syntactic construct \\
-  &$|$& $\Surf{m}{e_1 ... e_n}$ & surface syntactic construct \\
-  &$|$& $[e_1 ... e_n]$ & list \\
-  &$|$& $string$ & string literal \\
-  &$|$& $\Refn[i]{x}$ $|$ $\Decl[i]{x}$  & variable \\
-value $v$ &$::=$& $e$ & with no sugar invocations \\
-\end{Table}
 
 
 
