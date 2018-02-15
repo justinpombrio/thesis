@@ -31,10 +31,11 @@ straightforward:
 \begin{Table}
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 ast $e$ &$::=$& $\Const$ & syntactic constant \\
-  &$|$& $\Con{C}{e_1 \dd e_n}$ & \Sc{ast} node $u$ \\
-%  &$|$& $\Core{C}{e_1 \dd e_n}$ & core syntactic construct \\
-%  &$|$& $\Aux{C}{e_1 \dd e_n}$ & auxilliary syntactic construct \\
-%  &$|$& $\Surf{C}{e_1 \dd e_n}$ & surface syntactic construct \\
+  &$|$& $\Core{C}{e_1 \dd e_n}$ & core \Sc{ast} node \\
+  &$|$& $\Surf{C}{e_1 \dd e_n}$ & surface \Sc{ast} node \\
+  &$|$& $\Aux{C}{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
+  &$|$& $\Bitter{C}{e_1 \dd e_n}$ & bitter \Sc{ast} node \\
+  &$|$& $\Tag{C}{i}{e}$ & tagged node \\
   &$|$& $[e_1 \dd e_n]$ & list \\
   &$|$& $\Refn[u]{x}$  & variable reference \\
   &$|$& $\Decl[u]{x}$  & variable declaration \\
@@ -217,7 +218,7 @@ $\begin{cases}
 rewrite case $c$ &$::=$&
   $\DsRuleCase{(p_1,\,...,\,p_k)}{\Gamma}{F}{p'}$ \\
 desugaring rule $r$ &$::=$&
-  $\DsRule{m}{c_1,...,c_n}$ \\
+  $\DsRule{C}{k_1,...,k_n}$ \\
 desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
 \end{Table}
 
@@ -351,29 +352,88 @@ See \cref{fig:expansion}.
 [TODO: Replace $v$ with something that looks like core terms.]
 
 \begin{figure}
-  \Inference[eval-ctx]{
-    \SaysStep{L}{e}{e'}
+  \begin{Table}
+    $c$ &$::=$& $\Const$ \\
+    &$|$& $\Refn{x}$ \\
+    &$|$& $\Decl{x}$ \\
+    &$|$& $\Bitter{C}{c \dd}$ \\
+    &$|$& $\Core{C}{c \dd}$ \\
+    &$|$& $\Tag{C}{i}{c}$ \\
+    \\
+    $E_{ds}$ &$::=$& $[c \dd E_{ds}\,e \dd]$ \\
+    &$|$& $\Core{C}{c \dd E_{ds}\,e \dd}$ \\
+    &$|$& $\Surf{C}{c \dd E_{ds}\,e \dd}$ \\
+    &$|$& $\Aux{C}{c \dd E_{ds}\,e \dd}$ \\
+    &$|$& $\Bitter{C}{c \dd E_{ds}\,e \dd}$ \\
+    &$|$& $\Tag{C}{i}{E_{ds}}$ \\
+  \end{Table}
+  \TypeLabel{\SaysExp{L}{e}{e}}
+  \Inference[ds-ctx]{
+    \SaysExp{L}{e}{e'}
   }{
-    \SaysStep{L}{E[e]}{E[e']}
+    \SaysExp{L}{E_{ds}[e]}{E_{ds}[e']}
   }
-  \Inference[eval-expand]{
+  \Inference[ds-sugar]{
     L = G,rs &
-    \DsRule{m}{c_1 ... c_n} \in G \IS\\
-    \SaysCase{L}{\Surf{m}{e_1 ... e_n}}{e''}{c_i} \IS\\
-    \SaysNotCase{L}{\Surf{m}{e_1 ... e_n}}{e'}{c_j} \text{ for any } j<i
+    \DsRule{C}{k_1 ... k_n} \in G \IS\\
+    \SaysCase{L}{\Surf{C}{c_1 ... c_n}}{e'}{k_i}
   }{
-    \SaysStep{L}{\Surf{m}{e_1 ... e_n}}{e'}
+    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{\Tag{C}{i}{e'}}
   }
-  \Inference[eval-case]{
+  \TypeLabel{\SaysCase{L}{e}{e}{c}}
+  \Inference[ds-expand]{
+    \SaysMatch{L}{c_i}{p_i}{\gamma_i} \text{ for each $i$} \IS\\
+    \gamma' \text{ gives fresh names to the variables in $F$} \IS\\
+    \gamma_1 \DisjUnion ... \DisjUnion \gamma_n \DisjUnion \gamma' = \gamma \IS\\
+    \SaysSubs{F}{\gamma}{p'}{e'}
+  }{
+    \SaysCase{L}{\Surf{C}{c_1 ... c_n}}{e'}{\DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p'}}
+  }
+  \caption{Expansion}
+  \label{fig:expansion}
+\end{figure}
+
+\begin{figure}
+  \begin{Table}
+    $s$ &$::=$& $\Const$ \\
+    &$|$& $\Refn{x}$ \\
+    &$|$& $\Decl{x}$ \\
+    &$|$& $\Surf{C}{s \dd}$ \\
+    &$|$& $\Core{C}{s \dd}$
+    \\
+    $E_{rs}$ &$::=$& $[s \dd E_{rs}\,e \dd]$ \\
+    &$|$& $\Core{C}{s \dd E_{rs}\,e \dd}$ \\
+    &$|$& $\Surf{C}{s \dd E_{rs}\,e \dd}$ \\
+    &$|$& $\Aux{C}{s \dd E_{rs}\,e \dd}$ \\
+    &$|$& $\Bitter{C}{s \dd E_{rs}\,e \dd}$ \\
+    &$|$& $\Tag{C}{i}{E_{rs}}$ \\
+  \end{Table}
+  \TypeLabel{\SaysUnexp{L}{e}{e}}
+  \Inference[rs-ctx]{
+    \SaysUnexp{L}{e}{e'}
+  }{
+    \SaysUnexp{L}{E_{rs}[e]}{E_{rs}[e']}
+  }
+  \Inference[rs-sugar]{
+    [TODO] &
+    L = G,rs &
+    \DsRule{C}{k_1 ... k_n} \in G \IS\\
+    \SaysUncase{L}{\Surf{C}{e_1 ... e_n}}{e'}{k_i}
+  }{
+    \SaysUnexp{L}{\Surf{C}{e_1 ... e_n}}{e'}
+  }
+  \TypeLabel{\SaysUncase{L}{e}{e}{s}}
+  \Inference[rs-unexpand]{
+    [TODO] &
     \SaysMatch{L}{e_i}{p_i}{\gamma_i} \text{ for each $i$} \IS \\
     \gamma' \text{ gives fresh names to the variables in $F$} \\
     \gamma_1 \DisjUnion ... \DisjUnion \gamma_n \DisjUnion \gamma' = \gamma \\
     \SaysSubs{F}{\gamma}{p'}{e'}
   }{
-    \SaysCase{L}{\Surf{m}{e_1 ... e_n}}{e'}{(p_1,...,p_n);\Gamma;F \To p'}
+    \SaysUncase{L}{\Surf{C}{e_1 ... e_n}}{e'}{\DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p'}}
   }
-  \caption{Expansion}
-  \label{fig:expansion}
+  \caption{Unexpansion}
+  \label{fig:unexpansion}
 \end{figure}
 
 [FILL] One expansion rule. Note expansion contexts.
@@ -552,12 +612,12 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
 We prove soundness by way of progress + preservation:
 \begin{theorem}[Soundness]
   If $\SaysExpr{L}{e}{t}$, then
-  $\SaysSteps{L}{e}{v}$ where $\SaysExpr{L}{v}{t}$, or $e$ runs forever.
+  $\SaysExps{L}{e}{v}$ where $\SaysExpr{L}{v}{t}$, or $e$ runs forever.
 \end{theorem}
 \begin{proof}
 \Cref{thm:progress} (progress) and \cref{thm:preservation}
 (preservation) together imply that either:
-(i) $e$ is a value, or (ii) $\SaysStep{L}{e}{e'}$ and $\SaysExpr{L}{e'}{t}$.
+(i) $e$ is a value, or (ii) $\SaysExp{L}{e}{e'}$ and $\SaysExpr{L}{e'}{t}$.
 Apply this repeatedly. Either $e$ eventually steps to a value $v$, and
 has remained the same type $t$ throughout the evaluation, or $e$ never
 halts.
@@ -565,14 +625,14 @@ halts.
 
 \begin{lemma}[Progress] \label{thm:progress}
   If $\SaysExpr{L}{e}{t}$, then
-  $\SaysStep{L}{e}{e'}$, or $e$ is a value.
+  $\SaysExp{L}{e}{e'}$, or $e$ is a value.
 \end{lemma}
 \begin{proof}
   First, verify that our evaluation contexts include every case that
   isn't a value. Thus either $e$ is a value and we are done, or $e$
   contains a redex: $e=E[\Surf{m}{e_1 ... e_n}]$.
   In the latter case, we will show that $e$ can take a step because
-  the eval-expand rule applies. There are two premises that need to be
+  the ds-sugar rule applies. There are two premises that need to be
   satisfied:
   \begin{itemize}
     \item First, we must show that $m$ is bound in $L$. Since $e$
@@ -580,7 +640,8 @@ halts.
       sugar invocation is p-sugar; this in turn must use rule
       g-sugar; finally g-sugar requires that $m \in L$.
     \item Second, we must show that the pattern match of $e_1,...,e_n$
-      succeeds on any case $(p_1,...,p_n);\Gamma;F$ of the desugaring
+      succeeds on any case ${\DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p'}}$
+      of the desugaring
       rule. By \cref{thm:exhaustion}, it does.
   \end{itemize}
 \end{proof}
@@ -590,8 +651,8 @@ halts.
   $t_1,...,t_n$ according to our exhaustion checking algorithm, then
   for every possible argument list $e_1,...,e_n$ that matches the
   given types (i.e., $\SaysExpr{L}{e_1}{t_1},...,\SaysExpr{L}{e_n}{t_n}$),
-  there is a case $c_i$ such that $e_1,...,e_n$ successfully matches
-  against $c_i$. [TODO: prove]
+  there is a case $k_i$ such that $e_1,...,e_n$ successfully matches
+  against $k_i$. [TODO: prove]
 \end{assumption}
 \begin{proof}
   \emph{Not given}. We have not stated our exhaustion checking
@@ -600,19 +661,19 @@ halts.
 \end{proof}
 
 \begin{lemma}[Preservation] \label{thm:preservation}
-  If $\SaysExpr{L}{e}{t}$ and $\SaysStep{L}{e}{e'}$, then $\SaysExpr{L}{e'}{t}$.
+  If $\SaysExpr{L}{e}{t}$ and $\SaysExp{L}{e}{e'}$, then $\SaysExpr{L}{e'}{t}$.
 \end{lemma}
 \begin{proof}
   Since $e$ can take an expansion step, it must have a redex (via
-  eval-ctx): $e = E[\Surf{m}{e_1 ... e_n}]$. And furthermore (by eval-expand) $m$
+  ds-ctx): $e = E[\Surf{m}{e_1 ... e_n}]$. And furthermore (by ds-sugar) $m$
   must be bound in $L$, and there must be a first case of $m$ that
-  matches $e$.  Call it $c_i = (p_1,...,p_n);\Gamma \To p'$. Then:
+  matches $e$.  Call it $k_i = (p_1,...,p_n);\Gamma \To p'$. Then:
   \begin{ProofTable}
-  By eval-case: & $\SaysMatch{L}{e_i}{p_i}{\gamma_i}$
+  By ds-case: & $\SaysMatch{L}{e_i}{p_i}{\gamma_i}$
     for some $\gamma_i$ for each $i$ & (1) \\
   and & $\SaysSubs{F}{\gamma_i \DisjUnion ...
     \DisjUnion \gamma_n}{p'}{e'}$ & (2) \\
-  and & $\SaysStep{L}{E[e]}{E[e']}$ \\
+  and & $\SaysExp{L}{E[e]}{E[e']}$ \\
   By e-sugar: & $\SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}$ \\
   and & $\SaysRule{L}{m}{t_1 ... t_n}{t}$ \\
   and & $\SaysExpr{L}{e_i}{t_i}$ for each $i$ & (3) \\

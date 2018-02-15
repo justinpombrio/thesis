@@ -112,7 +112,7 @@
 \newcommand{\CoreStep}{{\rule{0pt}{1.2\baselineskip}{\ensuremath\longrightarrow}}}
 \newcommand{\SurfStep}{{\rule{0pt}{1.2\baselineskip}{\ensuremath\dashrightarrow}}}
 % Inference Rules
-\newcommandx*{\Inference}[3][1=\empty]{\inference[#1]{#2}{#3}\vspace{1.5em}}
+\newcommandx*{\Inference}[3][1=\empty]{\inference[#1]{#2}{#3}\hspace{1em}\vspace{1.5em}}
 \newcommand{\IS}{\vspace{0.25em}} % Not enough space by default...
 \newcommand{\TypeLabel}[1]{
   \setlength{\fboxsep}{3pt}\fbox{$#1$}~\\
@@ -125,10 +125,12 @@
 \newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
 \newcommand{\SaysRule}[4]{#1 \vdash #2 : #3 \to #4}
 \newcommand{\SaysEnv}[3]{#1 \vdash #2 : #3}
-\newcommand{\SaysStep}[3]{#1 \vdash #2 \rightsquigarrow #3}
-\newcommand{\SaysSteps}[3]{#1 \vdash #2 \rightsquigarrow^{*} #3}
-\newcommand{\SaysCase}[4]{#1 \vdash #2 \rightsquigarrow #3 \text{ by  case } #4}
-\newcommand{\SaysNotCase}[4]{#1 \not\vdash #2 \rightsquigarrow #3 \text{ by  case } #4}
+\newcommand{\SaysExp}[3]{#1 \vdash #2 \rightsquigarrow_\text{ds} #3}
+\newcommand{\SaysExps}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{ds} #3}
+\newcommand{\SaysCase}[4]{#1;#4 \vdash #2 \rightsquigarrow_\text{exp} #3}
+\newcommand{\SaysUnexp}[3]{#1 \vdash #2 \rightsquigarrow_\text{rs} #3}
+\newcommand{\SaysUnexps}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{rs} #3}
+\newcommand{\SaysUncase}[4]{#1;#4 \vdash #2 \rightsquigarrow_\text{unexp} #3}
 \newcommand{\SaysScope}[6]{#1 \vdash #2 : #3 ; #4 ; #5 ; #6}
 \newcommand{\SaysCanBind}[3]{#1 \vdash #2 \sim_{bind} #3}
 \newcommand{\SaysCanShadow}[3]{#1 \vdash #2 \sim_{shadow} #3}
@@ -143,15 +145,17 @@
 \newcommand{\Prov}[2]{\texttt{provide } #2 \ensuremath{\in #1}}
 
 % Expressions
-\newcommand{\Con}[2]{(\Variable{u}{}{C}{}\,#2)}
-\newcommand{\Core}[2]{(\Variable{u}{}{C}{core}\,#2)}
-\newcommand{\Aux}[2]{(\Variable{u}{}{C}{aux}\,#2)}
-\newcommand{\Surf}[2]{(\Variable{u}{}{C}{surf}\,#2)}
+\newcommand{\Con}[2]{(\Variable{u}{}{#1}{}\,#2)}
+\newcommand{\Core}[2]{(\Variable{u}{}{#1}{Core}\,#2)}
+\newcommand{\Aux}[2]{(\Variable{u}{}{#1}{Aux}\,#2)}
+\newcommand{\Surf}[2]{(\Variable{u}{}{#1}{Surf}\,#2)}
+\newcommand{\Bitter}[2]{(\Variable{u}{}{#1}{Bitter}\,#2)}
 \newcommand{\Variable}[4]{
   {#3}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
 \newcommand{\Const}{const}
+\newcommand{\Tag}[3]{(\Code{Tag}\;#1\;#2\;#3)}
 % Patterns
 \newcommand{\PVarA}{\alpha}
 \newcommand{\PVarB}{\beta}
@@ -160,7 +164,7 @@
 \newcommand{\Cons}[2]{#1, #2}
 \newcommand{\Rep}[2]{#1\ {*}\_{#2}}
 % Desugaring Rules
-\newcommand{\DsRule}[2]{\Code{sugar}\;#1 = \{#2\}}
+\newcommand{\DsRule}[2]{\Code{sugar}\;\Variable{}{}{#1}{} = \{#2\}}
 \newcommand{\DsRuleFancy}[3]{\Code{sugar}\;#1 =
   \begin{cases}
     #2 \\
@@ -168,7 +172,7 @@
     #3
   \end{cases}
 }
-\newcommand{\DsRuleCase}[4]{#1;#2;#3 \To #4}
+\newcommand{\DsRuleCase}[4]{#2;#3;#1 \To #4}
 % Environments
 \newcommand{\EmptyEnv}{\{\}}
 \newcommand{\ConsEnv}[3]{#1:#2,\,#3}
@@ -222,7 +226,7 @@
 \include{chapters/intro}
 \include{chapters/desugaring-systems}
 \part{Desugaring for Pyret}
-\include{chapters/desugaring-for-pyret}
+\include{chapters/formalism}
 \part{Resugaring}
 \include{chapters/resugar-eval}
 % Chapter: Resugaring steps
