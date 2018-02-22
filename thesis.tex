@@ -1,3 +1,4 @@
+% Alternative style: http://cleanthesis.der-ric.de/
 
 % Related work:
 % Object representation of scope during translation (coined "scope graph"):
@@ -67,7 +68,7 @@
 }
 
 % LstListing
-\lstset{basicstyle=\ttfamily,breaklines=true}
+\lstset{basicstyle=\ttfamily,breaklines=true,mathescape=true}
 \lstset{framextopmargin=50pt,frame=bottomline}
 
 % Theorems
@@ -120,7 +121,7 @@
 
 % Judgements
 \newcommand{\SaysSubs}[4]{#1 \vdash #2 \bullet #3 = #4}
-\newcommand{\SaysMatch}[4]{#1 \vdash #2 / #3 = #4}
+\newcommand{\SaysMatch}[5]{#1 \vdash #2 / #3 = #4,#5}
 \newcommand{\SaysExpr}[3]{#1 \vdash #2 : #3}
 \newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
 \newcommand{\SaysRule}[4]{#1 \vdash #2 : #3 \to #4}
@@ -149,13 +150,14 @@
 \newcommand{\Core}[2]{(\Variable{u}{}{#1}{Core}\,#2)}
 \newcommand{\Aux}[2]{(\Variable{u}{}{#1}{Aux}\,#2)}
 \newcommand{\Surf}[2]{(\Variable{u}{}{#1}{Surf}\,#2)}
-\newcommand{\Bitter}[2]{(\Variable{u}{}{#1}{Bitter}\,#2)}
+%\newcommand{\Bitter}[2]{(\Variable{u}{}{#1}{Bitter}\,#2)}
 \newcommand{\Variable}[4]{
   {#3}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
 \newcommand{\Const}{const}
-\newcommand{\Tag}[3]{(\Code{Tag}\;#1\;#2\;#3)}
+%\newcommand{\Tag}[3]{(\Code{Tag}\;#1\;#2\;#3)}
+\newcommand{\Tag}[3]{(\Code{Tag}_{#1 \To #2} #3)}
 % Patterns
 \newcommand{\PVarA}{\alpha}
 \newcommand{\PVarB}{\beta}

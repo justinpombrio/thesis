@@ -34,8 +34,8 @@ ast $e$ &$::=$& $\Const$ & syntactic constant \\
   &$|$& $\Core{C}{e_1 \dd e_n}$ & core \Sc{ast} node \\
   &$|$& $\Surf{C}{e_1 \dd e_n}$ & surface \Sc{ast} node \\
   &$|$& $\Aux{C}{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
-  &$|$& $\Bitter{C}{e_1 \dd e_n}$ & bitter \Sc{ast} node \\
-  &$|$& $\Tag{C}{i}{e}$ & tagged node \\
+%  &$|$& $\Bitter{C}{e_1 \dd e_n}$ & bitter \Sc{ast} node \\
+  &$|$& $\Tag{p}{p}{e}$ & tagged node \\
   &$|$& $[e_1 \dd e_n]$ & list \\
   &$|$& $\Refn[u]{x}$  & variable reference \\
   &$|$& $\Decl[u]{x}$  & variable declaration \\
@@ -144,42 +144,144 @@ StructField:
 
 \subsection{Pyret For Expressions}
 
-To handle Pyret for-expressions, we need to do two things.
+To handle Pyret for-expressions, we need to add desugaring rules for
+the \Code{for} and for its bindings. 
 First, when a for-expression binding (e.g. \Code{n from 0}) desugars,
-it will simply return its binding (\Code{n}) and its value (\Code{0})
-to the for-expression. It can do so with the desugaring rule:
+it will simply return its binding (\Code{n}) and its value (\Code{0}).
+It can do so with the desugaring rule:
 \begin{Codes}
    (s-for-bind l:Loc b:Bind v:Expr)
 => \{for-bind b v\}
 \end{Codes}
-where \Code{ForBind} is a new type:
+where \Code{ForBind} is a new auxiliary type:
 \begin{Codes}
-  ForBind ::= \{for-bind Bind Expr\}
+ForBind += \{for-bind Bind Expr\}
 
 with list scope:
-  [\{for-bind b v\} ...]
+  [\{for-bind b v\} bs ...]
   export b
-  export ...
+  export bs
+\end{Codes}
+
+Then the surface grammar can be extended for \Code{for} expressions:
+\begin{Codes}
+Expr += (s-for Loc Expr [ForBind] Ann Expr Bool)
+with scope:
+  bind binds in body
 \end{Codes}
 
 Then for-expressions can be implemented with the desugaring rule:
 \begin{Codes}
    (s-for l:Loc
           iter:Expr
-          [\{ForBind bind:Bind value:Expr\} ...]@binds
+          [\{for-bind bind:Bind value:Expr\} ...]@binds
           ann:Ann
           body:Expr
           blocky:Bool)
-=> \{Lambda l (CONCAT "for-body<" (FORMAT l false) ">")
-     [] [bind ...] ann "" body None None blocky\}
-with scope:
-  bind binds in body
+=> (Apply l iter
+     [(Lambda l (CONCAT "for-body<" (FORMAT l false) ">")
+        [] [bind ...] ann "" body None None blocky)
+      value ...])
 \end{Codes}
 
 Notice that \Code{s-for} is pattern matching against the results of
 desugaring the \Code{s-for-bind}s. The \Code{(CONCAT ...)} stuff is to
 compute at compile time a name for this lambda, which is what Pyret
 currently does.
+
+\newcommand{\C}{\(\sb{c}\)}
+\subsubsection{Desugaring Pyret For Expressions}
+\begin{Codes}
+   (s-for map
+     [(s-for-bind x (list [(+ 1 2)]))]
+     (* x x))
+=> (s-for map [(s-for-bind x (list
+     [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))] (* x x))
+=> (s-for map [(s-for-bind x (Tag<(list a),(list\C a)> (list\C
+     [(Tag<(+ a b),(+\C a b)> (+\C 1 2))])))] (* x x))
+=> (s-for map
+     [(Tag<(s-for-bind b v),\{for-bind b v\}> \{for-bind x
+       (Tag<(list a),(list\C a)> (list\C
+         [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))\})] (* x x))
+=> (s-for map
+     [(Tag<(s-for-bind b v),\{for-bind b v\}> \{for-bind x
+       (Tag<(list a),(list\C a)> (list\C
+         [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))\})] (* x x))
+=> (s-for map
+     [(Tag<(s-for-bind b v),\{for-bind b v\}> \{for-bind x
+       (Tag<(list a),(list\C a)> (list\C
+         [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))\})]
+     (Tag<(* a b),(*\C a b)>
+       (*\C x x)))
+=> (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (apply map [(lambda [x] (Tag<(* a b),(*\C a b)> (*\C x x)))
+        (Tag<(list a),(list\C a)> (list\C
+          [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))]))
+=> (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (apply map [(Tag<..,..> (lambda\C [x]
+          (Tag<(* a b),(*\C a b)> (*\C x x))))
+        (Tag<(list a),(list\C a)> (list\C
+          [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))]))
+=> (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (Tag<..,..> (apply\C map [(Tag<..,..>(lambda\C [x]
+          (Tag<(* a b),(*\C a b)> (*\C x x))))
+        (Tag<(list a),(list\C a)> (list\C
+          [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))])))
+-> (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (Tag<..,..> (apply\C map [(Tag<..,..> (lambda\C [x]
+           (Tag<(* a b),(*\C a b)> (*\C x x))))
+        (Tag<(list a),(list\C a)> (list\C [3]))])))
+<= (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (Tag<..,..> (apply\C map [(Tag<..,..> (lambda\C [x] (* x x)))
+        (Tag<(list a),(list\C a)> (list\C [3]))])))
+<= (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (Tag<..,..> (apply\C map [(lambda [x] (* x x))
+        (list [3])])))
+<= (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (apply map [(lambda [x] (* x x)) (list [3])]))
+<= (Tag<(s-for iter
+         [(Tag<(s-for-bind b v),\{for-bind b v\}>
+             \{for-bind bind value\}) ...]
+           body),
+         (apply iter [(lambda [bind ...] body) value ...])>
+      (apply map [(lambda [x] (* x x)) (list [3])]))
+  // iter=map, bind=[x], body=(* x x), value=[(list [3])]
+<= (s-for map
+     [(Tag<(s-for-bind b v),\{for-bind b v\}>
+        \{for-bind x (list [3])\})]
+     (* x x))
+<= (s-for map
+     [(s-for-bind x (list [3]))]
+     (* x x))
+\end{Codes}
 
 \section{Expressions}
 
@@ -352,20 +454,23 @@ See \cref{fig:expansion}.
 [TODO: Replace $v$ with something that looks like core terms.]
 
 \begin{figure}
+  NOTES: Core terms are terms without Surf or Aux nodes. Desugaring
+  takes a term and produces a core term. Each sugar lhs and rhs is a
+  surface pattern. Pattern variables match against core terms.
   \begin{Table}
     $c$ &$::=$& $\Const$ \\
     &$|$& $\Refn{x}$ \\
     &$|$& $\Decl{x}$ \\
-    &$|$& $\Bitter{C}{c \dd}$ \\
     &$|$& $\Core{C}{c \dd}$ \\
-    &$|$& $\Tag{C}{i}{c}$ \\
+    &$|$& $\Tag{p}{p}{c}$ \\
+    &$|$& $[c \dd]$ \\
     \\
-    $E_{ds}$ &$::=$& $[c \dd E_{ds}\,e \dd]$ \\
+    $E_{ds}$ &$::=$& $\square$ \\
+    &$|$& $[c \dd E_{ds}\,e \dd]$ \\
     &$|$& $\Core{C}{c \dd E_{ds}\,e \dd}$ \\
     &$|$& $\Surf{C}{c \dd E_{ds}\,e \dd}$ \\
     &$|$& $\Aux{C}{c \dd E_{ds}\,e \dd}$ \\
-    &$|$& $\Bitter{C}{c \dd E_{ds}\,e \dd}$ \\
-    &$|$& $\Tag{C}{i}{E_{ds}}$ \\
+    &$|$& $\Tag{p}{p}{E_{ds}}$
   \end{Table}
   \TypeLabel{\SaysExp{L}{e}{e}}
   \Inference[ds-ctx]{
@@ -375,38 +480,48 @@ See \cref{fig:expansion}.
   }
   \Inference[ds-sugar]{
     L = G,rs &
-    \DsRule{C}{k_1 ... k_n} \in G \IS\\
+    \DsRule{C}{k_1 ... k_n} \in rs \IS\\
     \SaysCase{L}{\Surf{C}{c_1 ... c_n}}{e'}{k_i}
   }{
-    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{\Tag{C}{i}{e'}}
+    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{e'}
   }
-  \TypeLabel{\SaysCase{L}{e}{e}{c}}
-  \Inference[ds-expand]{
-    \SaysMatch{L}{c_i}{p_i}{\gamma_i} \text{ for each $i$} \IS\\
-    \gamma' \text{ gives fresh names to the variables in $F$} \IS\\
-    \gamma_1 \DisjUnion ... \DisjUnion \gamma_n \DisjUnion \gamma' = \gamma \IS\\
-    \SaysSubs{F}{\gamma}{p'}{e'}
+  \Inference[ds-core]{
+    L = G,rs &
+    C \not\in rs &
+    p = \Surf{C}{\PVarA_1 ... \PVarA_n} &
+    p' = \Core{C}{\PVarA_1 ... \PVarA_n}
   }{
-    \SaysCase{L}{\Surf{C}{c_1 ... c_n}}{e'}{\DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p'}}
+    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{\Tag{p}{p'}{\Core{C}{c_1 ... c_n}}}
+  }\\ %NEWLINE
+  \TypeLabel{\SaysCase{L}{e}{e}{k}}
+  \Inference[ds-expand]{
+    k = \DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p_{rhs}} \IS\\
+    \SaysMatch{L}{c_i}{p_i}{\gamma_i}{p_i'} \text{ for each $i$} \IS\\
+    \gamma' \text{ gives fresh names to the variables in $F$} \IS\\
+    \gamma_1 \cup ... \cup \gamma_n \cup \gamma' = \gamma \IS\\
+    \SaysSubs{F}{\gamma}{p_{rhs}}{e'}
+  }{
+    \SaysCase{L}{\Surf{C}{c_1 ... c_n}}{\Tag{\Surf{C}{p_1' ... p_n'}}{p_{rhs}}{e'}}{k}
   }
   \caption{Expansion}
   \label{fig:expansion}
 \end{figure}
 
 \begin{figure}
+  NOTES: Surface terms are any untagged terms.
   \begin{Table}
     $s$ &$::=$& $\Const$ \\
     &$|$& $\Refn{x}$ \\
     &$|$& $\Decl{x}$ \\
     &$|$& $\Surf{C}{s \dd}$ \\
-    &$|$& $\Core{C}{s \dd}$
+    &$|$& $[s \dd]$ \\
     \\
-    $E_{rs}$ &$::=$& $[s \dd E_{rs}\,e \dd]$ \\
+    $E_{rs}$ &$::=$& $\square$ \\
     &$|$& $\Core{C}{s \dd E_{rs}\,e \dd}$ \\
     &$|$& $\Surf{C}{s \dd E_{rs}\,e \dd}$ \\
     &$|$& $\Aux{C}{s \dd E_{rs}\,e \dd}$ \\
-    &$|$& $\Bitter{C}{s \dd E_{rs}\,e \dd}$ \\
-    &$|$& $\Tag{C}{i}{E_{rs}}$ \\
+    &$|$& $\Tag{p}{p}{E_{rs}}$ \\
+    &$|$& $[s \dd E_{rs}\,e \dd]$
   \end{Table}
   \TypeLabel{\SaysUnexp{L}{e}{e}}
   \Inference[rs-ctx]{
@@ -414,23 +529,12 @@ See \cref{fig:expansion}.
   }{
     \SaysUnexp{L}{E_{rs}[e]}{E_{rs}[e']}
   }
-  \Inference[rs-sugar]{
-    [TODO] &
-    L = G,rs &
-    \DsRule{C}{k_1 ... k_n} \in G \IS\\
-    \SaysUncase{L}{\Surf{C}{e_1 ... e_n}}{e'}{k_i}
+  \Inference[rs-tag]{
+    e \text{ has no Tags} &
+    \SaysMatch{L}{e}{p'}{\gamma}{\_} &
+    \SaysSubs{L}{\gamma}{p}{e'}
   }{
-    \SaysUnexp{L}{\Surf{C}{e_1 ... e_n}}{e'}
-  }
-  \TypeLabel{\SaysUncase{L}{e}{e}{s}}
-  \Inference[rs-unexpand]{
-    [TODO] &
-    \SaysMatch{L}{e_i}{p_i}{\gamma_i} \text{ for each $i$} \IS \\
-    \gamma' \text{ gives fresh names to the variables in $F$} \\
-    \gamma_1 \DisjUnion ... \DisjUnion \gamma_n \DisjUnion \gamma' = \gamma \\
-    \SaysSubs{F}{\gamma}{p'}{e'}
-  }{
-    \SaysUncase{L}{\Surf{C}{e_1 ... e_n}}{e'}{\DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p'}}
+    \SaysUnexp{L}{\Tag{p}{p'}{e}}{e'}
   }
   \caption{Unexpansion}
   \label{fig:unexpansion}
