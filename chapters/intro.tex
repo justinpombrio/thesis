@@ -109,6 +109,11 @@ There are many axes on which desugaring mechanisms vary:
   \item How \emph{safe} is it? Can desugaring produce syntactically
     invalid code? Can it produce an unbound variable, or accidentally
     capture a variable? Can it produce code that contains a type error?
+  \item How powerful is it? Can a sugar take an arbitrary expression
+    as a parameter, or only a primitive type? If it can take an
+    expression, can it deconstruct it, or only use it parametrically?
+    Are the sugars written in a general purpose language, or in a
+    restricted one, e.g. as declarative pattern-based rules?
 \end{enumerate}
 
 There is one big cluster of desugaring systems that should be called
