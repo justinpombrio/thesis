@@ -69,16 +69,20 @@ fixed from within the paradigm. \emph{Overall, code transformations
 
 \section{C++ Templates} \label{sec:cpp}
 
-\Desc{Representation} Concrete Syntax
-
+\Desc{Representation} Abstract surface syntax
 \Desc{Authorship} User-defined
-
-\Desc{Evaluation Strategy} IO
-
-\Desc{Safety} [FILL]
+\Desc{Metalanguage} C++ templates (pattern based)
+\Desc{Arguments} Types and primitive values
+\Desc{Result} Function/method definition, struct/class definition, or type alias
+\Desc{Deconstruction} Yes (although the arguments are limited)
+\Desc{Evaluation Order} IO
+\Desc{Phases} One
+\Desc{Syntax safe} Yes
+\Desc{Scope safe} NA
+\Desc{Type safe} NA
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
-\Desc{Discussion} C++ templates [CITE] are not general-purpose sugars,
+C++ templates [CITE] are not general-purpose sugars,
 because they cannot take code as an argument. Thus you cannot, for
 example, express a sugar that takes an expression \Code{e} and expands
 it to \Code{e + 1}.
