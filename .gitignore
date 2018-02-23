@@ -22,4 +22,9 @@
 *.out
 *.synctex.gz
 *.pdf
+*.o
+*.hi
+*.dyn_o
+*.dyn_hi
 texput.log
+sugars/haskell/main
