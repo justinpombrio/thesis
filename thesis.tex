@@ -76,6 +76,7 @@
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \newtheorem{assumption}{Assumption}
+\newtheorem{corollary}{Corollary}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -126,12 +127,12 @@
 \newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
 \newcommand{\SaysRule}[4]{#1 \vdash #2 : #3 \to #4}
 \newcommand{\SaysEnv}[3]{#1 \vdash #2 : #3}
-\newcommand{\SaysExp}[3]{#1 \vdash #2 \rightsquigarrow_\text{ds} #3}
-\newcommand{\SaysExps}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{ds} #3}
-\newcommand{\SaysCase}[4]{#1;#4 \vdash #2 \rightsquigarrow_\text{exp} #3}
-\newcommand{\SaysUnexp}[3]{#1 \vdash #2 \rightsquigarrow_\text{rs} #3}
-\newcommand{\SaysUnexps}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{rs} #3}
-\newcommand{\SaysUncase}[4]{#1;#4 \vdash #2 \rightsquigarrow_\text{unexp} #3}
+\newcommand{\SaysDs}[3]{#1 \vdash #2 \rightsquigarrow_\text{ds} #3}
+\newcommand{\SaysDss}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{ds} #3}
+\newcommand{\SaysExp}[3]{#1 \vdash #2 \rightsquigarrow_\text{exp} #3}
+\newcommand{\SaysRs}[3]{#1 \vdash #2 \rightsquigarrow_\text{rs} #3}
+\newcommand{\SaysRss}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{rs} #3}
+\newcommand{\SaysUnexp}[3]{#1 \vdash #2 \rightsquigarrow_\text{unexp} #3}
 \newcommand{\SaysScope}[6]{#1 \vdash #2 : #3 ; #4 ; #5 ; #6}
 \newcommand{\SaysCanBind}[3]{#1 \vdash #2 \sim_{bind} #3}
 \newcommand{\SaysCanShadow}[3]{#1 \vdash #2 \sim_{shadow} #3}

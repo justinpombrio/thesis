@@ -472,36 +472,36 @@ See \cref{fig:expansion}.
     &$|$& $\Aux{C}{c \dd E_{ds}\,e \dd}$ \\
     &$|$& $\Tag{p}{p}{E_{ds}}$
   \end{Table}
-  \TypeLabel{\SaysExp{L}{e}{e}}
+  \TypeLabel{\SaysDs{L}{e}{e}}
+  
   \Inference[ds-ctx]{
     \SaysExp{L}{e}{e'}
   }{
-    \SaysExp{L}{E_{ds}[e]}{E_{ds}[e']}
+    \SaysDs{L}{E_{ds}[e]}{E_{ds}[e']}
   }
-  \Inference[ds-sugar]{
+
+  \TypeLabel{\SaysExp{L}{e}{e}}
+  
+  \Inference[exp-sugar]{
     L = G,rs &
     \DsRule{C}{k_1 ... k_n} \in rs \IS\\
-    \SaysCase{L}{\Surf{C}{c_1 ... c_n}}{e'}{k_i}
+    k_i = \DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p_{rhs}} \IS\\
+    \SaysMatch{L}{c_i}{p_i}{\gamma_i}{p_i'} \text{ for each $i$} \IS\\
+    \SaysMatch{L}{\Surf{C}{c_1 ... c_n}}{\Surf{C}{p_1 ... p_n}}{\gamma}{p_{lhs}} \IS\\
+    \gamma' \text{ gives fresh names to the variables in $F$} \IS\\
+%    \gamma_1 \cup ... \cup \gamma_n \cup \gamma' = \gamma \IS\\
+    \SaysSubs{F}{(\gamma \cup \gamma')}{p_{rhs}}{e'}
   }{
-    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{e'}
+    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{\Tag{p_{lhs}}{p_{rhs}}{e'}}
   }
-  \Inference[ds-core]{
+  
+  \Inference[exp-core]{
     L = G,rs &
     C \not\in rs &
     p = \Surf{C}{\PVarA_1 ... \PVarA_n} &
     p' = \Core{C}{\PVarA_1 ... \PVarA_n}
   }{
     \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{\Tag{p}{p'}{\Core{C}{c_1 ... c_n}}}
-  }\\ %NEWLINE
-  \TypeLabel{\SaysCase{L}{e}{e}{k}}
-  \Inference[ds-expand]{
-    k = \DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p_{rhs}} \IS\\
-    \SaysMatch{L}{c_i}{p_i}{\gamma_i}{p_i'} \text{ for each $i$} \IS\\
-    \gamma' \text{ gives fresh names to the variables in $F$} \IS\\
-    \gamma_1 \cup ... \cup \gamma_n \cup \gamma' = \gamma \IS\\
-    \SaysSubs{F}{\gamma}{p_{rhs}}{e'}
-  }{
-    \SaysCase{L}{\Surf{C}{c_1 ... c_n}}{\Tag{\Surf{C}{p_1' ... p_n'}}{p_{rhs}}{e'}}{k}
   }
   \caption{Expansion}
   \label{fig:expansion}
@@ -523,24 +523,50 @@ See \cref{fig:expansion}.
     &$|$& $\Tag{p}{p}{E_{rs}}$ \\
     &$|$& $[s \dd E_{rs}\,e \dd]$
   \end{Table}
-  \TypeLabel{\SaysUnexp{L}{e}{e}}
+  \TypeLabel{\SaysRs{L}{e}{e}}
+
   \Inference[rs-ctx]{
     \SaysUnexp{L}{e}{e'}
   }{
-    \SaysUnexp{L}{E_{rs}[e]}{E_{rs}[e']}
+    \SaysRs{L}{E_{rs}[e]}{E_{rs}[e']}
   }
-  \Inference[rs-tag]{
+
+  \TypeLabel{\SaysUnexp{L}{e}{e}}
+
+  \Inference[unexp-tag]{
     e \text{ has no Tags} &
     \SaysMatch{L}{e}{p'}{\gamma}{\_} &
     \SaysSubs{L}{\gamma}{p}{e'}
   }{
     \SaysUnexp{L}{\Tag{p}{p'}{e}}{e'}
   }
+  
   \caption{Unexpansion}
   \label{fig:unexpansion}
 \end{figure}
 
-[FILL] One expansion rule. Note expansion contexts.
+\begin{lemma} \label{lemma:exp-inverse}
+  For all terms $e$, if $\SaysExp{L}{e}{e'}$ and
+  $\SaysUnexp{L}{e'}{e''}$ then $e = e''$.
+\end{lemma}
+\begin{proof}
+  .[FILL]
+\end{proof}
+\begin{corollary}
+  Suppose that $e$ has honest tags [TODO].
+  If $\SaysUnexp{L}{e}{e'}$ and $\SaysExp{L}{e'}{e''}$
+  then $e = e''$.
+\end{corollary}
+\begin{proof}
+  Since $e$ can unexpand, it must have exactly one tag.
+  Since that tag is honest, it came from the expansion of some term $e^{*}$.
+  By \cref{lemma:exp-inverse}, $Expand(e^{*}) = e^{**}$ 
+  and $Unexpand(e^{**}) = e^{*}$ for some $e^{**}$.
+
+  (We write $Expand$ as shorthand for $\SaysExp{L}{\_}{\_}$;
+   likewise for $Unexpand$.)
+\end{proof}
+
 
 
 
@@ -716,12 +742,12 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
 We prove soundness by way of progress + preservation:
 \begin{theorem}[Soundness]
   If $\SaysExpr{L}{e}{t}$, then
-  $\SaysExps{L}{e}{v}$ where $\SaysExpr{L}{v}{t}$, or $e$ runs forever.
+  $\SaysDss{L}{e}{v}$ where $\SaysExpr{L}{v}{t}$, or $e$ runs forever.
 \end{theorem}
 \begin{proof}
 \Cref{thm:progress} (progress) and \cref{thm:preservation}
 (preservation) together imply that either:
-(i) $e$ is a value, or (ii) $\SaysExp{L}{e}{e'}$ and $\SaysExpr{L}{e'}{t}$.
+(i) $e$ is a value, or (ii) $\SaysDs{L}{e}{e'}$ and $\SaysExpr{L}{e'}{t}$.
 Apply this repeatedly. Either $e$ eventually steps to a value $v$, and
 has remained the same type $t$ throughout the evaluation, or $e$ never
 halts.
@@ -729,7 +755,7 @@ halts.
 
 \begin{lemma}[Progress] \label{thm:progress}
   If $\SaysExpr{L}{e}{t}$, then
-  $\SaysExp{L}{e}{e'}$, or $e$ is a value.
+  $\SaysDs{L}{e}{e'}$, or $e$ is a value.
 \end{lemma}
 \begin{proof}
   First, verify that our evaluation contexts include every case that
@@ -765,7 +791,7 @@ halts.
 \end{proof}
 
 \begin{lemma}[Preservation] \label{thm:preservation}
-  If $\SaysExpr{L}{e}{t}$ and $\SaysExp{L}{e}{e'}$, then $\SaysExpr{L}{e'}{t}$.
+  If $\SaysExpr{L}{e}{t}$ and $\SaysDs{L}{e}{e'}$, then $\SaysExpr{L}{e'}{t}$.
 \end{lemma}
 \begin{proof}
   Since $e$ can take an expansion step, it must have a redex (via
@@ -777,7 +803,7 @@ halts.
     for some $\gamma_i$ for each $i$ & (1) \\
   and & $\SaysSubs{F}{\gamma_i \DisjUnion ...
     \DisjUnion \gamma_n}{p'}{e'}$ & (2) \\
-  and & $\SaysExp{L}{E[e]}{E[e']}$ \\
+  and & $\SaysDs{L}{E[e]}{E[e']}$ \\
   By e-sugar: & $\SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}$ \\
   and & $\SaysRule{L}{m}{t_1 ... t_n}{t}$ \\
   and & $\SaysExpr{L}{e_i}{t_i}$ for each $i$ & (3) \\
