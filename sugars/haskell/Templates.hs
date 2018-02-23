@@ -39,3 +39,9 @@ module Templates where
   -- Haskell Templates are AST safe. See that this does not compile:
   -- astSafe :: Q Exp -> Q Stmt
   -- astSafe exp = exp
+
+  -- Haskell Templates can abstract over any sort
+  power :: Q Stmt
+  power = do
+    name <- newName "x"
+    return $ LetS [ValD (VarP name) (NormalB (LitE (CharL 'a'))) []]

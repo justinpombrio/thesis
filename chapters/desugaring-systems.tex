@@ -69,13 +69,13 @@ fixed from within the paradigm. \emph{Overall, code transformations
 
 \section{C++ Templates} \label{sec:cpp}
 
-\Desc{Representation} Abstract surface syntax
+\Desc{Representation} Concrete syntax
 \Desc{Authorship} User-defined
 \Desc{Metalanguage} C++ templates (pattern based)
 \Desc{Arguments} Types and primitive values
 \Desc{Result} Function/method definition, struct/class definition, or type alias
 \Desc{Deconstruction} Yes (although the arguments are limited)
-\Desc{Evaluation Order} IO
+\Desc{Evaluation Strategy} IO
 \Desc{Phases} One
 \Desc{Syntax safe} Yes
 \Desc{Scope safe} NA
@@ -159,18 +159,36 @@ it, even if this type is the result of another template expansion.
 
 \section{Haskell Templates} \label{sec:haskell}
 
-\Desc{Representation} Concrete or Abstract Syntax
-
+\Desc{Representation} Concrete or abstract syntax
 \Desc{Authorship} User-defined
-
+\Desc{Metalanguage} Haskell
+\Desc{Arguments} Any sort
+\Desc{Result} Any sort
+\Desc{Deconstruction} Yes
 \Desc{Evaluation Strategy} IO
-
-\Desc{Safety} \Sc{ast} safe. Scope unsafe. Type unsafe.
+\Desc{Phases} One
+\Desc{Syntax Safe} Yes
+\Desc{Scope Safe} No
+\Desc{Type Safe} No
 
 %https://hackage.haskell.org/package/template-haskell-2.10.0.0/docs/Language-Haskell-TH-Syntax.html#t:Lit
 %https://stackoverflow.com/questions/10857030/whats-so-bad-about-template-haskell
-\Desc{Discussion}
 NOTES:
 \begin{itemize}
   \item Must be defined in separate file
 \end{itemize}
+
+
+\section{MetaOCaml} \label{sec:metaocaml}
+
+\Desc{Representation} Concrete syntax
+\Desc{Authorship} User-defined
+\Desc{Metalanguage} OCaml
+\Desc{Arguments} Expressions (+ OCaml values)
+\Desc{Result} Expressions (+ OCaml values)
+\Desc{Deconstruction} No
+\Desc{Evaluation Strategy} IO
+\Desc{Phases} Many
+\Desc{Syntax Safe} Yes
+\Desc{Scope Safe} Yes
+\Desc{Type Safe} Yes
