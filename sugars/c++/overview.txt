@@ -1,0 +1,20 @@
+# C++ Templates #
+
+Representation: abstract surface syntax
+Authorship: user-defined
+Metalanguage: C++ templates (pattern based)
+Arguments: types and primitive values
+Result: function/method definition, struct/class definition, or type alias
+Deconstruction: yes (although this is mostly case analysis on primitive values)
+Evaluation Order: IO
+Phases: one
+Syntax safe: yes
+Scope safe: NA
+Type safe: NA
+
+
+# Installation Notes #
+
+0. Install C++.
+
+The examples can be compiled with g++, with -std=c++11
