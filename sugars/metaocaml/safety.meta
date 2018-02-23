@@ -1,0 +1,15 @@
+open Runcode
+let printf = Printf.printf;;
+
+let a = .<3>.;;
+let b = .<"four">.;;
+(* let c = .<.~a + .~b>.;; -- TYPE ERROR *)
+let c = .<.~a + .~a>.;; (* OKAY *)
+printf "%d\n" (!. c)
+
+let outer_sugar f = .<let x = "outer" in .~(f .<x>.)>.;;
+let inner_sugar code = .<let x = "inner" in .~code>.;;
+let user_func code = let x = "user" in (inner_sugar code);;
+let scope_test = outer_sugar user_func;;
+(* scope_test : string code = .<let x_1 = "outer" in let x_2 = "inner" in x_1>. *)
+printf "%s\n" (!. scope_test);;

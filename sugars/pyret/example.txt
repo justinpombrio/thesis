@@ -1,0 +1,216 @@
+#lang racket
+
+;; ### IO vs OI ###
+;;
+;; - IO can express 'not' as a helper function. OI cannot!
+;;
+;; - Under the assumption that macros should only pattern match
+;;   on syntactic literals,
+;;     (i.e. (k a ...) s.t. (desugar (k a ...)) = (k a ...)
+;;   all successful OI expansions would also expand the same way under IO.
+;;   However, the reverse is not true.
+;;
+;; - Converting IO rules to OI is a global transformation
+;;   that inverts control flow.
+;;   (Hard case: (f1 x) => (g1 (h x))
+;;               (f2 x) => (g2 (h x)))
+;;
+;; - IO expansion is analogous to evaluation:
+;;   - pattern matching is pattern matching
+;;   - macro invocations are function calls
+;;   - core language constructs are functions that contruct that syntax
+
+;; TODO:
+;;   talk to oak: he thinks no lazy/eval order change
+;;   Will Cook's (UT Austen) Esho macro system
+;;   Figure out workflow
+;;     can configure pipeline
+;;   explicit metafunction vs. surface as metafunction:
+;;     different types: any->any vs. S->C
+;;   Oak's suggestion:
+;;     explicit metafunctions & IO & lang ext. done w/ passthru
+;;     (introduces an extra pass)
+
+#|
+| s-for(l, iter, bindings, ann, body, blocky) =>
+  values = bindings.map(_.value).map(desugar-expr)
+  name = "for-body<" + l.format(false) + ">"
+  the-function = A.s-lam(l,
+    name,
+    [list: ],
+    bindings.map(_.bind).map(desugar-bind),
+    desugar-ann(ann),
+    "",
+    desugar-expr(body),
+    none,
+    blocky)
+  A.s-app(l, desugar-expr(iter), link(the-function, values))
+|#
+
+#|
+Differences with Racket, and justifications:
+- Having lists, instead of vararity ops:
+    - Matches Pyret's ast well
+    - Works better with type (and scope) declarations
+  sk: use pyret's tc? rename g-op
+- Some builtins: manipulate srclocs and variable names
+  sk: ok
+- No implicit #%app
+    Since we're working over ASTs and not concrete syntax
+  sk: ok. Only downside: macros didn't need to know func from macro
+- Type annotations and type checking
+    All of us agree that we want this
+  
+- Kind distinction between macro invocations and literal syntax
+    (Parens vs. curly braces)
+    - Better for local reasoning (you don't need to consult the grammar)
+  sk: some existing macro systems might do this
+- IO vs OI: see above
+|#
+
+(define-syntax-rule
+  (s-for l iter [(s-for-bind lb bind val) ...] ann body blocky)
+  (s-app l iter
+         ((s-lam l "" () (bind ...) ann "" body #f blocky)
+          val ...)))
+
+#;(
+   (s-for l iter [{s-for-bind lb bind val} ...] ann body blocky)
+=> {s-app l iter
+         [{s-lam l "" [] [bind ...] ann "" body #f blocky}
+          val ...]}
+)
+
+
+
+
+;; FAILED DEFINE-SYNTAX ATTEMPT ;;
+
+#;(define-syntax (collect stx)
+  (syntax-case stx ()
+    [(collect (and a b))
+     (with-syntax
+         [((p ...) (local-expand #'(collect a)
+                                 'expression (list)))
+          ((q ...) (local-expand #'(collect b)
+                                 'expression (list)))]
+       #`(list p ... q ...))]
+    [(collect a)
+     #'(list a)]))
+
+
+;; PURE SYNTAX-RULES ;;
+
+(define-syntax collect-ands
+  (syntax-rules (and)
+    [(collect-ands l ((and a b) ands ...) (r ...))
+     (collect-ands l (a b ands ...) (r ...))]
+    [(collect-ands l (a ands ...) (r ...))
+     (collect-ands l (ands ...) (r ... a))]
+    [(collect-ands l () (r ...))
+     (desugar-and l r ...)])); the 'helper function' must call its caller!
+
+(define-syntax desugar-expr
+  (syntax-rules ()
+    [(desugar-expr l a)
+     (collect-ands l (a) ())]))
+
+(define-syntax desugar-and
+  (syntax-rules ()
+    [(desugar-and l a)
+     (check-bool l a)]
+    [(desugar-and l a b ...)
+     (s-if l ((s-if-branch l a (desugar-and l b ...)))
+           (s-bool l false)
+           false)]))
+
+(define-syntax check-bool
+  (syntax-rules ()
+    [(check-bool l b)
+     (s-prim-app l "checkWrapBoolean" (b))]))
+
+
+;; DELTA-RACKET ;;
+
+#;(define-syntax desugar-expr
+  (syntax-rules ()
+    [(desugar-expr l a)
+     (desugar-and l @(collect-ands a))])) ; splicing @
+
+#;(define-syntax collect-ands
+  (syntax-rules ()
+    [(collect-ands (and a b))
+     (@(collect-ands a) @(collect-ands b))] ; io evaluation
+    [(collect-ands a)
+     (a)])) ; no implicit #%app
+
+#;(define-syntax desugar-and
+  (syntax-rules ()
+    [(desugar-and l a)
+     (check-bool l a)]
+    [(desugar-and l a b ...)
+     (s-if l ((s-if-branch l a (desugar-and l b ...)))
+           (s-bool l false)
+           false)]))
+
+#;(define-syntax check-bool
+  (syntax-rules ()
+    [(check-bool l b)
+     (s-prim-app l "checkWrapBoolean" (b))]))
+
+
+;; MY IDEAL LANGUAGE ;;
+
+#;(
+   (desugar-expr {s-op l "opand" a b})
+=> (desugar-and l (collect-ands {s-op l "opand" a b}))
+
+   (collect-ands {s-op _ "opand" a b})
+=> [@(collect-ands a) @(collect-ands b)]
+
+   (collect-ands a)
+=> [a]
+
+   (desugar-and l [a:Expr])
+=> (check-bool l (desugar-expr a))
+
+   (desugar-and l [[a:Expr, cs...]...])
+=> {s-if l [{s-if-branch l (desugar-expr a) (desugar-and l [cs...])}...]
+       {s-bool l false}
+       false}
+
+   (check-bool l b)
+=> {s-prim-app l "checkWrapBoolean" [b]}
+)
+
+;; BASE LANGUAGE
+
+(define-syntax-rule
+  (s-if <l1> ((s-if-branch <l2> <cond> <then>)) <else> <blocky>)
+  (if <cond> <then> <else>))
+
+(define-syntax-rule
+  (s-bool l bool)
+  bool)
+
+(define-syntax-rule
+  (s-prim-app l "checkWrapBoolean" (b))
+  b)
+
+(define-syntax-rule
+  (s-app l func (arg ...))
+  (func arg ...))
+
+(define-syntax-rule
+  (s-lam l "" () (bind ...) ann "" body #f blocky)
+  (lambda (bind ...) body))
+
+
+;; TESTS ;;
+
+(define-syntax-rule (test a)
+  (begin (print 'a) (display " => ") a))
+
+(test (desugar-expr #f (and (and 1 2) (and 3 4))))
+(test (desugar-expr #f (and (and 1 #f) (and 3 4))))
+(test (s-for #f map [(s-for-bind #f x (list 1 2 3))] #f (* x x) #f))

@@ -1,0 +1,69 @@
+
+
+else if op == "opand":
+  fun helper(operands):
+    cases(List) operands.rest:
+    | empty =>
+      check-bool(operands.first.l, desugar-expr(operands.first), lam(and-oper): and-oper end)
+    | link(_, _) =>
+      A.s-if-else(l,
+        [list: A.s-if-branch(l, desugar-expr(operands.first), helper(operands.rest))],
+        A.s-bool(l, false), false)
+    end
+  end
+  operands = collect-ands(expr)
+  helper(operands)
+...
+
+collect-ands = collect-op("opand", _)
+
+fun collect-op(opname, exp):
+  if A.is-s-op(exp):
+    if exp.op == opname: collect-op(opname, exp.left) + collect-op(opname, exp.right)
+    else: [list: exp]
+    end
+  else: [list: exp]
+  end
+end
+
+fun check-bool<T>(l, e, cont :: (A.Expr -> T)) -> T:
+  cont(A.s-prim-app(l, "checkWrapBoolean", [list: e]))
+end
+
+
+   (desugar-expr {s-op l "opand" a b})
+=> (desugar-and l (collect-ands {s-op l "opand" a b}))
+
+
+   (collect-ands {s-op _ "opand" a b})
+=> [@(collect-ands a) @(collect-ands b)]
+
+   (collect-ands a)
+=> [a]
+
+
+   (desugar-and l [a:Expr])
+=> (check-bool l (desugar-expr a))
+
+   (desugar-and l [a:Expr, cs...])
+=> {s-if l [{s-if-branch l (desugar-expr a) (desugar-and l [cs...])}]
+       {s-bool l false}
+       false}
+
+
+   (check-bool l b)
+=> {s-prim-app l "checkWrapBoolean" [b]}
+
+
+   (reverse 
+
+
+------
+desugar-expr: metafunction
+s-op:         ast node / literal
+a:            metavariable
+true:         builtin literal
+Expr:         type / grammar nonterminal
+
+
+

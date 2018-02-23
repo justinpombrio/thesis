@@ -1,0 +1,21 @@
+open Runcode
+
+let printf = Printf.printf;;
+
+let a = "a";; (* OK *)
+
+type 't opt =
+  | Nada
+  | Yada of 't;;
+
+(* SYNTAX ERROR - cannot abstract over non-exprs
+let foo = .<let a = "a";;>.;;
+*)
+
+(* SYNTAX ERROR - cannot abstract over non-exprs
+let foo = .<
+  type 't opt =
+    | Nada
+    | Yada of 't
+>.;;
+*)

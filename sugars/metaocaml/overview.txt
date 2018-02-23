@@ -1,0 +1,23 @@
+# MetaOCaml Desugaring #
+
+Representation: abstract surface syntax
+Authorship: user-defined
+Metalanguage: OCaml
+Arguments: expressions (and arbitrary OCaml values containing them)
+Result: expressions (and arbitrary OCaml values containing them)
+Deconstruction: no
+Evaluation Order: IO
+Phases: many
+Syntax Safe: yes
+Scope Safe: yes
+Type Safe: yes
+
+
+# Installation Notes #
+
+0. Install opam
+1. Follow instructions from here: http://okmij.org/ftp/ML/MetaOCaml.html#install
+    $ opam update
+    $ opam switch 4.04.0+BER
+    $ eval `opam config env`
+2. Run with metaocaml example.meta

@@ -1,0 +1,32 @@
+open Runcode
+let printf = Printf.printf;;
+
+let outer x =
+  printf "Begin outer call\n";
+  let answer = .<.~x * 2>. in
+  printf "End outer call\n";
+  answer;;
+
+let inner x =
+  printf "Begin inner call\n";
+  let answer = .<.~x + 1>. in
+  printf "End inner call\n";
+  answer;;
+
+printf "(10 + 1) * 2 = %d\n" (!. (outer (inner .<10>.)));;
+
+(*
+Output:
+    Begin inner call
+    End inner call
+    Begin outer call
+    End outer call
+    (10 + 1) * 2 = 22
+Notice that:
+  1. The calls aren't nested, which shows that this isn't simply
+     evaluation.
+  2. The inner call is first: this is IO order, reflecting the fact
+     that Ocaml's evaluation order is IO order.
+  3. The result is 22, not 12. This is AST manipulation, not
+     string/token manipulation.
+*)
