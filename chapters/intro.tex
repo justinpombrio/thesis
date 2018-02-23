@@ -89,32 +89,32 @@ sugar shines.
 \subsection{A Thousand Grains of Sugar}
 
 There are many axes on which desugaring mechanisms vary:
-\begin{enumerate}
-  \item Desugaring is a syntax-to-syntax transformation, but what is
+\begin{description}
+  \item[Representation] Desugaring is a syntax-to-syntax transformation, but what is
     the representation of syntax? There is a big difference between
     transformations on the \emph{text} of the program vs. its
     \emph{concrete surface syntax} vs. its \emph{abstract surface
       syntax}.
-  \item Are sugars defined by developers of the language (and thus
+  \item[Authorship] Are sugars defined by developers of the language (and thus
     relatively fixed), or by users of the language (and thus flexible)? % macros?
-  \item What is the metalanguage? That is, in what language are sugars
+  \item[Metalanguage] What is the metalanguage? That is, in what language are sugars
     written? Is it the same language the programs are written in, thus
     allowing sugars and code to be interspersed, or a different
     language?
-  \item In what order are constructs desugared? Most importantly, are
-    nested sugars evaluated from the \emph{innermost to outermost}, or
-    from \emph{outermost to innermost}?
-  \item How many \emph{phases} of desugaring are there? Can there be
-    more than one?
-  \item How \emph{safe} is it? Can desugaring produce syntactically
-    invalid code? Can it produce an unbound variable, or accidentally
-    capture a variable? Can it produce code that contains a type error?
-  \item How powerful is it? Can a sugar take an arbitrary expression
+  \item[Expressiveness] How expressive is it? Can a sugar take an arbitrary expression
     as a parameter, or only a primitive type? If it can take an
     expression, can it deconstruct it, or only use it parametrically?
     Are the sugars written in a general purpose language, or in a
     restricted one, e.g. as declarative pattern-based rules?
-\end{enumerate}
+  \item[Evaluation Order] In what order are constructs desugared? Most importantly, are
+    nested sugars evaluated from the \emph{innermost to outermost}, or
+    from \emph{outermost to innermost}?
+  \item[Phases] How many \emph{phases} of desugaring are there? Can there be
+    more than one?
+  \item[Safety] How \emph{safe} is it? Can desugaring produce syntactically
+    invalid code? Can it produce an unbound variable, or accidentally
+    capture a variable? Can it produce code that contains a type error?
+\end{description}
 
 There is one big cluster of desugaring systems that should be called
 out by name: macro systems. They can be loosely defined as:
