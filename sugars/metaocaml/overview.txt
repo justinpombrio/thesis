@@ -1,6 +1,6 @@
 # MetaOCaml Desugaring #
 
-Representation: abstract surface syntax
+Representation: concrete surface syntax
 Authorship: user-defined
 Metalanguage: OCaml
 Arguments: expressions (and arbitrary OCaml values containing them)

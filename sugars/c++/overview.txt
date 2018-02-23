@@ -1,6 +1,6 @@
 # C++ Templates #
 
-Representation: abstract surface syntax
+Representation: concrete surface syntax
 Authorship: user-defined
 Metalanguage: C++ templates (pattern based)
 Arguments: types and primitive values
