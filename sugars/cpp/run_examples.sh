@@ -1,1 +1,1 @@
-g++ examples.cpp -o examples && ./examples
+gcc examples.c -o examples && ./examples
