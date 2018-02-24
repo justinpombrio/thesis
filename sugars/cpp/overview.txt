@@ -1,0 +1,20 @@
+# C++ Templates #
+
+Representation:
+Authorship:
+Metalanguage:
+Arguments:
+Result:
+Deconstruction:
+Evaluation Order:
+Phases: One
+Syntax safe: No
+Scope safe: No
+Type safe: No
+
+
+# Installation Notes #
+
+0. Install C.
+
+The examples can be compiled with gcc
