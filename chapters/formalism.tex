@@ -1,8 +1,8 @@
 \chapter{Desugaring, Formally}
 
-In this chapter, I give formal definitions for \Sc{ast}s and
+In this chapter, we give formal definitions for \Sc{ast}s and
 desugaring that will be used throughout the rest of the thesis.  Most
-relevantly, I assume that desugaring is given as a set of
+relevantly, we assume that desugaring is given as a set of
 pattern-based rewrite rules (a la Racket's \Code{syntax-rules}
 [CITE]). This is important because it will form an expressive limit on
 resugaring. My techniques for resugaring evaluation sequences [REF] and
@@ -12,7 +12,7 @@ will further restrict the allowed desuarging rules.
 
 \section{ASTs}
 
-For the purposes of resugaring, I place two requirements on
+For the purposes of resugaring, we place two requirements on
 \textsc{ast}s. First, the \Sc{ast} must distinguish between variable
 \emph{declarations} (i.e., binding sites) $\Decl{x}$, and variable
 \emph{references} (i.e., uses) $\Refn{x}$. Second, each variable and
@@ -35,7 +35,7 @@ ast $e$ &$::=$& $\Const$ & syntactic constant \\
   &$|$& $\Surf{C}{e_1 \dd e_n}$ & surface \Sc{ast} node \\
   &$|$& $\Aux{C}{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
 %  &$|$& $\Bitter{C}{e_1 \dd e_n}$ & bitter \Sc{ast} node \\
-  &$|$& $\Tag{p}{p}{e}$ & tagged node \\
+  &$|$& $\Tag{p}{p}{e}$ & tagged node ($p$ defined later) \\
   &$|$& $[e_1 \dd e_n]$ & list \\
   &$|$& $\Refn[u]{x}$  & variable reference \\
   &$|$& $\Decl[u]{x}$  & variable declaration \\
@@ -46,19 +46,185 @@ ast $e$ &$::=$& $\Const$ & syntactic constant \\
 
 [FILL: pattern-based rules, matching/subs; copy prose]
 
-\section{AST Signatures}
+\section{AST Signatures} % Or Syntype Checking
 
 Language's \textsc{ast}s typically have well-formedness criteria that
 restrict how they can be put together. For example, perhaps
 expressions can only occur within statements; statements occur only
 within blocks; or data definitions can only occur at the top
-level. These restrictions are \emph{usually} but not always (e.g.,
-Racket [CITE] - marginpar?) enforced by parsing.
+level. These restrictions are \emph{usually} enforced by parsing,
+although this becomes more difficult in the precense of sugar
+(e.g. Racket [CITE] [FILL]).
 
 These well-formedness conditions can (largely) be captured by giving
 each syntactic construct a \emph{signature} that assigns it an
 \emph{arity} and a \emph{sort}, and specifies the sorts that its
 children must have.
+
+\begin{Table}
+ast defn. $G$ &$::=$& $A \mapsto \{t_1, ... t_n\}$
+  & (with no production $A_1 \mapsto A_2$) \\
+syntactic category $A$ &$::=$& \textit{name} \\
+syntax type $t$ &$::=$& $A$ & syntactic category \\
+  &$|$& $\Core{C}{t_1 ... t_n}$ & syntactic construct \\
+  &$|$& $[t]$ & list \\
+  &$|$& String & string literal \\
+  &$|$& Decl & variable declaration \\
+  &$|$& Refn & variable reference \\
+language $L$ &$::=$& $G, rs$
+\end{Table}
+
+Lemma: If rules grammar check, then e obeys Surf implies ds(e) obeys
+Core.
+
+Lemma: Normalizing a grammar does not change its language.
+
+\paragraph{Exhaustion Checking}
+We perform exhaustion checking to make sure that sugars cover all
+possible cases of their arguments, but do not give the algorithm here.
+It works by looking at \emph{shapes}: a shape is a pattern that
+contains types in place of pattern variables. It is straightforward to
+check whether an expression matches a shape, and to convert a pattern
+into a shape. Exhaustion checking uses the fact that the expressions
+that do \emph{not} match a shape can be expressed as a union of shapes.
+[TODO: prove]
+
+\begin{figure}
+
+\TypeLabel{\SaysExpr{L}{e}{t}}
+
+\begin{multicols}{2}
+  
+  \Inference[e-con]{
+    A \mapsto \Core{C}{t_1 ... t_n} \in L \\
+    \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{L}{e_n}{t_n}
+  }{
+    \SaysExpr{L}{\Core{C}{e_1 ... e_n}}{A}
+  }
+
+  \Inference[e-refn]{}{
+    \SaysExpr{L}{\Refn{x}}{\TRefn}
+  }
+
+  \Inference[e-decl]{}{
+    \SaysExpr{L}{\Decl{x}}{\TDecl}
+  }
+
+  \Inference[e-str]{}{
+    \SaysExpr{L}{\textit{string}}{\TString}
+  }
+
+  \Inference[e-list]{
+    \SaysExpr{L}{e_1}{t} \;\cdots\; \SaysExpr{L}{e_n}{t}
+  }{
+    \SaysExpr{L}{[e_1 ... e_n]}{[t]}
+  }
+
+  \Inference[e-sugar]{
+    \SaysRule{L}{m}{t_1,...,t_n}{t} \\
+    \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{L}{e_n}{t_n}
+  }{
+    \SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}
+  }
+\end{multicols}
+
+\TypeLabel{\SaysPatt{L}{\Gamma}{p}{t}}
+
+\begin{multicols}{2}
+
+  \Inference[p-pvar]{
+    \PVarA : t \in \Gamma
+  }{
+    \SaysPatt{L}{\Gamma}{\PVarA}{t}
+  }
+
+  \Inference[p-refn]{}{
+    \SaysPatt{L}{\Gamma}{x}{\TRefn}
+  }
+
+  \Inference[p-decl]{}{
+    \SaysPatt{L}{\Gamma}{x}{\TDecl}
+  }
+
+  \Inference[p-str]{}{
+    \SaysPatt{L}{\Gamma}{\textit{string}}{\TString}
+  }
+
+  \Inference[p-con]{
+    A \mapsto \Core{C}{t_1 ... t_n} \in L \\
+    \SaysPatt{L}{\Gamma}{p_1}{t_1} \;\cdots\; \SaysPatt{L}{\Gamma}{p_n}{t_n}
+  }{
+    \SaysPatt{L}{\Gamma}{\Core{C}{p_1 ... p_n}}{A}
+  }
+
+  \Inference[p-sugar]{
+    \SaysRule{L}{m}{t_1,...,t_n}{t} \\
+    \SaysPatt{L}{\Gamma}{p_1}{t_1} \;\cdots\; \SaysPatt{L}{\Gamma}{p_n}{t_n}
+  }{
+    \SaysPatt{L}{\Gamma}{\Surf{m}{p_1 ... p_n}}{t}
+  }
+
+  \Inference[p-empty]{}{
+    \SaysPatt{L}{\Gamma}{[\epsilon]}[t]
+  }
+
+  \Inference[p-cons]{
+    \SaysPatt{L}{\Gamma}{p}{t} \\
+    \SaysPatt{L}{\Gamma}{[ps]}{[t]}
+  }{
+    \SaysPatt{L}{\Gamma}{[\Cons{p}{ps}]}{[t]}
+  }
+
+  \Inference[p-ellipsis]{
+    l \mapsto \EList{\Gamma'} \in \Gamma & \SaysPatt{L}{\Gamma'}{p}{t}
+  }{
+    \SaysPatt{L}{\Gamma}{[\Rep{p}{l}]}{[t]}
+  }
+\end{multicols}
+
+\TypeLabel{\SaysRule{L}{m}{t,...,t}{t}}
+\Inference[g-sugar]{
+  \DsRuleFancy
+      {m}
+      {(p_{11},...,p_{1n});\Gamma_1;F_1 \To p_1'}
+      {(p_{k1},...,p_{kn});\Gamma_k;F_k \To p_k'}
+      \in L \\
+  \text{The cases are exhaustive over $t_1,...,t_n$ in $G$} \\
+  \SaysPatt{L}{\Gamma_{i}}{p_{ij}}{t_j}
+    \text{ for each $i \in 1..k, j \in 1..n$} \\
+  \SaysPatt{L}{\Gamma_{i}}{p_i'}{t}
+    \text{ for each $i \in 1..k$}
+}{
+  \SaysRule{L}{m}{t_1,...,t_n}{t}
+}
+
+\TypeLabel{\SaysEnv{L}{\gamma}{\Gamma}}
+\Inference[$\gamma$-env]{
+  \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{e_n}{t_n} \\
+  \SaysEnv{L}{\gamma_{11}}{\Gamma_1} \;\cdots\; \SaysEnv{L}{\gamma_{1j}}{\Gamma_1} \\
+  ... \\
+  \SaysEnv{L}{\gamma_{m1}}{\Gamma_m} \;\cdots\; \SaysEnv{L}{\gamma_{mk}}{\Gamma_m} \\
+}{
+  \SaysEnv{L}{
+    \begin{cases}
+      \PVarA_1 \mapsto e_1,\,...,\,\PVarA_n \mapsto e_n \\
+      i_1 \mapsto [\gamma_{11},\,...,\,\gamma_{1j}] \\
+      ... \\
+      i_m \mapsto [\gamma_{m1},\,...,\,\gamma_{mk}]
+    \end{cases}
+  }{
+    \Gamma',
+    \begin{cases}
+      \PVarA_1: t_1,\,...,\,\PVarA_n: t_n, \\
+      %\PVarA_1': t_1',\,...,\,\PVarA_{n'}': t_{n'}' \\
+      i_1 \mapsto [\Gamma_1],\,...,\,i_m \mapsto [\Gamma_m], \\
+      %i_1' \mapsto [\Gamma_1'],\,...,\,i_{m'}' \mapsto [\Gamma_{m'}']
+    \end{cases}
+  }
+}
+
+\caption{Grammar Checking}
+\end{figure}
 
 
 \newpage
@@ -302,6 +468,7 @@ pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
 seq. pattern $ps$ &$::=$& $\epsilon$ & empty sequence \\
   &$|$& $\Cons{p}{ps}$ & cons \\
   &$|$& $\Rep{p}{l}$ & ellipsis with label $l$ \\
+  &$|$& $\EList{p_1 ... p_n}_l$ & ellipsis list (used internally) \\
 fresh vars $F$ &$::=$& $\{x,...\}$ & fresh variable set \\
 type env. $\Gamma$ &$::=$&
 $\begin{cases}
@@ -311,7 +478,7 @@ $\begin{cases}
 substitution $\gamma$ &$::=$&
 $\begin{cases}
   \PVarA \mapsto e, ... \\
-  l \mapsto [\gamma ... \gamma], ... \\
+  l \mapsto \EList{\gamma ... \gamma}, ... \\
   x \mapsto x, ...
 \end{cases}$
 \end{Table}
@@ -327,55 +494,63 @@ desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
 \subsection{Matching and Substitution}
 
 \begin{figure}
-\TypeLabel{\SaysMatch{F}{e}{p}{\gamma}}
+\TypeLabel{\SaysMatch{F}{e}{p}{\gamma}{p}}
 \begin{multicols}{2}
   \Inference[m-pvar]{}{
-    \SaysMatch{F}{e}{\PVarA}{\{\PVarA \mapsto e\}}
+    \SaysMatch{F}{e}{\PVarA}{\{\PVarA \mapsto e\}}{\PVarA}
   }
 
   \Inference[m-capture]{
     x \not\in F
   }{
-    \SaysMatch{F}{x}{x}{\{\}}
+    \SaysMatch{F}{x}{x}{\{\}}{x}
   }
 
   \Inference[m-fresh]{
     x \in F
   }{
-    \SaysMatch{F}{y}{x}{\{x \mapsto y\}}
+    \SaysMatch{F}{y}{x}{\{x \mapsto y\}}{y}
   }
 
   \Inference[m-str]{}{
-    \SaysMatch{F}{string}{string}{\{\}}
+    \SaysMatch{F}{string}{string}{\{\}}{string}
   }
 
   \Inference[m-empty]{}{
-    \SaysMatch{F}{[\phantom{.}]}{\epsilon}{\{\}}
+    \SaysMatch{F}{[\phantom{.}]}{[\epsilon]}{\{\}}{[\epsilon]}
   }
 
   \Inference[m-cons]{
-    \SaysMatch{F}{e_1}{p}{\gamma_1} \\
-    \SaysMatch{F}{[e_2,...,e_n]}{ps}{\gamma_s} \\
+    \SaysMatch{F}{e_1}{p}{\gamma_1}{p'} \\
+    \SaysMatch{F}{[e_2,...,e_n]}{[ps]}{\gamma_s}{[ps']} \\
     \gamma_1 \DisjUnion \gamma_2 = \gamma
   }{
-    \SaysMatch{F}{[e_1 ... e_n]}{p,ps}{\gamma}
+    \SaysMatch{F}{[e_1 ... e_n]}{[p,ps]}{\gamma}{[p',ps']}
   }
 \end{multicols}
 \vspace{1em}
 
+\Inference[m-ellipsis]{
+  \SaysMatch{F}{e_1}{p}{\gamma_1}{p_1'} \;\cdots\; \SaysMatch{F}{e_n}{p}{\gamma_n}{p_n'}
+}{
+  \SaysMatch{F}{[e_1 ... e_n]}{[\Rep{p}{l}]}
+            {\{l \mapsto \EList{\gamma_1 ... \gamma_n}\}}
+            {\EList{p_1' ... p_n'}_l}
+}
+
 \Inference[m-con]{
-  \SaysMatch{F}{e_1}{p_1}{\gamma_1} \;\cdots\; \SaysMatch{F}{e_n}{p_n}{\gamma_n}
-  \gamma_1 \DisjUnion ... \DisjUnion \gamma_n = \gamma
+  \SaysMatch{F}{e_1}{p_1}{\gamma_1}{p_1'} \;\cdots\; \SaysMatch{F}{e_n}{p_n}{\gamma_n}{p_n'} &
 }{
-  \SaysMatch{F}{\Core{C}{e_1 ... e_n}}{\Core{C}{p_1 ... p_n}}{\gamma}
+  \SaysMatch{F}{\Core{C}{e_1 ... e_n}}{\Core{C}{p_1 ... p_n}}
+            {\gamma_1 \cup ... \cup \gamma_n}
+            {\Core{C}{p_1' ... p_n'}}
 }
 
-\Inference[m-star]{
-  \SaysMatch{F}{e_1}{p}{\gamma_1} \;\cdots\; \SaysMatch{F}{e_n}{p}{\gamma_n}
-}{
-  \SaysMatch{F}{[e_1 ... e_n]}{[\Rep{p}{l}]}{\{l \mapsto [\gamma_1 ... \gamma_n]\}}
-}
+\caption{Matching}
+\end{figure}
 
+
+\begin{figure}
 \TypeLabel{\SaysSubs{F}{\gamma}{p}{e}}
 \begin{multicols}{2}
   \Inference[s-pvar]{
@@ -406,18 +581,25 @@ desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
 
   \Inference[s-cons]{
     \SaysSubs{F}{\gamma}{p}{e_1} \\
-    \SaysSubs{F}{\gamma}{[ps]}{[e_2,...,e_n]}
+    \SaysSubs{F}{\gamma}{[ps]}{[e_2 ... e_n]}
   }{
     \SaysSubs{F}{\gamma}{[p,ps]}{[e_1 e_2 ... e_n]}
   }
 \end{multicols}
 \vspace{1em}
 
-\Inference[s-star]{
-  l \mapsto [\gamma_1 ... \gamma_n] \in \gamma \\
+\Inference[s-ellipsis]{
+  l \mapsto \EList{\gamma_1 ... \gamma_n} \in \gamma \\
   \SaysSubs{F}{\gamma_1}{p}{e_1} \;\cdots\; \SaysSubs{F}{\gamma_n}{p}{e_n}
 }{
   \SaysSubs{F}{\gamma}{[\Rep{p}{l}]}{[e_1 ... e_n]}
+}
+
+\Inference[s-ellipsis-list]{
+  l \mapsto \EList{\gamma_1 ... \gamma_n} \in \gamma \\
+  \SaysSubs{F}{\gamma_1}{p_1}{e_1} \;\cdots\; \SaysSubs{F}{\gamma_n}{p_n}{e_n}
+}{
+  \SaysSubs{F}{\gamma}{\EList{p_1 ... p_n}}{[e_1 ... e_n]}
 }
 
 \Inference[s-con]{
@@ -432,7 +614,7 @@ desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
   \SaysSubs{F}{\gamma}{\Surf{m}{p_1 ... p_n}}{\Surf{m}{e_1 ... e_n}}
 }
 
-\caption{Matching and Substitution}
+\caption{Substitution}
 \end{figure}
 
 \begin{lemma}[matching and substitution]
@@ -569,173 +751,6 @@ See \cref{fig:expansion}.
 
 
 
-
-\section{AST Checking} % Or Syntype Checking
-
-\begin{Table}
-ast defn. $G$ &$::=$& $A \mapsto \{t_1, ... t_n\}$
-  & (with no production $A_1 \mapsto A_2$) \\
-syntactic category $A$ &$::=$& \textit{name} \\
-syntax type $t$ &$::=$& $A$ & syntactic category \\
-  &$|$& $\Core{C}{t_1 ... t_n}$ & syntactic construct \\
-  &$|$& $[t]$ & list \\
-  &$|$& String & string literal \\
-  &$|$& Decl & variable declaration \\
-  &$|$& Refn & variable reference \\
-language $L$ &$::=$& $G, rs$
-\end{Table}
-
-Lemma: If rules grammar check, then e obeys Surf implies ds(e) obeys
-Core.
-
-Lemma: Normalizing a grammar does not change its language.
-
-\paragraph{Exhaustion Checking}
-We perform exhaustion checking to make sure that sugars cover all
-possible cases of their arguments, but do not give the algorithm here.
-It works by looking at \emph{shapes}: a shape is a pattern that
-contains types in place of pattern variables. It is straightforward to
-check whether an expression matches a shape, and to convert a pattern
-into a shape. Exhaustion checking uses the fact that the expressions
-that do \emph{not} match a shape can be expressed as a union of shapes.
-[TODO: prove]
-
-\begin{figure}
-
-\TypeLabel{\SaysExpr{L}{e}{t}}
-
-\begin{multicols}{2}
-  
-  \Inference[e-con]{
-    A \mapsto \Core{C}{t_1 ... t_n} \in L \\
-    \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{L}{e_n}{t_n}
-  }{
-    \SaysExpr{L}{\Core{C}{e_1 ... e_n}}{A}
-  }
-
-  \Inference[e-refn]{}{
-    \SaysExpr{L}{\Refn{x}}{\TRefn}
-  }
-
-  \Inference[e-decl]{}{
-    \SaysExpr{L}{\Decl{x}}{\TDecl}
-  }
-
-  \Inference[e-str]{}{
-    \SaysExpr{L}{\textit{string}}{\TString}
-  }
-
-  \Inference[e-list]{
-    \SaysExpr{L}{e_1}{t} \;\cdots\; \SaysExpr{L}{e_n}{t}
-  }{
-    \SaysExpr{L}{[e_1 ... e_n]}{[t]}
-  }
-
-  \Inference[e-sugar]{
-    \SaysRule{L}{m}{t_1,...,t_n}{t} \\
-    \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{L}{e_n}{t_n}
-  }{
-    \SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}
-  }
-\end{multicols}
-
-\TypeLabel{\SaysPatt{L}{\Gamma}{p}{t}}
-
-\begin{multicols}{2}
-
-  \Inference[p-pvar]{
-    \PVarA : t \in \Gamma
-  }{
-    \SaysPatt{L}{\Gamma}{\PVarA}{t}
-  }
-
-  \Inference[p-refn]{}{
-    \SaysPatt{L}{\Gamma}{x}{\TRefn}
-  }
-
-  \Inference[p-decl]{}{
-    \SaysPatt{L}{\Gamma}{x}{\TDecl}
-  }
-
-  \Inference[p-str]{}{
-    \SaysPatt{L}{\Gamma}{\textit{string}}{\TString}
-  }
-
-  \Inference[p-con]{
-    A \mapsto \Core{C}{t_1 ... t_n} \in L \\
-    \SaysPatt{L}{\Gamma}{p_1}{t_1} \;\cdots\; \SaysPatt{L}{\Gamma}{p_n}{t_n}
-  }{
-    \SaysPatt{L}{\Gamma}{\Core{C}{p_1 ... p_n}}{A}
-  }
-
-  \Inference[p-sugar]{
-    \SaysRule{L}{m}{t_1,...,t_n}{t} \\
-    \SaysPatt{L}{\Gamma}{p_1}{t_1} \;\cdots\; \SaysPatt{L}{\Gamma}{p_n}{t_n}
-  }{
-    \SaysPatt{L}{\Gamma}{\Surf{m}{p_1 ... p_n}}{t}
-  }
-
-  \Inference[p-empty]{}{
-    \SaysPatt{L}{\Gamma}{[\epsilon]}[t]
-  }
-
-  \Inference[p-cons]{
-    \SaysPatt{L}{\Gamma}{p}{t} \\
-    \SaysPatt{L}{\Gamma}{[ps]}{[t]}
-  }{
-    \SaysPatt{L}{\Gamma}{[\Cons{p}{ps}]}{[t]}
-  }
-
-  \Inference[p-star]{
-    l \mapsto [\Gamma'] \in \Gamma & \SaysPatt{L}{\Gamma'}{p}{t}
-  }{
-    \SaysPatt{L}{\Gamma}{[\Rep{p}{l}]}{[t]}
-  }
-\end{multicols}
-
-\TypeLabel{\SaysRule{L}{m}{t,...,t}{t}}
-\Inference[g-sugar]{
-  \DsRuleFancy
-      {m}
-      {(p_{11},...,p_{1n});\Gamma_1;F_1 \To p_1'}
-      {(p_{k1},...,p_{kn});\Gamma_k;F_k \To p_k'}
-      \in L \\
-  \text{The cases are exhaustive over $t_1,...,t_n$ in $G$} \\
-  \SaysPatt{L}{\Gamma_{i}}{p_{ij}}{t_j}
-    \text{ for each $i \in 1..k, j \in 1..n$} \\
-  \SaysPatt{L}{\Gamma_{i}}{p_i'}{t}
-    \text{ for each $i \in 1..k$}
-}{
-  \SaysRule{L}{m}{t_1,...,t_n}{t}
-}
-
-\TypeLabel{\SaysEnv{L}{\gamma}{\Gamma}}
-\Inference[$\gamma$-env]{
-  \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{e_n}{t_n} \\
-  \SaysEnv{L}{\gamma_{11}}{\Gamma_1} \;\cdots\; \SaysEnv{L}{\gamma_{1j}}{\Gamma_1} \\
-  ... \\
-  \SaysEnv{L}{\gamma_{m1}}{\Gamma_m} \;\cdots\; \SaysEnv{L}{\gamma_{mk}}{\Gamma_m} \\
-}{
-  \SaysEnv{L}{
-    \begin{cases}
-      \PVarA_1 \mapsto e_1,\,...,\,\PVarA_n \mapsto e_n \\
-      i_1 \mapsto [\gamma_{11},\,...,\,\gamma_{1j}] \\
-      ... \\
-      i_m \mapsto [\gamma_{m1},\,...,\,\gamma_{mk}]
-    \end{cases}
-  }{
-    \Gamma',
-    \begin{cases}
-      \PVarA_1: t_1,\,...,\,\PVarA_n: t_n, \\
-      %\PVarA_1': t_1',\,...,\,\PVarA_{n'}': t_{n'}' \\
-      i_1 \mapsto [\Gamma_1],\,...,\,i_m \mapsto [\Gamma_m], \\
-      %i_1' \mapsto [\Gamma_1'],\,...,\,i_{m'}' \mapsto [\Gamma_{m'}']
-    \end{cases}
-  }
-}
-
-\caption{Grammar Checking}
-\end{figure}
 
 \subsection{Type Soundness}
 
@@ -880,10 +895,10 @@ halts.
   \item[$p = [p,ps{]}$] [FILL]
   \item[$p = [\Rep{p}{l'}{]}$]
     \begin{ProofTable}
-      By p-star: & $\SaysPatt{L}{\Gamma}{\Rep{p}{l'}}{[t]}$ & fixes $t$ \\
+      By p-ellipsis: & $\SaysPatt{L}{\Gamma}{\Rep{p}{l'}}{[t]}$ & fixes $t$ \\
       and & $l' \mapsto [\Gamma'] \in \Gamma$ & (1) \\
       and & $\SaysPatt{L}{\Gamma'}{p}{t}$ & (2) \\
-      By m-star: & $\SaysMatch{F}{[e_1 ... e_n]}{[\Rep{p}{l}]}
+      By m-ellipsis: & $\SaysMatch{F}{[e_1 ... e_n]}{[\Rep{p}{l}]}
         {\{l' \mapsto [\gamma_1 \DisjUnion ... \gamma_n]\}}$
         & fixes $e$, $\gamma$ \\
       and & $\SaysMatch{F}{e_i}{p}{\gamma_i}$ for each $i$ & (3) \\
@@ -973,12 +988,12 @@ halts.
     Finally, by e-list (forward), $\SaysExpr{L}{[e_1 e_2 ... e_n]}{[t]}$.
   \item[$p = [\Rep{p}{l}{]}$]
     \begin{ProofTable}
-      By s-star: & $\SaysSubs{F}{\gamma}{[\Rep{p}{l}]}{[e_1 ... e_n]}$ & fixes $e$ \\
-      and & $l \mapsto [\gamma_1 ... \gamma_n] \in \gamma$ \\
+      By s-ellipsis: & $\SaysSubs{F}{\gamma}{[\Rep{p}{l}]}{[e_1 ... e_n]}$ & fixes $e$ \\
+      and & $l \mapsto \EList{\gamma_1 ... \gamma_n} \in \gamma$ \\
       and & $\SaysSubs{F}{\gamma_i}{p}{e_i}$ for each $i$ & (1) \\
-      By $\gamma$-env: & $l \mapsto [\Gamma'] \in \Gamma$ \\
+      By $\gamma$-env: & $l \mapsto \EList{\Gamma'} \in \Gamma$ \\
       and & $\SaysEnv{L}{\gamma_i}{\Gamma'}$ for each $i$ & (2) \\
-      By p-star: & $\SaysPatt{L}{\Gamma}{[\Rep{p}{l}]}{[t]}$ & fixes $t$ \\
+      By p-ellipsis: & $\SaysPatt{L}{\Gamma}{[\Rep{p}{l}]}{[t]}$ & fixes $t$ \\
       and & $\SaysPatt{L}{\Gamma'}{p}{t}$ & (3)
     \end{ProofTable}
     Using the I.H. with (1), (2), and (3) proves that
