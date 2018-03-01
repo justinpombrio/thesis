@@ -28,3 +28,4 @@
 *.dyn_hi
 texput.log
 sugars/haskell/main
+examples
