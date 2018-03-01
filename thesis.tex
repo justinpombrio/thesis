@@ -83,7 +83,7 @@
 %%  Commands
 
 % General Formatting
-\newcommand{\Sc}[1]{\textsc{#1}\xspace}
+\newcommand{\Sc}[1]{\textsc{#1}}
 \newcommand{\Desc}[1]{\unskip\par\noindent\textsc{#1:}}
 \newenvironment{Table}
   {\begin{center}\begin{tabular}{l l l @{\quad}l}}
@@ -127,9 +127,11 @@
 \newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
 \newcommand{\SaysRule}[4]{#1 \vdash #2 : #3 \to #4}
 \newcommand{\SaysEnv}[3]{#1 \vdash #2 : #3}
+\newcommand{\SaysDesugar}[3]{#1 \vdash desugar(#2) = #3}
 \newcommand{\SaysDs}[3]{#1 \vdash #2 \rightsquigarrow_\text{ds} #3}
 \newcommand{\SaysDss}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{ds} #3}
 \newcommand{\SaysExp}[3]{#1 \vdash #2 \rightsquigarrow_\text{exp} #3}
+\newcommand{\SaysResugar}[3]{#1 \vdash resugar(#2) = #3}
 \newcommand{\SaysRs}[3]{#1 \vdash #2 \rightsquigarrow_\text{rs} #3}
 \newcommand{\SaysRss}[3]{#1 \vdash #2 \rightsquigarrow^{*}_\text{rs} #3}
 \newcommand{\SaysUnexp}[3]{#1 \vdash #2 \rightsquigarrow_\text{unexp} #3}
@@ -156,7 +158,8 @@
   {#3}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
-\newcommand{\Const}{const}
+\newcommand{\Value}{value}
+\newcommand{\ValueT}{Value}
 %\newcommand{\Tag}[3]{(\Code{Tag}\;#1\;#2\;#3)}
 \newcommand{\Tag}[3]{(\Code{Tag}_{#1 \To #2} #3)}
 % Patterns
@@ -165,7 +168,7 @@
 \newcommand{\PVarC}{\gamma}
 % SeqPatterns
 \newcommand{\Cons}[2]{#1, #2}
-\newcommand{\Rep}[2]{#1\ {*}\_{#2}}
+\newcommand{\Rep}[2]{#1\ {*}_{#2}}
 \newcommand{\EList}[1]{\lceil #1 \rceil}
 % Desugaring Rules
 \newcommand{\DsRule}[2]{\Code{sugar}\;\Variable{}{}{#1}{} = \{#2\}}
@@ -233,8 +236,7 @@
 \include{chapters/formalism}
 \part{Resugaring}
 \include{chapters/resugar-eval}
-% Chapter: Resugaring steps
-%   Must extend terms with values and tags!
+\include{chapters/resugar-scope}
 % Chapter: Resugaring scope
 % Chapter: Resugaring types
 % Chapter: Implementation

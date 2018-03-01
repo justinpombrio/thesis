@@ -1,0 +1,127 @@
+\chapter{Resugaring Scope}\label{chap:resugar-scope}
+
+\section{Scope Checking}
+
+(See \cref{fig:scope}.)
+
+\begin{figure}
+\TypeLabel{\SaysScope{\Sigma}{e}
+  {\{\Decl{x}\}}
+  {\{\Refn{x}\}}
+  {\{\Decl{x}\}}
+  {\{\Refn{x}\mapsto\Decl{x}\}}}
+
+\Inference[scope-e-decl]{}{
+  \SaysScope{\Sigma}{\Decl{x}}{\{\Decl{x}\}}{\{\}}{\{\Decl{x}\}}{\{\}}
+}
+
+\Inference[scope-e-refn]{}{
+  \SaysScope{\Sigma}{\Refn{x}}{\{\}}{\{\Refn{x}\}}{\{\}}{\{\}}
+}
+
+\Inference[scope-e-con]{
+  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
+  \SaysScope{\Sigma}{e_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
+  S = \SetSuchThat{
+    \Decl[a]{x} \mapsto \Decl[b]{x}
+  }{
+    \Decl[a]{x} \in P_i,\;
+    \Decl[b]{x} \in P_j,\;
+    \Bind{\sigma}{i}{j}
+  } \IS\\
+  B = \SetSuchThat{
+    \Refn[a]{x} \mapsto \Decl[b]{x}
+  }{
+    \Refn[a]{x} \in R_i,\;
+    \Decl[b]{x} \in P_j,\;
+    \Bind{\sigma}{i}{j},\;
+    \Decl[b]{x} \not\in \Domain{S}
+  } \IS\\
+  R = \SetSuchThat{
+    \Refn[a]{x}
+  }{
+    \Refn[a]{x} \in R_i,\;
+    \NotExists{\Decl[b]{x}}{\Refn[a]{x} \mapsto \Decl[b]{x} \in B\}}
+  } \IS\\
+  P = \SetSuchThat{
+    \Decl[a]{x}
+  }{
+    \Decl[a]{x} \in P_i,\;
+    \Prov{\sigma}{i},\;
+    \Decl[a]{x} \not\in \Domain{S}
+  }
+}{
+  \SaysScope{\Sigma}{\Core{C}{e_1 ... e_n}}{P}{R}{B}
+}
+
+
+\Inference[scope-p-con]{
+  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
+  \SaysScope{\Sigma}{p_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
+  S = \SetSuchThat{
+    a \mapsto b
+  }{
+    a \in P_i,\;
+    b \in P_j,\;
+    \Bind{\sigma}{i}{j},\;
+    \SaysCanShadow{F}{a}{b}
+  } \IS\\
+  B = \SetSuchThat{
+    a \mapsto b
+  }{
+    a \in R_i,\;
+    b \in P_j,\;
+    \Bind{\sigma}{i}{j},\;
+    b \not\in \Domain{S},\;
+    \SaysCanBind{F}{a}{b}
+  } \IS\\
+  R = \SetSuchThat{
+    a
+  }{
+    a \in R_i,\;
+    (\NotExists{b}{a \mapsto b \in B\}}
+    \text{ or $a$ is a pattern var})
+  } \IS\\
+  P = \SetSuchThat{
+    a
+  }{
+    a \in P_i,\;
+    \Prov{\sigma}{i},\;
+    a \not\in \Domain{S}
+  }
+}{
+  \SaysScope{\Sigma}{\Core{C}{p_1 ... p_n}}{P}{R}{B}
+}
+
+Two checks to make: fresh vars don't bind to non-fresh vars, and named
+vars only bind to vars of the same name:
+\begin{multicols}{3}
+  \Inference{}{
+    \SaysCanBind{F}{\Refn[1]{x}}{\Decl[2]{x}}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \SaysCanBind{F}{\Refn[1]{x}}{\PVarA}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \SaysCanBind{F}{\PVarA}{\Decl[1]{x}}
+  }
+  \Inference{}{
+    \SaysCanBind{F}{\PVarA}{\PVarB}
+  }
+  \Inference{}{
+    \SaysCanShadow{F}{\Decl[1]{x}}{\Decl[2]{x}}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \SaysCanShadow{F}{\Decl[1]{x}}{\PVarA}
+  }
+\end{multicols}
+
+\caption{Scope Checking Rules}
+\label{fig:scope}
+\end{figure}

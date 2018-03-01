@@ -1,4 +1,4 @@
-\chapter{Resugaring Evaluation Sequences}
+\chapter{Resugaring Evaluation Sequences}\label{chap:resugar-eval}
 
 In this chapter, we tackle the challenge of combining syntactic sugar
 with semantics[CITE, CITE]. Given a set of desugaring rules, of the
@@ -185,3 +185,78 @@ has honest tags. (Assuming that evaluation does not modify tags.)
 %If $\Desugar{C} \stepsCore \Desugar{C'}$,
 %then $\forall E,t_1,...,t_k$,
 %$E[C[t_1,...,t_k]] \stepsSurf E[C'[t_1,...,t_k]]$
+
+
+
+\begin{figure}
+  NOTES: Surface terms are any untagged terms.
+  \begin{Table}
+    $s$ &$::=$& $\Value$ \\
+    &$|$& $\Refn{x}$ \\
+    &$|$& $\Decl{x}$ \\
+    &$|$& $\Surf{C}{s \dd}$ \\
+    &$|$& $[s \dd]$ \\
+    \\
+    $E_{rs}$ &$::=$& $\square$ \\
+    &$|$& $\Core{C}{s \dd E_{rs}\,e \dd}$ \\
+    &$|$& $\Surf{C}{s \dd E_{rs}\,e \dd}$ \\
+    &$|$& $\Aux{C}{s \dd E_{rs}\,e \dd}$ \\
+    &$|$& $\Tag{p}{p}{E_{rs}}$ \\
+    &$|$& $[s \dd E_{rs}\,e \dd]$
+  \end{Table}
+
+  \begin{multicols}{2}
+
+  \TypeLabel{\SaysResugar{L}{c}{s}}
+
+  \Inference[resugar]{
+    \SaysRss{L}{c}{s}
+  }{
+    \SaysResugar{L}{c}{s}
+  }
+  
+  \TypeLabel{\SaysRs{L}{e}{e}}
+  
+  \Inference[rs-ctx]{
+    \SaysUnexp{L}{e}{e'}
+  }{
+    \SaysRs{L}{E_{rs}[e]}{E_{rs}[e']}
+  }
+
+  \end{multicols}
+
+  \TypeLabel{\SaysUnexp{L}{e}{e}}
+
+  \Inference[unexp-tag]{
+    e \text{ has no Tags} &
+    \SaysMatch{L}{e}{p'}{\gamma}{\_} &
+    \SaysSubs{L}{\gamma}{p}{e'}
+  }{
+    \SaysUnexp{L}{\Tag{p}{p'}{e}}{e'}
+  }
+  
+  \caption{Unexpansion}
+  \label{fig:unexpansion}
+\end{figure}
+
+\begin{lemma} \label{lemma:exp-inverse}
+  For all terms $e$, if $\SaysExp{L}{e}{e'}$ and
+  $\SaysUnexp{L}{e'}{e''}$ then $e = e''$.
+\end{lemma}
+\begin{proof}
+  .[FILL]
+\end{proof}
+\begin{corollary}
+  Suppose that $e$ has honest tags [TODO].
+  If $\SaysUnexp{L}{e}{e'}$ and $\SaysExp{L}{e'}{e''}$
+  then $e = e''$.
+\end{corollary}
+\begin{proof}
+  Since $e$ can unexpand, it must have exactly one tag.
+  Since that tag is honest, it came from the expansion of some term $e^{*}$.
+  By \cref{lemma:exp-inverse}, $Expand(e^{*}) = e^{**}$ 
+  and $Unexpand(e^{**}) = e^{*}$ for some $e^{**}$.
+
+  (We write $Expand$ as shorthand for $\SaysExp{L}{\_}{\_}$;
+   likewise for $Unexpand$.)
+\end{proof}

@@ -8,7 +8,7 @@ The term \emph{syntactic sugar} was introduced by Peter Landin in
 convenience, but could instead be written using the syntax of the rest
 of the language. This captures the spirit and purpose of syntactic
 sugar, but is not discriminating enough to be a useful definition.
-I will define syntactic sugar as follows:
+We will define syntactic sugar as follows:
 %% [TODO: definition must (i) rule out functions, (ii) rule out
 %%   metaprogramming, (iii) include Racket macros, which are non-local
 %%   and non-phase-specific.]
@@ -27,7 +27,7 @@ The name suggests that syntactic sugar is inessential: it ``sweetens''
 the language to make it more palatable, but does not otherwise change
 its substance. The name also naturally leads to related terminology:
 \emph{desugaring} is the removal of syntactic sugar by expanding it;
-and \emph{resugaring} is a term I am introducing for the restoration
+and \emph{resugaring} is a term we are introducing for the restoration
 of information that was lost during desugaring.
 
 \section{What is it Good for?}
@@ -69,8 +69,8 @@ we can just look for things that most programming languages
     % e.g.:
     %\Code{class C: pass; c = C(); setattr(c, ``x'', 3); print(c.x)}
     \footnote{
-    It may sound like I am suggesting that everything should be
-    manipulatable at run-time. I am not. The more
+    It may sound like we are suggesting that everything should be
+    manipulatable at run-time. We are not. The more
     things which are fixed at compile time (variable names, field
     names, etc.), the more (i) programmers can reason about their
     programs; (ii) tools can reason about programs; (iii) compilers
@@ -143,12 +143,12 @@ The semantics of a language is almost always defined in terms of its
 as a programmer is forced to think of their program as text rather
 than as a tree, they are being distracted from its semantics. There
 are well-known examples of bugs that arise in text-based desugaring
-rules unless they are written in a very defensive style: I discuss
+rules unless they are written in a very defensive style: we discuss
 these in \ref{sec:cpre}.
 
 There are variations among tree representations as well: desugaring
 rules may work over the concrete syntax of the language, or over its
-abstract syntax. I discuss this further in [REF].
+abstract syntax. We discuss this further in [REF].
 
 \subsection{Language-defined or User-defined}
 
@@ -192,7 +192,7 @@ by being macro-aware and expanding the program (see [REF]).
 
 There are two major evaluation strategies used in desugaring systems.
 They loosely correspond to eager and lazy runtime evaluation, but
-differ in some important ways described below, so I will instead refer
+differ in some important ways described below, so we will instead refer
 to them by their original names [CITE]: Outside-in (\textsc{oi}) and
 Inside-out (\textsc{io}) evaluation:
 \begin{description}
