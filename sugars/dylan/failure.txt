@@ -1,0 +1,6 @@
+Internal error:
+  Link failed:
+  Building target libdylan.so:
+  "gcc [...several pages of gcc args...]"
+  failed with return status 1
+Exiting with return code -1
