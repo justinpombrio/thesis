@@ -31,20 +31,17 @@ straightforward:
 \begin{Table}
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 ast $e$ &$::=$& $\Value$ & primitive value \\
-  &$|$& $\Core{C}{e_1 \dd e_n}$ & core \Sc{ast} node \\
-  &$|$& $\Surf{C}{e_1 \dd e_n}$ & surface \Sc{ast} node \\
-  &$|$& $\Aux{C}{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
+  &$|$& $\Core{C}[u]{e_1 \dd e_n}$ & core \Sc{ast} node \\
+  &$|$& $\Surf{C}[u]{e_1 \dd e_n}$ & surface \Sc{ast} node \\
+  &$|$& $\Aux{C}[u]{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
 %  &$|$& $\Bitter{C}{e_1 \dd e_n}$ & bitter \Sc{ast} node \\
   &$|$& $[e_1 \dd e_n]$ & list \\
   &$|$& $\Refn[u]{x}$  & variable reference \\
   &$|$& $\Decl[u]{x}$  & variable declaration \\
-  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval})
+%  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval})
 %value $v$ &$::=$& $e$ & with no sugar invocations \\
 \end{Table}
 
-\section{Desugaring}
-
-[FILL: pattern-based rules, matching/subs; copy prose]
 
 \section{AST Signatures} % Or Syntype Checking
 
@@ -53,24 +50,34 @@ restrict how they can be put together. For example, perhaps
 expressions can only occur within statements; statements occur only
 within blocks; or data definitions can only occur at the top
 level. These restrictions are \emph{usually} enforced by parsing,
-although this becomes more difficult in the precense of sugar
+although this becomes more difficult in the presence of sugar
 (e.g. Racket [CITE] [FILL]).
 
+% TODO: Say 'signature', 'arity', 'sort' instead?
 These well-formedness conditions can (largely) be captured by giving
-each syntactic construct a \emph{signature} that assigns it an
-\emph{arity} and a \emph{sort}, and specifies the sorts that its
-children must have.
+each syntactic construct a \emph{syntax type}:
 
 \begin{Table}
 \Sc{ast} defn. $G$ &$::=$& $A \mapsto \{t_1, ... t_n\}$
-  & (with no production $A_1 \mapsto A_2$) \\
-syntactic category $A$ &$::=$& \textit{name} \\
+  & (where each $t$ is a syn. con.) \\
+syntactic category $A$ \hspace{-1em} &$::=$& \textit{name} \\
 syntax type $t$ &$::=$& $A$ & syntactic category \\
-  &$|$& $\Core{C}{t_1 ... t_n}$ & syntactic construct \\
+  &$|$& $\Core{C}{t_1 ... t_n}$ & core syntactic construct \\
+  &$|$& $\Aux{C}{t_1 ... t_n}$  & auxilliary syntactic construct \\
+  &$|$& $\Surf{C}{t_1 ... t_n}$ & surface syntactic construct \\
   &$|$& $[t]$ & list \\
-  &$|$& Value & primitive value \\
-  &$|$& Decl & variable declaration \\
-  &$|$& Refn & variable reference
+  &$|$& $\ValueT$ & primitive value \\
+  &$|$& $\DeclT$ & variable declaration \\
+  &$|$& $\RefnT$ & variable reference
+\end{Table}
+
+For example, if a language has only ``define'' statements, numeric
+expressions, and addition expressions, that can be captured by the
+\Sc{ast} definition:
+\begin{Table}
+  $\textit{Stmt}$ &$\mapsto$& $\{\Core{Define}{\DeclT\;\textit{Expr}}\}$ \\
+  $\textit{Expr}$ &$\mapsto$& $\{\Core{Number}{\ValueT},$ \\
+  && $\Core{Plus}{\textit{Expr}\;\textit{Expr}}\}$
 \end{Table}
 
 If parsing the surface language will respect this \Sc{ast} signature
@@ -127,7 +134,10 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
     \SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}
   }
 \end{multicols}
+\caption{Grammar Checking: Terms}
+\end{figure}
 
+\begin{figure}
 \TypeLabel{\SaysPatt{L}{\Gamma}{p}{t}}
 
 \begin{multicols}{2}
@@ -223,11 +233,8 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
   }
 }
 
-\caption{Grammar Checking}
+\caption{Grammar Checking: Patterns}
 \end{figure}
-
-
-\section{Expressions}
 
 
 
@@ -244,6 +251,7 @@ pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
   &$|$& $value$ & primitive value \\
   &$|$& $\Refn[i]{x}$ $|$ $\Decl[i]{x}$  & variable \\
   &$|$& $\Tag{p}{p}{e}$ & (used internally) \\
+  &$|$& $\Fresh{x}{p}$ & fresh variable \\
 seq. pattern $ps$ &$::=$& $\epsilon$ & empty sequence \\
   &$|$& $\Cons{p}{ps}$ & cons \\
   &$|$& $\Rep{p}{l}$ & ellipsis with label $l$ \\
@@ -282,18 +290,6 @@ language $L$ &$::=$& $G, rs$
     \SaysMatch{F}{e}{\PVarA}{\{\PVarA \mapsto e\}}{\PVarA}
   }
 
-  \Inference[m-capture]{
-    x \not\in F
-  }{
-    \SaysMatch{F}{x}{x}{\{\}}{x}
-  }
-
-  \Inference[m-fresh]{
-    x \in F
-  }{
-    \SaysMatch{F}{y}{x}{\{x \mapsto y\}}{y}
-  }
-
   \Inference[m-str]{}{
     \SaysMatch{F}{string}{string}{\{\}}{string}
   }
@@ -308,6 +304,24 @@ language $L$ &$::=$& $G, rs$
     \gamma_1 \cup \gamma_2 = \gamma
   }{
     \SaysMatch{F}{[e_1 ... e_n]}{[p,ps]}{\gamma}{[p',ps']}
+  }
+
+  \Inference[m-var-capture]{
+    x \not\in F
+  }{
+    \SaysMatch{F}{x}{x}{\{\}}{x}
+  }
+
+  \Inference[m-var-fresh]{
+    x \in F
+  }{
+    \SaysMatch{F}{y}{x}{\{x \mapsto y\}}{y}
+  }
+
+  \Inference[m-fresh]{
+    \SaysMatch{F,x}{e}{p}{\gamma}{p'}
+  }{
+    \SaysMatch{F}{e}{\Fresh{x}{p}}{\gamma}{p'}
   }
 \end{multicols}
 \vspace{1em}
@@ -351,18 +365,6 @@ language $L$ &$::=$& $G, rs$
     \SaysSubs{F}{\gamma}{string}{string}
   }
 
-  \Inference[s-capture]{
-    x \not\in F
-  }{
-    \SaysSubs{F}{\gamma}{x}{x}
-  }
-
-  \Inference[s-fresh]{
-    x \in F & x \mapsto y \in \gamma
-  }{
-    \SaysSubs{F}{\gamma}{x}{y}
-  }
-
   \Inference[s-empty]{}{
     \SaysSubs{F}{\gamma}{[\epsilon]}{[\phantom{.}]}
   }
@@ -372,6 +374,24 @@ language $L$ &$::=$& $G, rs$
     \SaysSubs{F}{\gamma}{[ps]}{[e_2 ... e_n]}
   }{
     \SaysSubs{F}{\gamma}{[p,ps]}{[e_1 e_2 ... e_n]}
+  }
+
+  \Inference[s-var-capture]{
+    x \not\in \gamma
+  }{
+    \SaysSubs{F}{\gamma}{x}{x}
+  }
+
+  \Inference[s-var-fresh]{
+    x \mapsto y \in \gamma
+  }{
+    \SaysSubs{F}{\gamma}{x}{y}
+  }
+
+  \Inference[s-fresh]{
+    \SaysSubs{F}{\gamma,x \mapsto y}{p}{e} \text{ for fresh $y$}
+  }{
+    \SaysSubs{F}{\gamma}{\Fresh{x}{p}}{e}
   }
 \end{multicols}
 \vspace{1em}
@@ -668,6 +688,7 @@ halts.
   then $\SaysExpr{L}{e}{t}$.
 \end{lemma}
 \begin{proof}
+  .[TODO]: update proof (freshness)
   Induction on $p$.
   \begin{description}
   \item[$p = string$]
@@ -766,27 +787,27 @@ Stmts:
 | [\{fun f:Var args:Args body:Expr\} @rest:Stmts]
    binding args in body, rest in body
    providing f, rest
-
-ALTERNATIVELY:
-
-Stmts:
-| \{splicing-begin stmts:Stmts rest:Stmts\}
-   binding stmts in rest
-   providing stmts, rest
-
-| \{let x:Var v:Expr rest:Stmts\}
-   binding x in rest
-
-| \{fun f:Var args:Args body:Expr rest:Stmts\}
-   binding args in body, rest in body
-   providing f, rest
-
-| \{end\}
-
-Params:
-| \{param x:Var rest:Params\}
-| \{end\}
 \end{Codes}
+
+%% ALTERNATIVELY:
+
+%% Stmts:
+%% | \{splicing-begin stmts:Stmts rest:Stmts\}
+%%    binding stmts in rest
+%%    providing stmts, rest
+
+%% | \{let x:Var v:Expr rest:Stmts\}
+%%    binding x in rest
+
+%% | \{fun f:Var args:Args body:Expr rest:Stmts\}
+%%    binding args in body, rest in body
+%%    providing f, rest
+
+%% | \{end\}
+
+%% Params:
+%% | \{param x:Var rest:Params\}
+%% | \{end\}
 
 \paragraph{Auxiliary AST}
 \begin{Codes}

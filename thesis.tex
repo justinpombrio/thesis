@@ -121,7 +121,7 @@
 }
 
 % Judgements
-\newcommand{\SaysSubs}[4]{#1 \vdash #2 \bullet #3 = #4}
+\newcommand{\SaysSubs}[4]{#2 \bullet #3 = #4}
 \newcommand{\SaysMatch}[5]{#1 \vdash #2 / #3 = #4,#5}
 \newcommand{\SaysExpr}[3]{#1 \vdash #2 : #3}
 \newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
@@ -149,20 +149,20 @@
 \newcommand{\Prov}[2]{\texttt{provide } #2 \ensuremath{\in #1}}
 
 % Expressions
-\newcommand{\Con}[2]{(\Variable{u}{}{#1}{}\,#2)}
-\newcommand{\Core}[2]{(\Variable{u}{}{#1}{Core}\,#2)}
-\newcommand{\Aux}[2]{(\Variable{u}{}{#1}{Aux}\,#2)}
-\newcommand{\Surf}[2]{(\Variable{u}{}{#1}{Surf}\,#2)}
+\newcommand{\ASTNode}[4]{(\Variable{#3}{}{#2}{#1}\;#4)}
+\newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
+\newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
+\newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
 %\newcommand{\Bitter}[2]{(\Variable{u}{}{#1}{Bitter}\,#2)}
 \newcommand{\Variable}[4]{
-  {#3}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
+  {\textit{#3}}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
 \newcommand{\Value}{value}
-\newcommand{\ValueT}{Value}
 %\newcommand{\Tag}[3]{(\Code{Tag}\;#1\;#2\;#3)}
 \newcommand{\Tag}[3]{(\Code{Tag}_{#1 \To #2} #3)}
 % Patterns
+\newcommand{\Fresh}[2]{(\Code{Fresh}\,#1.\,#2)}
 \newcommand{\PVarA}{\alpha}
 \newcommand{\PVarB}{\beta}
 \newcommand{\PVarC}{\gamma}
@@ -170,6 +170,10 @@
 \newcommand{\Cons}[2]{#1, #2}
 \newcommand{\Rep}[2]{#1\ {*}_{#2}}
 \newcommand{\EList}[1]{\lceil #1 \rceil}
+% Types
+\newcommand{\ValueT}{\texttt{Value}}
+\newcommand{\DeclT}{\texttt{Decl}}
+\newcommand{\RefnT}{\texttt{Refn}}
 % Desugaring Rules
 \newcommand{\DsRule}[2]{\Code{sugar}\;\Variable{}{}{#1}{} = \{#2\}}
 \newcommand{\DsRuleFancy}[3]{\Code{sugar}\;#1 =
