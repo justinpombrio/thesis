@@ -1,0 +1,18 @@
+# Julia Desugaring #
+
+Representation: concrete or abstract surface syntax
+Authorship: user-defined
+Metalanguage: Julia
+Arguments: any
+Result: any
+Deconstruction: yes
+Evaluation Order: OI*
+Phases: one (with "macro"), or many (with metaprogramming)
+Syntax Safe: yes
+Scope Safe: no
+Type Safe: no
+
+# Installation Notes #
+
+1. `sudo apt-get install julia`
+2. Run with `julia eval_order.jl`
