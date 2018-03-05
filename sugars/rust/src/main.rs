@@ -44,7 +44,7 @@ fn inner(_arg: usize) -> () {
 }
 
 fn main() {
-    outer!(inner!(5)); // OI macro expansion order.
+    outer!(inner!(5)); // OI* macro expansion order.
     outer(inner(5)); // IO runtime evaluation order.
     use_list!(list!(5)); // Notice that 'list!' is never invoked.
     println!("ok");

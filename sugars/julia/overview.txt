@@ -6,7 +6,7 @@ Metalanguage: Julia
 Arguments: any
 Result: any
 Deconstruction: yes
-Desugaring Order: OI*
+Desugaring Order: OI
 Phases: one (with "macro"), or many (with metaprogramming)
 Syntax Safe: yes
 Hygienic: no
