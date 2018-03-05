@@ -1,4 +1,4 @@
-# Julia is not scope safe.
+# Julia is not hygienic
   macro unbound_x()
     return :(println(x))
   end
@@ -8,8 +8,14 @@
     @unbound_x()
   end
   
-  # No error! Not scope safe.
+  # No error! Not hygienic
   call_unbound_x()
+
+
+# Julia is not scope safe
+  macro unbound_y()
+    return :(println(y))
+  end # No error! Not scope safe.
 
 
 # Julia is untyped ("dynamically typed"), so its macros certainly aren't type safe.

@@ -3,11 +3,13 @@ import Templates
 
 main :: IO ()
 main = do
-  {- Test evaluation order -}
-  -- The fact that this succeeds shows that templates are evaluated in IO order.
+  {- Test desugaring order -}
+  -- The fact that this succeeds shows that templates are desugared in IO order.
   putStrLn $ show $(outer (inner [|'a'|]))
   -- Haskell Templates are scope unsafe:
   --   putStrLn $(scopeUnsafe)
   -- Haskell Templates are type unsafe:
   --   putStrLn $ show $(typeUnsafe)
-  -- Haskell Templates are AST safe.
+  -- Haskell Templates are syntax safe.
+  -- Haskell Templates don't allow nested evaluation (at least not easily)
+  -- putStrLn $ $($(phases)) -- Type error

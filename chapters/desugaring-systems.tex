@@ -1,10 +1,137 @@
 \chapter{Desugaring in the Wild}
 
+In this chapter, we classify 
+
 .[TODO: State version of each system discussed]
+
+\section{A Sugar Taxonomy}
+
+There are many dimensions by which desugaring mechanisms vary:
+\begin{description}
+  \item[Representation] Desugaring is a syntax-to-syntax transformation, but what is
+    the representation of syntax? There is a big difference between
+    transformations on the \emph{text} of the program vs. its
+    \emph{concrete surface syntax} vs. its \emph{abstract surface
+      syntax}.
+  \item[Authorship] Are sugars defined by developers of the language (and thus
+    relatively fixed), or by users of the language (and thus flexible)?
+  \item[Metalanguage] What is the metalanguage? That is, in what language are sugars
+    written? Is it the same language the programs are written in, thus
+    allowing sugars and code to be interspersed, or a different
+    language?
+  \item[Expressiveness] How expressive is it? Can a sugar take an
+    arbitrary expression as a parameter, or only a primitive type
+    (\Sc{Argument Sort})? If it can take an expression, can it
+    deconstruct it, or only use it parametrically (\Sc{Deconstruction})?
+    Do sugars exclusively produce expressions, or can they produce any
+    sort of syntax (\Sc{Result Sort})?
+  \item[Desugaring Order] In what order are constructs desugared? Most importantly, are
+    nested sugars desugared from the \emph{innermost to outermost}, or
+    from \emph{outermost to innermost}?
+  \item[Phases] How many \emph{phases} of desugaring are there? Can there be
+    more than one?
+  \item[Safety] How \emph{safe} is it? Can desugaring produce
+    syntactically invalid code (\Sc{Syntax Safety})? Can it produce an
+    unbound variable (\Sc{Scope Safety}), or accidentally capture a
+    variable (\Sc{Hygiene})? Can it produce code that contains a type
+    error (\Sc{Type Safety})?
+\end{description}
+
+There are two big clusters of desugaring systems that should be called
+out by name: macros and metaprogramming. They can be loosely defined as:
+\begin{quote}
+  \emph{Macros} are user-defined sugars.
+\end{quote}
+In practice, macro systems tend to share several features: (i) by
+definition, they are user-defined; (ii) the metalanguage is the
+programming language itself [CHECK]; and (iii) the desugaring order is
+usually outside-in [CHECK]. [CHECK: others?]
+
+[FILL: metaprogramming]
+
+\subsection{Syntax Representation}
+
+There are many ways to represent a program. The most prevalent are as
+\emph{text} and as a \emph{tree}. Programs are most commonly
+\emph{saved as} and \emph{edited as} text (notable exceptions include
+visual and block based language/editors), and they are most commonly
+\emph{internally represented as} trees (notable exceptions include
+assembly, whose code is linear, and Forth, which does not have a
+parsing phase).
+
+Desugaring systems may be based on either representation.
+\emph{However, text is a terrible representation for desugaring rules.}
+The semantics of a language is almost always defined in terms of its
+(abstract syntax) tree representation. Thus, insofar as a programmer
+as a programmer is forced to think of their program as text rather
+than as a tree, they are being distracted from its semantics. There
+are well-known examples of bugs that arise in text-based desugaring
+rules unless they are written in a very defensive style: we discuss
+these in \ref{sec:cpre}.
+
+There are variations among tree representations as well: desugaring
+rules may work over the concrete syntax of the language, or over its
+abstract syntax. We discuss this further in [REF].
+
+\subsection{Language-defined or User-defined}
+
+Sugars may either be specified and implemented as part of the
+language, or they may be defined by users. For example, Haskell list
+comprehensions are defined by the Haskell spec [CITE] and implemented
+in the compiler(s); thus they are language-defined. Template Haskell
+sugars [CITE], on the other hand, can be defined (and used) in any
+Haskell program; thus they are user-defined. The difference between the two
+is whether sugar is only a convenient method of simplifying language
+design, or whether users are given the power to extend the language
+themselves.
+
+When sugars are user-defined, it raises difficulties with tools such
+as editors that need to support the new syntax. For example, if sugars
+are language-defined then an editor can just support the full
+language. If they are user-defined, however, how can an editor provide
+correct indentation, syntax highlighting, etc.?
+
+Different languages work around this problem in different ways. Lisps
+mostly avoid the problem by mostly not having syntax. They don't
+\emph{entirely} avoid the problem, though. For example, the DrRacket editor for
+Racket [CITE] allows indentation schemes to be set on a per-macro
+basis (because different syntactic forms, while purely parenthetical,
+still have varying nesting patterns that should be indented
+differently), and it displays arrows showing where variables are bound
+by being macro-aware and expanding the program (see [REF]).
+[FILL: SugarJ, other examples]
+
+[FILL: resugaring in general]
+
+[TODO: macro-defining-macros]
+
+
+\subsection{Metalanguage}
+
+
+\subsection{Desugaring Strategy}
+% https://dl.acm.org/citation.cfm?id=1440085
+% GRAMMARS WITH MACRO-LIKE PRODUCTIONS (Fischer)
+
+There are two major desugaring strategies used in desugaring systems.
+They loosely correspond to eager and lazy runtime evaluation, but
+differ in some important ways described below, so we will instead refer
+to them by their original names [CITE]: Outside-in (\textsc{oi}) and
+Inside-out (\textsc{io}) desugaring:
+\begin{description}
+\item[\textsc{oi}] desugaring is similar to lazy evaluation.
+  However, it has an unusual property: [FILL]
+\item[\textsc{io}] desugaring is similar to eager evaluation. It has [FILL]
+\end{description}
+
+\subsection{Number of Phases}
+
+\subsection{Safety} [TODO]: AST safety, scope-safety, type-safety
+
 
 \section{C Preprocessor} \label{sec:cpre}
 
-\Desc{Evaluation Strategy} IO
+\Desc{Desugaring Strategy} IO
 
 \Desc{Authorship} User-defined
 
@@ -14,7 +141,8 @@
 
 % https://gcc.gnu.org/onlinedocs/cpp/
 % Not Turing complete: https://gcc.gnu.org/onlinedocs/cpp/Self-Referential-Macros.html
-% Evaluation strategy: https://gcc.gnu.org/onlinedocs/cpp/Macro-Arguments.html
+% Desugaring strategy: https://gcc.gnu.org/onlinedocs/cpp/Macro-Arguments.html
+%   also section 6.10.3.1: http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1124.pdf
 \Desc{Discussion}
 The C Preprocessor (hereafter \textsc{cpp}) [CITE] is a \emph{text
   preprocessor}: a source-to-source transformation that operates at
@@ -75,7 +203,7 @@ fixed from within the paradigm. \emph{Overall, code transformations
 \Desc{Arguments} Types and primitive values
 \Desc{Result} Function/method definition, struct/class definition, or type alias
 \Desc{Deconstruction} Yes (although the arguments are limited)
-\Desc{Evaluation Strategy} IO
+\Desc{Desugaring Strategy} IO
 \Desc{Phases} One
 \Desc{Syntax safe} Yes
 \Desc{Scope safe} NA
@@ -133,7 +261,7 @@ be parameterized over code, and thus are not general-purpose sugars.
 For example, most of the examples in this thesis cannot be written as
 C++ templates.
 
-Template expansion uses IO evaluation order. This is important because
+Template expansion uses IO desugaring order. This is important because
 it is possible
 to define both a generic template, that applies most of the time, and
 a specialized template, that applies if a parameter has a particular
@@ -149,7 +277,7 @@ it, even if this type is the result of another template expansion.
 
 \Desc{Authorship} User-defined
 
-\Desc{Evaluation Strategy} OI
+\Desc{Desugaring Strategy} OI
 
 \Desc{Safety} [FILL]
 
@@ -165,7 +293,7 @@ it, even if this type is the result of another template expansion.
 \Desc{Arguments} Any sort
 \Desc{Result} Any sort
 \Desc{Deconstruction} Yes
-\Desc{Evaluation Strategy} IO
+\Desc{Desugaring Strategy} IO
 \Desc{Phases} One
 \Desc{Syntax Safe} Yes
 \Desc{Scope Safe} No
@@ -187,7 +315,7 @@ NOTES:
 \Desc{Arguments} Expressions (+ OCaml values)
 \Desc{Result} Expressions (+ OCaml values)
 \Desc{Deconstruction} No
-\Desc{Evaluation Strategy} IO
+\Desc{Desugaring Strategy} IO
 \Desc{Phases} Many
 \Desc{Syntax Safe} Yes
 \Desc{Scope Safe} Yes

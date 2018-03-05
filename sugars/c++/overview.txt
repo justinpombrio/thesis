@@ -6,15 +6,16 @@ Metalanguage: C++ templates (pattern based)
 Arguments: types and primitive values
 Result: function/method definition, struct/class definition, or type alias
 Deconstruction: yes (although this is mostly case analysis on primitive values)
-Evaluation Order: IO
+Desugaring Order: IO
 Phases: one
 Syntax safe: yes
+Hygienic: NA
 Scope safe: NA
 Type safe: NA
 
 
-# Installation Notes #
+# Installation Notes (C++11) #
 
-0. Install C++.
+0. Install g++.
 
 The examples can be compiled with g++, with -std=c++11

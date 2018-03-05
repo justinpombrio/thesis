@@ -1,0 +1,21 @@
+# Haskell Templates #
+
+Representation: Concrete or abstract surface syntax
+Authorship: User-defined
+Metalanguage: Haskell
+Arguments: any
+Result: any
+Deconstruction: yes
+Desugaring Order: IO
+Phases: one
+Syntax safe: yes
+Hygienic: ???
+Scope safe: no
+Type safe: no
+
+
+# Installation Notes (GHC version 8) #
+
+0. Install the [Haskell Platform](https://www.haskell.org/platform/).
+1. Build the examples with `ghc --make main.hs`.
+2. Run the examples with `./main`.

@@ -3,7 +3,7 @@ module Templates where
   import Language.Haskell.TH
   import Data.Char (ord, chr)
 
-  {- Test evaluation order -}
+  {- Test desugaring order -}
     
   incChar :: Char -> Char
   incChar c = chr ((ord c) + 1)
@@ -11,7 +11,7 @@ module Templates where
   inner :: Q Exp -> Q Exp
   inner exp = do
     exp <- exp
-    return $ case exp of
+    return $ case exp of -- notice the deconstruction
       LitE (CharL c) -> LitE (CharL (incChar c))
       exp -> exp
 
@@ -45,3 +45,7 @@ module Templates where
   power = do
     name <- newName "x"
     return $ LetS [ValD (VarP name) (NormalB (LitE (CharL 'a'))) []]
+
+  -- Checking if quotations can be nested. (It's easy to construct, but hard to run?)
+  phases :: Q (Q Exp)
+  phases = return $ return $ LitE (StringL "two phases")

@@ -6,9 +6,10 @@ Metalanguage: OCaml
 Arguments: expressions (and arbitrary OCaml values containing them)
 Result: expressions (and arbitrary OCaml values containing them)
 Deconstruction: no
-Evaluation Order: IO
+Desugaring Order: IO
 Phases: many
 Syntax Safe: yes
+Hygienic: yes
 Scope Safe: yes
 Type Safe: yes
 

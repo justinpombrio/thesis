@@ -1,20 +1,21 @@
-# C++ Templates #
+# C Preprocessor #
 
-Representation:
-Authorship:
-Metalanguage:
-Arguments:
-Result:
-Deconstruction:
-Evaluation Order:
+Representation: tokens
+Authorship: user-defined
+Metalanguage: C preprocessor
+Arguments: any
+Result: any
+Deconstruction: no
+Desugaring Order: IO
 Phases: One
 Syntax safe: No
+Hygienic: No
 Scope safe: No
 Type safe: No
 
 
-# Installation Notes #
+# Installation Notes (gcc version 6.3.0) #
 
-0. Install C.
-
-The examples can be compiled with gcc
+0. Install gcc.
+1. If on linux, run the appropriate bash script.
+   Otherwise, compile with gcc and run.
