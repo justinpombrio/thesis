@@ -108,7 +108,7 @@
 \newcommand{\Code}[1]{\texttt{#1}}
 \newenvironment{Codes}
   {\begin{alltt}\leftskip=1.5em} % \small
-  {\end{alltt}\vspace{-\baselineskip}} % Something was adding an extra line of space.
+  {\end{alltt}}
 
 % PL Notation
 \newcommand{\CoreStep}{{\rule{0pt}{1.2\baselineskip}{\ensuremath\longrightarrow}}}
@@ -183,7 +183,7 @@
     #3
   \end{cases}
 }
-\newcommand{\DsRuleCase}[4]{#2;#3;#1 \To #4}
+\newcommand{\DsRuleCase}[3]{#2;#1 \To #3}
 % Environments
 \newcommand{\EmptyEnv}{\{\}}
 \newcommand{\ConsEnv}[3]{#1:#2,\,#3}

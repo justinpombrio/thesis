@@ -1,5 +1,12 @@
 \chapter{Syntactic Sugar}
 
+\paragraph{TODO}
+\begin{itemize}
+\item Q: Do sugars take ``arguments''?
+\item Q: ``sugars'' vs. ``metaprogramming''?
+\item Q: What is ``syntactic sugar''?
+\end{itemize}
+
 \section{What is it?}
 
 % http://www.cs.cmu.edu/~crary/819-f09/Landin64.pdf
@@ -14,8 +21,9 @@ We will define syntactic sugar as follows:
 %%   and non-phase-specific.]
 \begin{quote}
   A syntactic construct in an implementation of a programming language
-  is \emph{syntactic sugar} if it is translated at compile time into
-  the syntax of the rest of the language.
+  is \emph{syntactic sugar} if it is translated at compile-time into
+  the syntax of the rest of the language. [TODO: Nope! stx->stx xform
+    where langs are similar?]
 \end{quote}
 %% \begin{quote}
 %%   'A construct in a language is called ``syntactic sugar'' if it can be
@@ -30,30 +38,34 @@ its substance. The name also naturally leads to related terminology:
 and \emph{resugaring} is a term we are introducing for the restoration
 of information that was lost during desugaring.
 
+[FILL: show examples and introduce define-syntax-rule]
+
 \section{What is it Good for?}
 
 Syntactic sugar is used to define abstractions. But languages have
 other ways to define abstractions already: functions, classes, data
 definitions, etc. If an abstraction can be implemented using these
-features, it's almost always better to do so. Thus:
+features, it's almost always better to do so, because they are easier
+to reason about. Thus:
 \begin{quote}
   Syntactic sugar should only be used to implement an abstraction if
   it cannot be implemented in the core language directly.
 \end{quote}
 
 Therefore, to find places where it is a \emph{good} idea to use sugar,
-we can just look for things that most programming languages
+we should look for things that most programming languages
 \emph{cannot} abstract over:
 \begin{enumerate}
   \item In most languages, variable names are first order and cannot
     be manipulated at run-time (e.g., a variable cannot be passed as
-    an argument to a function: if you attempt to do so, the thing the
+    an argument to a function: if you attempt to do so, the variable the
     variable is bound to will be passed instead). Therefore, creating
     new binding constructs is a good use for syntactic sugar in most
     languages. However, in R[CITE] variable names can be abstracted
     over (e.g. \Code{assign("x", 3); x} prints 3), and so sugar isn't
     necessary for this purpose.
-  \item Most languages force the arguments to a function to be
+  \item Most languages use eager evaluation,
+    which forces the arguments to a function to be
     evaluated when it is called, rather than allowing the function to
     choose whether to
     evaluate them or not. Thus if an abstraction requires delaying
@@ -64,10 +76,8 @@ we can just look for things that most programming languages
     new data definition constructs (e.g., a way to define state
     machines) is a good use case for sugars. However, in Python field
     names are first class (e.g., they can be added or assigned using
-    \Code{setattr}), so sugars are not needed to abstract over fields
-    in data definitions.
-    % e.g.:
-    %\Code{class C: pass; c = C(); setattr(c, ``x'', 3); print(c.x)}
+    \Code{setattr}), so it does not need sugars to abstract over fields
+    in data definitions.%e.g. \Code{class C: pass; c = C(); setattr(c, ``x'', 3); print(c.x)}
     \footnote{
     It may sound like we are suggesting that everything should be
     manipulatable at run-time. We are not. The more
@@ -84,5 +94,3 @@ In a limited sense, this is what functions are for as well.
 Functions, however, are limited: they cannot take a variable as an
 argument, delay evaluation, introduce new syntax, etc. This is where
 sugar shines.
-
-[TODO: Introduce define-syntax-rule for exposition.]

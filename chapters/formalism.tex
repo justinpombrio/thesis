@@ -272,7 +272,7 @@ $\begin{cases}
 
 \begin{Table}
 rewrite case $c$ &$::=$&
-  $\DsRuleCase{(p_1,\,...,\,p_k)}{\Gamma}{F}{p'}$ \\
+  $\DsRuleCase{(p_1,\,...,\,p_k)}{\Gamma}{p'}$ \\
 desugaring rule $r$ &$::=$&
   $\DsRule{C}{k_1,...,k_n}$ \\
 desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$ \\
@@ -321,7 +321,7 @@ language $L$ &$::=$& $G, rs$
   \Inference[m-fresh]{
     \SaysMatch{F,x}{e}{p}{\gamma}{p'}
   }{
-    \SaysMatch{F}{e}{\Fresh{x}{p}}{\gamma}{p'}
+    \SaysMatch{F}{e}{\Fresh{x}{p}}{\gamma}{\Fresh{x}{p'}}
   }
 \end{multicols}
 \vspace{1em}
