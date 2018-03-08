@@ -20,6 +20,7 @@ node in the \Sc{ast} must have a unique identity $u$ that
 distinguishes it from other occurrences of the same variable or node.
 (Exactly why these requirements are necessary will become clear in
 [REF] and [REF].)
+[TODO: distinguish core, aux, surf]
 With this taken into account, the definition of \textsc{ast}s is
 straightforward:
 \marginpar{
@@ -43,17 +44,18 @@ ast $e$ &$::=$& $\Value$ & primitive value \\
 \end{Table}
 
 
+\section{Patterns}
 
-
-\section{Expansion}
-
+We represent the \Sc{lhs}s and \Sc{rhs}s of desugaring rules uniformly
+as \emph{patterns}. Patterns $p$ are defined inductively as:
 \begin{Table}
 ellipsis label $l$ &$::=$& \textit{name} & ellipsis label \\
 %shape $\dot{e}$ &$::=$& ...e... & (same cases as $e$) \\
 %  &$|$& $\bullet$ & hole \\
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
-  &$|$& $\Core{C}{p_1 ... p_n}$ & syntactic construct \\
-  &$|$& $\Surf{m}{p_1 ... p_n}$ & sugar invocation \\
+  &$|$& $\Core{C}{p_1 ... p_n}$ & core \Sc{ast} node \\
+  &$|$& $\Surf{m}{p_1 ... p_n}$ & surface \Sc{ast} node \\
+  &$|$& $\Aux{m}{p_1 ... p_n}$ & auxilliary \Sc{ast} node \\
   &$|$& $[ps]$ & list \\
   &$|$& $value$ & primitive value \\
   &$|$& $\Refn[i]{x}$ $|$ $\Decl[i]{x}$  & variable \\
@@ -77,6 +79,39 @@ $\begin{cases}
 \end{cases}$
 \end{Table}
 
+[TODO: The rest of the prose in this section is out of date]
+Variables are denoted by a lowercase
+identifier, labeled nodes are denoted by an uppercase identifier followed
+by a parenthesized list of subpatterns, and lists are denoted by a
+parenthesized list of subpatterns. Nodes must have fixed arity, so lists are
+used when a node needs to contain an arbitrary number of subterms.
+Ellipses (which we write formally as $\ddd{\bullet}$ to distinguish them
+from metasyntactic ellipses) in a list pattern denote zero or more
+repetitions of the pattern
+they follow. A \emph{term} $T$ is simply a pattern without variables or
+ellipses. Tags and origins ($O$) are described in \cref{sec:ds-tagging}.
+We do \emph{not} address hygiene in our system. We believe it is largely
+orthogonal to the problem at hand, and that our transformation system
+could be made hygienic without significant alterations.
+
+Our definition of patterns determines both the expressiveness of the
+resulting transformation system and the ability to formally reason about
+it. There is a natural trade-off between the two. We pick a definition similar to
+that of Scheme \Code{syntax-rules}-style macros, though without guard
+expressions.
+
+Formally, our patterns are
+\emph{regular tree expressions}~\cite{regular-tree-expressions}.  Regular
+tree expressions $\mathit{trx}$ are the
+natural extension of regular expressions to handle trees: they add a
+primitive $l;\mathit{trx}_1 \,...\,\mathit{trx}_n$ for matching a tree node
+labeled $l$ with branches matching the regular tree expressions
+$\mathit{trx}_1\,...\,\mathit{trx}_n$. Whereas regular tree
+expressions conventionally allow choice, we encode it using multiple
+rules, making the pattern language simpler.
+
+
+
 \begin{Table}
 rewrite case $c$ &$::=$&
   $\DsRuleCase{(p_1,\,...,\,p_k)}{\Gamma}{p'}$ \\
@@ -85,7 +120,37 @@ desugaring rule $r$ &$::=$&
 desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
 \end{Table}
 
+
+
 \subsection{Matching and Substitution}
+
+Our desugaring transformations are implemented with simpler operations on patterns:
+matching and substitution.
+
+\newcommand{\blist}[1]{\lceil #1 \rceil}
+
+\emph{Matching} a term against a pattern induces an \emph{environment}
+that binds the pattern's variables. This environment may be
+\emph{substituted} into a pattern to produce another term. Formally, an
+environment is a mapping from pattern variables $\PVarA$ to bindings $b$[TODO],
+where each \emph{binding} is either a term $e$, a \emph{list binding}
+$\blist{b_1...b_n}$, or an \emph{ellipsis binding}
+$\blist{b_1...b_n\ \ddd{b_e}}$. A pattern variable within ellipses is
+bound to a list binding $\blist{b_1...b_n}$ instead of a list term
+$[b_1...b_n]$; they behave slightly differently under
+substitution. Ellipsis bindings are similar, but needed only during
+unification when a variable within an ellipsis is itself bound to an
+ellipsis pattern.
+
+We will write $\SimpleMatch{e}{p}$ to denote matching a term $e$ against a pattern
+$p$, and write $\SimpleSubs{\gamma}{p}$ to denote substituting the bindings of an
+environment $\gamma$ into a pattern $p$.
+We will write $\gamma_1 \cup \gamma_2$ for the
+\emph{right-biased} union of $\gamma_1$ and $\gamma_2$. The matching and
+substitution
+algorithms are given in \cref{fig:subs}, while bindings are defined in
+\cref{fig:bind}.
+
 
 \begin{figure}
 \TypeLabel{\SaysMatch{F}{e}{p}{\gamma}{p}}
