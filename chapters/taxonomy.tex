@@ -1,14 +1,19 @@
 \chapter{Desugaring in the Wild}
 
-\paragraph{TODO}
+TODO
 \begin{itemize}
 \item State version of each system discussed
-\item ``desugaring'' vs. ``metaprogramming''
 \item mention macro-defining-macros in expressiveness?
 \end{itemize}
 
-There are a bewildering variety of desugaring systems.
-In this chapter, we categorize them into a taxonomy.
+There are a bewildering variety of desugaring systems.  In this
+chapter, we categorize them into a taxonomy.
+
+We stretch this taxonomy to include systems that aren't quite
+desugaring systems, but that are closely associated with
+them. Notably, we discuss staged metaprogramming systems, which (i)
+operate on code at run-time, rather than compile-time, and (ii) have
+to explicitly, rather than implicitly, desugar code.
 
 \section{A Sugar Taxonomy}
 
@@ -30,10 +35,11 @@ There are many dimensions by which desugaring mechanisms vary:
       to outermost} (\Sc{io}), or from \emph{outermost to innermost}
     (\Sc{oi})?
   \item[Phase] \emph{When} does desugaring occur? Is it at compilation time,
-    or at evaluation time (as in staged metaprogramming systems)?
+    or at evaluation time (as in staged metaprogramming systems)? If
+    you recall our definition of syntactic sugar qqq
   \item[Expressiveness] How expressive is it? Can a sugar take an
     arbitrary expression as a parameter, or only a primitive type
-    (\Sc{Argument})? If it can take an expression, can it
+    (\Sc{Parameter})? If it can take an expression, can it
     deconstruct it, or only use it parametrically (\Sc{Deconstruction})?
     Do sugars exclusively produce expressions, or can they produce any
     kind of syntax (\Sc{Result})?
@@ -43,6 +49,8 @@ There are many dimensions by which desugaring mechanisms vary:
     variable (\Sc{Hygiene})? Can it produce code that contains a type
     error (\Sc{Type Safety})?
 \end{description}
+
+
 
 There are two big clusters of desugaring systems that should be called
 out by name: macros and staged metaprogramming. Racket [CITE] is a
@@ -146,13 +154,13 @@ Inside-out (\Sc{io}) desugaring:\marginpar{
   function uses (e.g., does case analysis on) one of its (lazy)
   arguments, that forces the evaluation of that argument. In contrast,
   if an \Sc{oi} sugar does case analysis on one of its
-  arguments (which are pieces of syntax), it does not force that
-  argument to be desugared! Rather, the case analysis happens on the
-  uninterpreted syntax of that argument.
+  parameters (which are pieces of syntax), it does not force that
+  parameter to be desugared! Rather, the case analysis happens on the
+  uninterpreted syntax of that parameter.
 
   There is an advantage to this: it allows sugars to truly extend the
   syntax of the language because they can treat the syntax of their
-  arguments however they want.
+  parameters however they want.
   In the most extreme case, it may be impossible
   to even tell where the innermost sugars are, so \Sc{oi} is the only
   possible desugaring order.
@@ -162,12 +170,12 @@ Inside-out (\Sc{io}) desugaring:\marginpar{
   settings in which it is: (i) the syntax that sugars can introduce is
   limited enough that you can always tell where nested sugars are;
   (iii) sugars act on the \Sc{ast} rather than on concrete syntax; or
-  (ii) sugars cannot deconstruct their arguments, so the desugaring
+  (ii) sugars cannot deconstruct their parameters, so the desugaring
   order is largely irrelevant anyways; . In these settings, \Sc{io}
   order has the advantage of being more analogous to evaluation (which
   developers are quite familiar with). It is
   also sometimes useful for sugars to use the desugared version of
-  their arguments: for example, C++ templates can be used to derive
+  their parameters: for example, C++ templates can be used to derive
   specialized implementations for particular types, and it is
   convenient to allow that type to be a template expression.
 \end{description}
@@ -186,24 +194,24 @@ arbitrary number of different phases [REF].
 We will examine three measures of expressiveness of each desugaring
 system:
 \begin{description}
-\item[Arguments] What kind of arguments can be passed to a sugar? In
+\item[Parameters] What kind of parameters can be passed to a sugar? In
   the most general desugaring systems, any syntactic category---be it
   expression, statement, type, field name, class definition,
   etc.---can be passed to a sugar. Some systems are more limited,
   however: for example, C++ templates can only take types or primitive
-  values (e.g., numbers) as arguments.
+  values (e.g., numbers) as parameters.
 \item[Result] What kind of syntax can a sugar desugar to? Can it be
   any syntactic category, or is it more limited, e.g., to expressions
   only?
-\item[Deconstruction] Sugars are given syntax as arguments. Can they
+\item[Deconstruction] Sugars are given syntax as parameters. Can they
   deconstruct this syntax (e.g., by case analysis) or must
   they treat it parametrically (i.e., only compose it)?
 
   There is a strong interaction between the ability to deconstruct
-  arguments and desugaring order (OI vs. IO). With OI order, the
-  arguments that are deconstructed are in the surface language, since
+  parameters and desugaring order (OI vs. IO). With OI order, the
+  parameters that are deconstructed are in the surface language, since
   they haven't been desugared yet. Under IO order, however, the
-  arguments are in the core language, because they \emph{have} been
+  parameters are in the core language, because they \emph{have} been
   desugared.
 \end{description}
 Of course, three measures isn't enough to fully capture how expressive
@@ -344,7 +352,7 @@ The rule can be fully fixed by another set of parentheses:
 \begin{Codes}
   #define SUB(a, b) ((a) - (b))
 \end{Codes}
-In general, both the inside boundary of a rule (the arguments \Code{a}
+In general, both the inside boundary of a rule (the parameters \Code{a}
 and \Code{b}), and the outside boundary (the whole \Sc{rhs}) need
 to be protected to ensure that the expansion is parsed correctly. If
 the sugar is used in expression position, as in the \Code{SUB}
@@ -364,9 +372,9 @@ fixed from within the paradigm. \emph{Overall, code transformations
 \Desc{Representation} Concrete syntax
 \Desc{Authorship} User-defined
 \Desc{Metalanguage} C++ templates (pattern based)
-\Desc{Arguments} Types and primitive values
+\Desc{Parameters} Types and primitive values
 \Desc{Result} Function/method definition, struct/class definition, or type alias
-\Desc{Deconstruction} Yes (although the arguments are limited)
+\Desc{Deconstruction} Yes (although the parameters are limited)
 \Desc{Desugaring Order} IO
 \Desc{Phases} One
 \Desc{Syntax safe} Yes
@@ -375,7 +383,7 @@ fixed from within the paradigm. \emph{Overall, code transformations
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
 C++ templates [CITE] are not general-purpose sugars,
-because they cannot take code as an argument. Thus you cannot, for
+because they cannot take code as an parameter. Thus you cannot, for
 example, express a sugar that takes an expression \Code{e} and expands
 it to \Code{e + 1}.
 
@@ -395,7 +403,7 @@ T circular_area(T r) \{
 Besides function definitions, several other kinds of declarations can
 be templated, including methods, classes, structs, and type aliases.
 The behavior of each is similar. A template may be invoked by passing
-arguments in angle brackets. An invoked template acts like the
+parameters in angle brackets. An invoked template acts like the
 kind of thing the template declared, and can be used in the same
 positions. Thus, e.g., a \Code{struct} template should be invoked in type
 position; and our running function template example should be invoked
@@ -405,7 +413,7 @@ in expression position to make a function, which can then be called:
 \end{Codes}
 When a template is invoked like this, a copy of the template
 definition is made, with the template parameters replaced with the
-concrete arguments.\marginpar{
+concrete parameters.\marginpar{
   If a template is invoked multiple times with the same parameters,
   only one copy of the code will be made, however.
 }
@@ -454,7 +462,7 @@ it, even if this type is the result of another template expansion.
 \Desc{Representation} Concrete or abstract syntax
 \Desc{Authorship} User-defined
 \Desc{Metalanguage} Haskell
-\Desc{Arguments} Any
+\Desc{Parameters} Any
 \Desc{Result} Any
 \Desc{Deconstruction} Yes
 \Desc{Desugaring Order} IO
@@ -476,7 +484,7 @@ NOTES:
 \Desc{Representation} Concrete syntax
 \Desc{Authorship} User-defined
 \Desc{Metalanguage} OCaml
-\Desc{Arguments} Expressions (+ OCaml values)
+\Desc{Parameters} Expressions (+ OCaml values)
 \Desc{Result} Expressions (+ OCaml values)
 \Desc{Deconstruction} No
 \Desc{Desugaring Order} IO

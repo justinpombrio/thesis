@@ -1,12 +1,5 @@
 \chapter{Syntactic Sugar}
 
-\paragraph{TODO}
-\begin{itemize}
-\item Q: Do sugars take ``arguments''?
-\item Q: ``sugars'' vs. ``metaprogramming''?
-\item Q: What is ``syntactic sugar''?
-\end{itemize}
-
 \section{What is it?}
 
 % http://www.cs.cmu.edu/~crary/819-f09/Landin64.pdf
@@ -14,31 +7,87 @@ The term \emph{syntactic sugar} was introduced by Peter Landin in
 1964[CITE]. It refers to surface syntactic forms that are provided for
 convenience, but could instead be written using the syntax of the rest
 of the language. This captures the spirit and purpose of syntactic
-sugar, but is not discriminating enough to be a useful definition.
-We will define syntactic sugar as follows:
-%% [TODO: definition must (i) rule out functions, (ii) rule out
-%%   metaprogramming, (iii) include Racket macros, which are non-local
-%%   and non-phase-specific.]
-\begin{quote}
-  A syntactic construct in an implementation of a programming language
-  is \emph{syntactic sugar} if it is translated at compile-time into
-  the syntax of the rest of the language. [TODO: Nope! stx->stx xform
-    where langs are similar?]
-\end{quote}
-%% \begin{quote}
-%%   'A construct in a language is called ``syntactic sugar'' if it can be
-%%   removed from the language without any effect on what the language
-%%   can do: functionality and expressive power will remain the same.' (Wikipedia)
-%% \end{quote}
+sugar.
 
 The name suggests that syntactic sugar is inessential: it ``sweetens''
 the language to make it more palatable, but does not otherwise change
 its substance. The name also naturally leads to related terminology:
 \emph{desugaring} is the removal of syntactic sugar by expanding it;
-and \emph{resugaring} is a term we are introducing for the restoration
-of information that was lost during desugaring.
+and \emph{resugaring} is a term that we will introduce in this thesis
+for recovering various pieces of information that were lost during
+desugaring.
 
-[FILL: show examples and introduce define-syntax-rule]
+% https://docs.oracle.com/javase/specs/jls/se8/html/jls-14.html#jls-14.14.2
+% (Section 14.14.2)
+% Also Rust: http://xion.io/post/code/rust-for-loop.html
+As an example of a sugar, consider Java's ``enhanced for statement''
+(a.k.a., for-each loop), which can be used to print out the best
+numbers:
+\begin{Codes}
+for (int n : best_numbers) \{
+  System.out.println(n);
+\}
+\end{Codes}
+This enhanced \Code{for} is quite convenient, but it isn't really
+\emph{necessary}, because you can always do the same thing with a
+regular for loop and an iterator:
+\begin{Codes}
+for (Iterator i = best_numbers.iterator(); i.hasNext(); ) \{
+  int n = (int) i.next();
+  System.out.println(n);
+\}
+\end{Codes}
+
+And in fact the Java spec formally recognizes this equivalence, and
+writes, ``The meaning of the enhanced for statement is given by
+translation into a basic for statement. [CITE]'' Ignoring some
+irrelevant details, it states (in so many words) that this \emph{sugar}:
+\begin{Codes}
+for (<type> <var> : <expr>) \{ <statement> \}
+\end{Codes}
+\emph{desugars} into:
+\begin{Codes}
+for (Iterator i = <expr>.iterator(); i.hasNext(); ) \{
+  <type> <var> = (<type>) i.next();
+  <statement>
+\}
+\end{Codes}
+Here, the things we have written in angle brackets are
+\emph{parameters} to the sugar: they are \emph{pieces of code} that it
+takes as arguments.
+
+[FILL: introduce define-syntax-rule?]
+
+\subsection{But What is it?}
+An astute reader may have noticed that we still haven't actually
+defined syntactic sugar. Here is a reasonable definition:\marginpar{
+  Words can be thought of as pointing to clusters in concept-space.
+  An extensional definition like this is an attempt to draw a
+  neat box around such a cluster, which is always a little dubious
+  because clusters typically have fuzzy boundaries and aren't
+  box-shaped.
+}
+\begin{quote}
+  A syntactic construct in an implementation of a programming language
+  is \emph{syntactic sugar} if it is translated at compile-time into
+  the syntax of the rest of the language.
+\end{quote}
+%% Note: definition must (i) rule out functions, (ii) rule out
+%%   metaprogramming, (iii) include Racket macros, which are non-local
+%%   and non-phase-specific.]
+%% \begin{quote}
+%%   'A construct in a language is called ``syntactic sugar'' if it can be
+%%   removed from the language without any effect on what the language
+%%   can do: functionality and expressive power will remain the same.' (Wikipedia)
+%% \end{quote}
+This makes syntactic sugar a subset of \emph{compilation}: it is
+compilation from a language to a subset of that language. It also
+makes clear the relationship between syntactic sugar and
+\emph{macros}: macros are a way of allowing users of a language to
+define syntactic sugar within the language itself.
+% Also: macros are a DSL for writing a compiler
+%   https://www.cs.utah.edu/plt/publications/macromod.pdf
+
 
 \section{What is it Good for?}
 
