@@ -1,3 +1,5 @@
+\newcommand{\Resugarer}{\Sc{Tobenamed}}
+
 \chapter{Resugaring Evaluation Sequences}\label{chap:resugar-eval}
 
 In this chapter, we tackle the challenge of combining syntactic sugar
@@ -175,7 +177,167 @@ does not match the \Sc{rhs} and is therefore skipped,
 yielding no surface step.  The last two steps are not tagged and are
 therefore included in the surface evaluation sequence as-is.
 
+\subsection{Striving for Coverage}
 
+Emulation and Abstraction guarantee an accurate
+surface evaluation sequence, but they do not guarantee a useful one. For
+instance, the following evaluation sequence is perfectly consistent with
+these two properties:
+\begin{Codes}
+    not(true) OR not(false)
+\SurfStep true
+\end{Codes}
+However, a stepper that only shows the final step is unhelpful. We therefore
+propose a third property, Coverage, which states that steps
+are not ``unnecessarily'' skipped. While Emulation and
+Abstraction are formally proved in \cref{sec:reval-proofs}, we have not found a
+formalization of Coverage, so we can only strive to attain it in
+our systems and evaluate it in practice. Our examples
+(\cref{sec:reval-pyret-example} and \cref{sec:reval-examples}) show
+that we do indeed obtain detailed and useful surface evaluation sequences.
+
+
+\subsection{Trading Abstraction for Coverage}
+\label{sec:reval-trading}
+
+[TODO: add to Pyret implementation]
+
+Suppose the surface term \Code{A OR B OR C} parses to
+\Code{Or(A, B, C)}. We therefore want to extend \Code{Or}
+to handle more than two sub-terms.  We can do this by adding another
+rule:
+\begin{Codes}
+Or([x, y]) ->
+  Let([Binding("t", x)],
+      If(Id("t"), Id("t"), y)));
+Or([x, y, ys ...] ->
+  Let([Binding("t", x)],
+      If(Id("t"), Id("t"), Or([y, ys ...])));
+\end{Codes}
+We assume a prioritized semantics in which rules are tried in
+order; the first rule whose \Sc{lhs} matches the invocation is
+used. The ellipses denote zero or more repetitions
+of the preceding pattern~\cite{macro-by-example}.
+
+Consider the surface term \Code{(false OR false OR true)}. 
+Given the revised definition of \Code{Or}, unexpansion would yield the
+following lifted evaluation steps:
+\begin{Codes}
+    false OR false OR true
+\SurfStep true
+\end{Codes}
+In particular, it correctly suppresses any presentation of the recursive
+invocation of \Code{Or}
+introduced by the transformation---precisely what Abstraction demands!
+However, there are settings
+(such as debugging or education) where the user might wish to see this
+invocation, i.e., to obtain the surface evaluation sequence
+\begin{Codes}
+    false OR false OR true
+\SurfStep false OR true
+\SurfStep true
+\end{Codes}
+Thus, we let sugar authors make part of a rule's \Sc{rhs}
+visible by prefixing it with \Code{!}. Here, writing the second
+\Code{Or} rule as
+\begin{Codes}
+Let([Binding("t", x)],
+    If(Id("t"), Id("t"), !Or([y, ys ...])))
+\end{Codes}
+yields the latter surface evaluation sequence.
+
+This illustrates that there is a trade-off (which we make precise with
+\cref{thm:reval-abstraction}) between Abstraction and Coverage.
+Because the trade-off depends on
+goals, we entrust it to the sugar author.  In the limit,
+marking the entirety of each rule as transparent results in
+an ordinary trace in the core, ignoring all sugar.
+
+
+\section{{\Resugarer} at Work}
+\label{sec:reval-pyret-example}
+
+[TODO: Update example for new resugarer]
+
+We demonstrate how the techniques just described come together to show
+surface evaluation sequences in the presence of sugar. Consider the
+following program, written in the language Pyret (\url{pyret.org}), 
+that computes the length of a list:
+\begin{Codes}
+    fun len(x):
+      cases(List) x:
+        | empty() => 0
+        | link(_, tail) => len(tail) + 1
+      end
+    end
+    len([1, 2])
+\end{Codes}
+This seemingly innocuous program contains a lot of sugar. The \Code{cases}
+expression desugars into an application of the matchee's \Code{\_match}
+method on an object containing code for each branch; the function
+declaration desugars into a let binding to a lambda; addition desugars
+into an application of a \Code{\_plus} method; and the list \Code{[1, 2]}
+desugars into a chain of list constructors. Here is the full desugaring
+(i.e., the code that will actually be run):
+\begin{Codes}
+len = fun(x):
+    temp17 :: List = x
+    temp17.["_match"](
+      \{"empty" : fun(): 0 end,
+       "link" : fun(_, tail):
+                len(tail).["_plus"](1) end\},
+      fun(): raise("cases: no cases matched");)
+    end
+len(list.["link"](1, list.["link"](2, list.["empty"])))
+\end{Codes}
+This degree and nature of expansion is not unique to Pyret.
+It is also found in languages like Scheme, due
+to the small size of the core, and in semantics like
+$\lambda_{JS}$~\cite{lambda-js},
+due to both the size of the core and the enormous complexity
+of the surface language.
+
+Nevertheless, here is the surface evaluation (pretty-)printed by {\Resugarer} (where
+\Code{<func>} denotes a resolved functional):
+\begin{Codes}
+\SurfStep <func>([1, 2])
+\SurfStep cases(List) [1, 2]:
+      | empty() => 0
+      | link(_, tail) => len(tail) + 1
+    end
+\SurfStep <func>([2]) + 1
+\SurfStep (cases(List) [2]:
+      | empty() => 0
+      | link(_, tail) => len(tail) + 1
+    end) + 1
+\SurfStep <func>([]) + 1 + 1
+\SurfStep (cases(List) []:
+      | empty() => 0
+      | link(_, tail) => len(tail) + 1
+    end) + 1 + 1
+\SurfStep 0 + 1 + 1
+\SurfStep 1 + 1
+\SurfStep 2
+\end{Codes}
+This sequence hides all the complexity of the core language.
+
+\section{The Transformation System}
+\label{sec:reval-transformations}
+
+We will present evaluation resugaring in three parts. First
+(\cref{sec:reval-onerule}), we will describe how our transformation system
+works, up to the level of performing a single transformation. Next
+(\cref{sec:reval-manyrule}), we will describe how to use tags to fully
+desugar and resugar terms, transforming not just a term but its subterms
+as well. Finally (\cref{sec:reval-lifting}), we will show how to use the
+transformation system to lift core evaluation sequences to surface
+evaluation sequences.
+
+
+
+
+
+\newpage
 \section{SCRATCH}
 
 Extend terms:
@@ -242,10 +404,10 @@ has honest tags. (Assuming that evaluation does not modify tags.)
   }
   
   \caption{Unexpansion}
-  \label{fig:unexpansion}
+  \label{fig:reval-unexpansion}
 \end{figure}
 
-\begin{lemma} \label{lemma:exp-inverse}
+\begin{lemma} \label{lemma:reval-exp-inverse}
   For all terms $e$, if $\SaysExp{L}{e}{e'}$ and
   $\SaysUnexp{L}{e'}{e''}$ then $e = e''$.
 \end{lemma}
@@ -260,7 +422,7 @@ has honest tags. (Assuming that evaluation does not modify tags.)
 \begin{proof}
   Since $e$ can unexpand, it must have exactly one tag.
   Since that tag is honest, it came from the expansion of some term $e^{*}$.
-  By \cref{lemma:exp-inverse}, $Expand(e^{*}) = e^{**}$ 
+  By \cref{lemma:reval-exp-inverse}, $Expand(e^{*}) = e^{**}$ 
   and $Unexpand(e^{**}) = e^{*}$ for some $e^{**}$.
 
   (We write $Expand$ as shorthand for $\SaysExp{L}{\_}{\_}$;
