@@ -1,0 +1,199 @@
+\chapter{Well-Formedness}\label{chap:wf}
+
+In this chapter, we describe how to perform well-formedness checking
+on \Sc{ast}s, and how to check that desugaring rules preserve
+well-formedness.
+
+
+\section{AST Signatures} % Or Syntype Checking
+
+Language's \textsc{ast}s typically have well-formedness criteria that
+restrict how they can be put together. For example, perhaps
+expressions can only occur within statements; statements occur only
+within blocks; or data definitions can only occur at the top
+level. These restrictions are \emph{usually} enforced by parsing,
+although this becomes more difficult in the presence of sugar
+(e.g. Racket [CITE] [FILL]).
+
+% TODO: Say 'signature', 'arity', 'sort' instead?
+These well-formedness conditions can (largely) be captured by giving
+each syntactic construct a \emph{syntax type}:
+
+\begin{Table}
+\Sc{ast} defn. $G$ &$::=$& $A \mapsto \{t_1, ... t_n\}$
+  & (where each $t$ is a syn. con.) \\
+syntactic category $A$ \hspace{-1em} &$::=$& \textit{name} \\
+syntax type $t$ &$::=$& $A$ & syntactic category \\
+  &$|$& $\Core{C}{t_1 ... t_n}$ & core syntactic construct \\
+  &$|$& $\Aux{C}{t_1 ... t_n}$  & auxilliary syntactic construct \\
+  &$|$& $\Surf{C}{t_1 ... t_n}$ & surface syntactic construct \\
+  &$|$& $[t]$ & list \\
+  &$|$& $\ValueT$ & primitive value \\
+  &$|$& $\DeclT$ & variable declaration \\
+  &$|$& $\RefnT$ & variable reference
+\end{Table}
+
+For example, if a language has only ``define'' statements, numeric
+expressions, and addition expressions, that could be captured by the
+\Sc{ast} definition:
+\begin{Table}
+  $\textit{Stmt}$ &$\mapsto$& $\{\Core{Define}{\DeclT\;\textit{Expr}}\}$ \\
+  $\textit{Expr}$ &$\mapsto$& $\{\Core{Number}{\ValueT},$ \\
+  && $\Core{Plus}{\textit{Expr}\;\textit{Expr}}\}$
+\end{Table}
+
+If parsing the surface language will respect this \Sc{ast} signature
+\emph{anyways}, why bother writing it down? First, note that  qqq
+
+Lemma: If rules wf check, then e obeys Surf implies ds(e) obeys
+Core.
+
+\paragraph{Exhaustion Checking}
+We perform exhaustion checking to make sure that sugars cover all
+possible cases of their arguments, but do not give the algorithm here.
+It works by looking at \emph{shapes}: a shape is a pattern that
+contains types in place of pattern variables. It is straightforward to
+check whether an expression matches a shape, and to convert a pattern
+into a shape. Exhaustion checking uses the fact that the expressions
+that do \emph{not} match a shape can be expressed as a union of shapes.
+[TODO: prove]
+
+\begin{figure}
+
+\TypeLabel{\SaysExpr{L}{e}{t}}
+
+\begin{multicols}{2}
+  
+  \Inference[e-core]{
+    A \mapsto \Core{C}{t_1 ... t_n} \in L \\
+    \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{L}{e_n}{t_n}
+  }{
+    \SaysExpr{L}{\Core{C}{e_1 ... e_n}}{A}
+  }
+
+  \Inference[e-refn]{}{
+    \SaysExpr{L}{\Refn{x}}{\TRefn}
+  }
+
+  \Inference[e-decl]{}{
+    \SaysExpr{L}{\Decl{x}}{\TDecl}
+  }
+
+  \Inference[e-str]{}{
+    \SaysExpr{L}{\textit{string}}{\TString}
+  }
+
+  \Inference[e-list]{
+    \SaysExpr{L}{e_1}{t} \;\cdots\; \SaysExpr{L}{e_n}{t}
+  }{
+    \SaysExpr{L}{[e_1 ... e_n]}{[t]}
+  }
+
+  \Inference[e-sugar]{
+    \SaysRule{L}{m}{t_1,...,t_n}{t} \\
+    \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{L}{e_n}{t_n}
+  }{
+    \SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}
+  }
+\end{multicols}
+\caption{Well-Formedness Checking: Terms}
+\end{figure}
+
+\begin{figure}
+\TypeLabel{\SaysPatt{L}{\Gamma}{p}{t}}
+
+\begin{multicols}{2}
+
+  \Inference[p-pvar]{
+    \PVarA : t \in \Gamma
+  }{
+    \SaysPatt{L}{\Gamma}{\PVarA}{t}
+  }
+
+  \Inference[p-refn]{}{
+    \SaysPatt{L}{\Gamma}{x}{\TRefn}
+  }
+
+  \Inference[p-decl]{}{
+    \SaysPatt{L}{\Gamma}{x}{\TDecl}
+  }
+
+  \Inference[p-str]{}{
+    \SaysPatt{L}{\Gamma}{\textit{string}}{\TString}
+  }
+
+  \Inference[p-core]{
+    A \mapsto \Core{C}{t_1 ... t_n} \in L \\
+    \SaysPatt{L}{\Gamma}{p_1}{t_1} \;\cdots\; \SaysPatt{L}{\Gamma}{p_n}{t_n}
+  }{
+    \SaysPatt{L}{\Gamma}{\Core{C}{p_1 ... p_n}}{A}
+  }
+
+  \Inference[p-sugar]{
+    \SaysRule{L}{m}{t_1,...,t_n}{t} \\
+    \SaysPatt{L}{\Gamma}{p_1}{t_1} \;\cdots\; \SaysPatt{L}{\Gamma}{p_n}{t_n}
+  }{
+    \SaysPatt{L}{\Gamma}{\Surf{m}{p_1 ... p_n}}{t}
+  }
+
+  \Inference[p-empty]{}{
+    \SaysPatt{L}{\Gamma}{[\epsilon]}[t]
+  }
+
+  \Inference[p-cons]{
+    \SaysPatt{L}{\Gamma}{p}{t} \\
+    \SaysPatt{L}{\Gamma}{[ps]}{[t]}
+  }{
+    \SaysPatt{L}{\Gamma}{[\Cons{p}{ps}]}{[t]}
+  }
+
+  \Inference[p-ellipsis]{
+    l \mapsto \EList{\Gamma'} \in \Gamma & \SaysPatt{L}{\Gamma'}{p}{t}
+  }{
+    \SaysPatt{L}{\Gamma}{[\Rep{p}{l}]}{[t]}
+  }
+\end{multicols}
+
+\TypeLabel{\SaysRule{L}{m}{t,...,t}{t}}
+\Inference[g-sugar]{
+  \DsRuleFancy
+      {m}
+      {(p_{11},...,p_{1n});\Gamma_1;F_1 \To p_1'}
+      {(p_{k1},...,p_{kn});\Gamma_k;F_k \To p_k'}
+      \in L \\
+  \text{The cases are exhaustive over $t_1,...,t_n$ in $G$} \\
+  \SaysPatt{L}{\Gamma_{i}}{p_{ij}}{t_j}
+    \text{ for each $i \in 1..k, j \in 1..n$} \\
+  \SaysPatt{L}{\Gamma_{i}}{p_i'}{t}
+    \text{ for each $i \in 1..k$}
+}{
+  \SaysRule{L}{m}{t_1,...,t_n}{t}
+}
+
+\TypeLabel{\SaysEnv{L}{\gamma}{\Gamma}}
+\Inference[$\gamma$-env]{
+  \SaysExpr{L}{e_1}{t_1} \;\cdots\; \SaysExpr{e_n}{t_n} \\
+  \SaysEnv{L}{\gamma_{11}}{\Gamma_1} \;\cdots\; \SaysEnv{L}{\gamma_{1j}}{\Gamma_1} \\
+  ... \\
+  \SaysEnv{L}{\gamma_{m1}}{\Gamma_m} \;\cdots\; \SaysEnv{L}{\gamma_{mk}}{\Gamma_m} \\
+}{
+  \SaysEnv{L}{
+    \begin{cases}
+      \PVarA_1 \mapsto e_1,\,...,\,\PVarA_n \mapsto e_n \\
+      i_1 \mapsto [\gamma_{11},\,...,\,\gamma_{1j}] \\
+      ... \\
+      i_m \mapsto [\gamma_{m1},\,...,\,\gamma_{mk}]
+    \end{cases}
+  }{
+    \Gamma',
+    \begin{cases}
+      \PVarA_1: t_1,\,...,\,\PVarA_n: t_n, \\
+      %\PVarA_1': t_1',\,...,\,\PVarA_{n'}': t_{n'}' \\
+      i_1 \mapsto [\Gamma_1],\,...,\,i_m \mapsto [\Gamma_m], \\
+      %i_1' \mapsto [\Gamma_1'],\,...,\,i_{m'}' \mapsto [\Gamma_{m'}']
+    \end{cases}
+  }
+}
+
+\caption{Well-Formedness Checking: Patterns}
+\end{figure}
