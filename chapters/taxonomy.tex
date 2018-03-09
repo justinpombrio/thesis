@@ -4,6 +4,7 @@ TODO
 \begin{itemize}
 \item State version of each system discussed
 \item mention macro-defining-macros in expressiveness?
+\item More examples
 \end{itemize}
 
 There are a bewildering variety of desugaring systems.  In this
@@ -101,10 +102,18 @@ language, or they may be defined by users. For example, Haskell list
 comprehensions are defined by the Haskell spec [CITE] and implemented
 in the compiler(s); thus they are language-defined. Template Haskell
 sugars [CITE], on the other hand, can be defined (and used) in any
-Haskell program; thus they are user-defined. The difference between the two
-is whether sugar is only a convenient method of simplifying language
-design, or whether users are given the power to extend the language
-themselves.
+Haskell program; thus they are user-defined.
+
+Language-defined sugars are a convenient method of simplifying
+language design, and they are largely invisible: if done correctly,
+users of the language should not be able to tell which syntactic
+constructs were implemented as sugar and which were built in.
+In contrast, user-defined sugars are much more visible. They give
+users the power to extend the language. As a consequence, when
+this extended language is shared, other users must contend with it,
+which may be a gift or a burden, depending on its quality.
+
+[TODO: Consider moving the rest of this prose into a different section.]
 
 When sugars are user-defined, it raises difficulties with tools such
 as editors that need to support the new syntax. For example, if sugars
@@ -112,17 +121,32 @@ are language-defined then an editor can just support the full
 language. If they are user-defined, however, how can an editor provide
 correct indentation, syntax highlighting, etc.?
 
-Different languages work around this problem in different ways. Lisps
-mostly avoid the problem by mostly not having syntax. They don't
-\emph{entirely} avoid the problem, though. For example, the DrRacket editor for
+Different languages work around this problem in different ways.
+
+Lisps partly avoid this problem by having two ``layers'' of syntax.
+The lower layer is simply s-expressions, and ensures that parentheses
+are well-balanced (and that there are no tokenization errors).
+The higher layer checks that the s-expression makes syntactic sense.
+For example, \Code{(define x 1} is invalid at both layers,
+\Code{(define ((x)) 1)} is valid at the first layer but not at the
+second, and \Code{(define x 1)} is valid at both layers.\marginpar{%
+The phrase \emph{bicameral syntax} was coined by Shriram Krishnamurthi <CITE plai>.
+}
+This can be called \emph{bicameral syntax}, by analogy to legislative
+houses that are split into a lower and upper level.
+
+This separation of concerns makes it easy for editors to support the
+\emph{first} layer of syntax, which cannot be modified by syntactic
+sugar, while ignoring the second, which can. Doing so only
+\emph{partly} avoids the problem. For example, the DrRacket editor for
 Racket [CITE] allows indentation schemes to be set on a per-macro
 basis (because different syntactic forms, while purely parenthetical,
 still have varying nesting patterns that should be indented
 differently), and it displays arrows showing where variables are bound
 by being macro-aware and expanding the program (see [REF]).
-[FILL: SugarJ, other examples]
 
-[FILL: resugaring in general]
+[FILL: SugarJ, other examples]
+[FILL: Spoofax, language workbenches: tie editor to language]
 
 
 \subsection{Metalanguage}
