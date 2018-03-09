@@ -120,9 +120,13 @@
   \setlength{\fboxsep}{3pt}\fbox{$#1$}~\\
 }
 
+% Matching & Subs
+\newcommand{\SimpleMatch}[2]{#1 / #2}
+\newcommand{\SimpleSubs}[2]{#1 \bullet #2}
+
 % Judgements
-\newcommand{\SaysSubs}[4]{#2 \bullet #3 = #4}
-\newcommand{\SaysMatch}[5]{#1 \vdash #2 / #3 = #4,#5}
+\newcommand{\SaysSubs}[4]{\SimpleSubs{#2}{#3} = #4}
+\newcommand{\SaysMatch}[5]{#1 \vdash \SimpleMatch{#2}{#3} = #4,#5}
 \newcommand{\SaysExpr}[3]{#1 \vdash #2 : #3}
 \newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
 \newcommand{\SaysRule}[4]{#1 \vdash #2 : #3 \to #4}
@@ -153,6 +157,9 @@
 \newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
 \newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
 \newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
+\newcommand{\CoreLabel}{\Variable{Core}{}{}{C}}
+\newcommand{\AuxLabel}{\Variable{Aux}{}{}{C}}
+\newcommand{\SurfLabel}{\Variable{Surf}{}{}{C}}
 %\newcommand{\Bitter}[2]{(\Variable{u}{}{#1}{Bitter}\,#2)}
 \newcommand{\Variable}[4]{
   {\textit{#3}}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
