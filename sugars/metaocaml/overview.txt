@@ -7,7 +7,7 @@ Arguments: expressions (and arbitrary OCaml values containing them)
 Result: expressions (and arbitrary OCaml values containing them)
 Deconstruction: no
 Desugaring Order: IO
-Phases: many
+Phase: runtime
 Syntax Safe: yes
 Hygienic: yes
 Scope Safe: yes

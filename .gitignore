@@ -26,6 +26,7 @@
 *.hi
 *.dyn_o
 *.dyn_hi
+*.class
 texput.log
 sugars/haskell/main
 examples
