@@ -51,6 +51,11 @@
 \usepackage{cleveref}
 \usepackage{color}
 %\usepackage{inconsolata}
+% Scope stuff
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{matrix}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -91,6 +96,10 @@
 \newenvironment{ProofTable}
   {~\\\begin{tabular}{r l @{\quad} l}}
   {\end{tabular}~\\}
+\newenvironment{LongTable}
+  {\begin{center}\begin{tabular}
+    {l @{\;} c @{\;} l @{\;} c @{\;} l @{\;} c @{\;} l @{\quad} l}}
+  {\end{tabular}\end{center}}
 
 % Math Notation
 \newcommand{\ddd}{\;\dots\;}
@@ -119,10 +128,21 @@
 \newcommand{\TypeLabel}[1]{
   \setlength{\fboxsep}{3pt}\fbox{$#1$}~\\
 }
+\newcommand{\sideLabel}[2]{
+  \raisebox{2em}{(#1)}
+  \hspace*{\fill}
+  #2
+  \hspace*{\fill}
+  \phantom{\raisebox{1em}{(#1)}}
+}
+
+% Matching and Substitution
+\newcommand{\Subs}[2]{#1 \bullet #2}
+\newcommand{\Match}[2]{#1 / #2}
 
 % Judgements
-\newcommand{\SaysSubs}[4]{#2 \bullet #3 = #4}
-\newcommand{\SaysMatch}[5]{#1 \vdash #2 / #3 = #4,#5}
+\newcommand{\SaysSubs}[4]{#1 \vdash \Subs{#2}{#3} = #4}
+\newcommand{\SaysMatch}[5]{#1 \vdash \Match{#2}{#3} = #4,#5}
 \newcommand{\SaysExpr}[3]{#1 \vdash #2 : #3}
 \newcommand{\SaysPatt}[4]{#1;#2 \vdash #3 : #4}
 \newcommand{\SaysRule}[4]{#1 \vdash #2 : #3 \to #4}
@@ -147,25 +167,34 @@
 % Scope
 \newcommand{\Bind}[3]{\texttt{bind } #3 \texttt{ in } #2 \ensuremath{\in #1}}
 \newcommand{\Prov}[2]{\texttt{provide } #2 \ensuremath{\in #1}}
+\renewcommand{\<}{\le}
 
 % Expressions
+\newcommand{\Node}[2]{(#1\;#2)}
+\newcommand{\ConstRm}[1]{\texttt{#1}}
+\newcommand{\NodeRm}[2]{\Node{\texttt{#1}}{#2}}
 \newcommand{\ASTNode}[4]{(\Variable{#3}{}{#2}{#1}\;#4)}
 \newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
 \newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
 \newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
-%\newcommand{\Bitter}[2]{(\Variable{u}{}{#1}{Bitter}\,#2)}
 \newcommand{\Variable}[4]{
   {\textit{#3}}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
 \newcommand{\Value}{value}
-%\newcommand{\Tag}[3]{(\Code{Tag}\;#1\;#2\;#3)}
 \newcommand{\Tag}[3]{(\Code{Tag}_{#1 \To #2} #3)}
+% Specific Variables
+\newcommand{\VarX}{\Variable{\empty}{x}{}{}}
+\newcommandx*{\DeclX}[1][1=\empty]{\Decl[#1]{x}}
+\newcommandx*{\DeclY}[1][1=\empty]{\Decl[#1]{y}}
+\newcommandx*{\RefnX}[1][1=\empty]{\Refn[#1]{x}}
+\newcommandx*{\RefnY}[1][1=\empty]{\Refn[#1]{y}}
 % Patterns
 \newcommand{\Fresh}[2]{(\Code{Fresh}\,#1.\,#2)}
 \newcommand{\PVarA}{\alpha}
 \newcommand{\PVarB}{\beta}
 \newcommand{\PVarC}{\gamma}
+\newcommand{\PVarD}{\delta}
 % SeqPatterns
 \newcommand{\Cons}[2]{#1, #2}
 \newcommand{\Rep}[2]{#1\ {*}_{#2}}
@@ -193,6 +222,147 @@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Scope
+
+% Ports
+\definecolor{imColor}{rgb}{0.0 0.36 0.84}
+\definecolor{exColor}{rgb}{0.63 0.0 0.0}
+\newcommand{\imSymb}{{\color{imColor}\downarrow}}
+\newcommand{\exSymb}{{\color{exColor}\uparrow}}
+\newcommand{\im}{\imSymb}
+\newcommand{\ex}{\exSymb}
+\newcommand{\imSymbCirc}{\imSymb}
+\newcommand{\exSymbCirc}{\exSymb}
+\newcommand{\Root}{\bigLetter{r}}
+\newcommand{\Imp}{\bigLetter{r}^\imSymb\!}
+\newcommand{\Exp}{\bigLetter{r}^\exSymb\!}
+
+% Scope Diagrams
+\definecolor{arrowColor}{rgb}{0.25 0.55 0.55}
+\definecolor{arrowColorHL}{rgb}{0.7 0.45 0.25}
+\newenvironment{tikzScopeDiagram}[1][]
+               {\def\tikzScopeDiagramMode{#1}
+                \begin{tikzpicture}}
+               {\end{tikzpicture}}
+\newenvironment{tikzEdges}
+               {\begin{pgfonlayer}{background}}
+               {\end{pgfonlayer}}
+% Scope Diagrams - With Ports
+\newcommand{\tikzRoot}[2]{%
+  #2{#1}{}
+}
+\newcommand{\tikzChild}[3]{%
+  \node(#2)[#3]{\Code{#1}};
+  \ifthenelse{\equal{\tikzScopeDiagramMode}{simple}}{}{
+    \node(#2-)[left= -0.7em of #2]{$\imSymbCirc$};
+    \node(#2+)[right= -0.7em of #2]{$\exSymbCirc$};
+  }
+}
+\newcommand{\tikzParentOne}[5]{%
+  \tikzChild{#1}{#4}{#5};
+  \ifthenelse{\equal{\tikzScopeDiagramMode}{simple}}{
+    #3{#2}{below = 2em of #4.center};
+  }{
+    #3{#2}{below = 2em of #4.center};
+  }
+  \path[-,thick,dotted] (#4) edge (#2);
+}
+\newcommand{\tikzParentTwo}[7]{%
+  \tikzChild{#1}{#6}{#7};
+  \ifthenelse{\equal{\tikzScopeDiagramMode}{simple}}{
+    #3{#2}{below left  = 2em and 1.2em of #6.center};
+    #5{#4}{below right = 2em and 1.2em of #6.center};
+  }{
+    #3{#2}{below left  = 2.5em and 1.5em of #6.center};
+    #5{#4}{below right = 2.5em and 1.5em of #6.center};
+  }
+  \path[-,thick,dotted] (#6) edge (#2);
+  \path[-,thick,dotted] (#6) edge (#4);
+}
+\newcommand{\tikzParentThree}[9]{%
+  \tikzChild{#1}{#8}{#9};
+  \ifthenelse{\equal{\tikzScopeDiagramMode}{simple}}{
+    #3{#2}{below left  = 2em and 2.33em of #8.center};
+    #5{#4}{below       = 2em            of #8.center};
+    #7{#6}{below right = 2em and 2.33em of #8.center};
+  }{
+    #3{#2}{below left  = 2.5em and 3em of #8.center};
+    #5{#4}{below       = 2.5em         of #8.center};
+    #7{#6}{below right = 2.5em and 3em of #8.center};
+  }
+  \path[-,thick,dotted] (#8) edge (#2);
+  \path[-,thick,dotted] (#8) edge (#4);
+  \path[-,thick,dotted] (#8) edge (#6);
+}
+\newcommand{\tikzParentThreeWide}[9]{%
+  \tikzChild{#1}{#8}{#9};
+  \ifthenelse{\equal{\tikzScopeDiagramMode}{simple}}{
+    #3{#2}{below left  = 2em and 2.66em of #8.center};
+    #5{#4}{below       = 2em            of #8.center};
+    #7{#6}{below right = 2em and 2.66em of #8.center};
+  }{
+    #3{#2}{below left  = 2.5em and 4em of #8.center};
+    #5{#4}{below       = 2.5em         of #8.center};
+    #7{#6}{below right = 2.5em and 4em of #8.center};
+  }
+  \path[-,thick,dotted] (#8) edge (#2);
+  \path[-,thick,dotted] (#8) edge (#4);
+  \path[-,thick,dotted] (#8) edge (#6);
+}
+\newcommand{\tikzParentFour}[2]{%
+  \def\ArgI{#1}%
+  \def\ArgII{#2}%
+  \tikzParentFourContinued
+}
+\newcommand{\tikzParentFourContinued}[9]{%
+  \tikzChild{\ArgI}{#8}{#9};
+  #1{\ArgII}{below left  = 3.5em and 7.5em of #8.center};
+  #3{#2}{below left  = 3.5em and 1em of #8.center};
+  #5{#4}{below right = 3.5em and 1em of #8.center};
+  #7{#6}{below right = 3.5em and 6em of #8.center};
+  \path[-,thick,dotted] (#8) edge (\ArgII);
+  \path[-,thick,dotted] (#8) edge (#2);
+  \path[-,thick,dotted] (#8) edge (#4);
+  \path[-,thick,dotted] (#8) edge (#6);
+}
+% Scope Diagrams - Edges
+\newcommand{\tikzEdgeTemplate}[4]{
+  \path[->, line width=0.15em, color=teal,
+    shorten <=-0.2em, shorten >=-0.2em, #3]
+  (#2) edge node [below] {#4} (#1);
+}
+\newcommandx*{\tikzEdge}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{#3}{#4}}
+\newcommandx*{\tikzEdgeL}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend right=15,#3}{#4}}
+\newcommandx*{\tikzEdgeR}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend left=15,#3}{#4}}
+\newcommandx*{\tikzEdgeLL}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend right=30,#3}{#4}}
+\newcommandx*{\tikzEdgeRR}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend left=30,#3}{#4}}
+\newcommandx*{\tikzEdgeLLL}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend right=45,#3}{#4}}
+\newcommandx*{\tikzEdgeRRR}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend left=45,#3}{#4}}
+\newcommandx*{\tikzEdgeRRRR}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend left=85,#3}{#4}}
+\newcommandx*{\tikzEdgeD}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{dashed,#3}{#4}}
+\newcommandx*{\tikzEdgeDL}[4][3=\empty,4=\empty]{
+  \tikzEdgeTemplate{#1}{#2}{bend right=15,dashed,#3}{#4}}
+% Scope Diagrams: binding specs
+\newenvironment{ScopeRules}
+  {\begin{tabular}{l @{\;} c @{\;} l}}
+  {\end{tabular}}
+\newcommand{\RuleImpt}[2]{\specImpt{\Code{#2}} &$\in$& $\Sigma[\Code{#1}]$}
+\newcommand{\RuleExpt}[2]{\specExpt{\Code{#2}} &$\in$& $\Sigma[\Code{#1}]$}
+\newcommand{\RuleSelf}[1]{\specSelf &$\in$& $\Sigma[\Code{#1}]$}
+\newcommand{\RuleBind}[3]{\specBind{\Code{#2}}{\Code{#3}} &$\in$& $\Sigma[\Code{#1}]$}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  Terminology
 
 \newcommand{\Constr}[2]{\ifthenelse{\isempty{#2}}{#1}{#1(#2)}}
@@ -207,6 +377,7 @@
 
 % Math Terminology
 \newcommand{\Domain}[1]{\ConstrIt{domain}{#1}}
+\newcommand{\Arity}[1]{\ConstrIt{arity}{#1}}
 
 % Resugaring Terminology
 \newcommand{\Tool}{\textit{Resugarer}\xspace}
@@ -224,6 +395,9 @@
 
 
 \begin{document}
+
+\pgfdeclarelayer{background}
+\pgfsetlayers{background,main}
 
 \author{Justin Pombrio}
 \title{Resugaring: Restoring the Abstractions that Syntactic Sugar is Supposed to Provide}
@@ -343,5 +517,133 @@ grammar as a \emph{specification}) is that for each production
       \production{s}{\exprs{P}{s_1 \dd s_n}{s}} \in G}
     {\saysG{G}{\expr{P}{e_1 \dd e_n \dd e_{n+k}}}{s}}
 \]
+
+
+\section{Scope Checking}
+
+(See \cref{fig:scope}.)
+
+\begin{figure}
+\TypeLabel{\SaysScope{\Sigma}{e}
+  {\{\Decl{x}\}}
+  {\{\Refn{x}\}}
+  {\{\Decl{x}\}}
+  {\{\Refn{x}\mapsto\Decl{x}\}}}
+
+\Inference[scope-e-decl]{}{
+  \SaysScope{\Sigma}{\Decl{x}}{\{\Decl{x}\}}{\{\}}{\{\Decl{x}\}}{\{\}}
+}
+
+\Inference[scope-e-refn]{}{
+  \SaysScope{\Sigma}{\Refn{x}}{\{\}}{\{\Refn{x}\}}{\{\}}{\{\}}
+}
+
+\Inference[scope-e-con]{
+  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
+  \SaysScope{\Sigma}{e_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
+  S = \SetSuchThat{
+    \Decl[a]{x} \mapsto \Decl[b]{x}
+  }{
+    \Decl[a]{x} \in P_i,\;
+    \Decl[b]{x} \in P_j,\;
+    \Bind{\sigma}{i}{j}
+  } \IS\\
+  B = \SetSuchThat{
+    \Refn[a]{x} \mapsto \Decl[b]{x}
+  }{
+    \Refn[a]{x} \in R_i,\;
+    \Decl[b]{x} \in P_j,\;
+    \Bind{\sigma}{i}{j},\;
+    \Decl[b]{x} \not\in \Domain{S}
+  } \IS\\
+  R = \SetSuchThat{
+    \Refn[a]{x}
+  }{
+    \Refn[a]{x} \in R_i,\;
+    \NotExists{\Decl[b]{x}}{\Refn[a]{x} \mapsto \Decl[b]{x} \in B\}}
+  } \IS\\
+  P = \SetSuchThat{
+    \Decl[a]{x}
+  }{
+    \Decl[a]{x} \in P_i,\;
+    \Prov{\sigma}{i},\;
+    \Decl[a]{x} \not\in \Domain{S}
+  }
+}{
+  \SaysScope{\Sigma}{\Core{C}{e_1 ... e_n}}{P}{R}{B}
+}
+
+
+\Inference[scope-p-con]{
+  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
+  \SaysScope{\Sigma}{p_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
+  S = \SetSuchThat{
+    a \mapsto b
+  }{
+    a \in P_i,\;
+    b \in P_j,\;
+    \Bind{\sigma}{i}{j},\;
+    \SaysCanShadow{F}{a}{b}
+  } \IS\\
+  B = \SetSuchThat{
+    a \mapsto b
+  }{
+    a \in R_i,\;
+    b \in P_j,\;
+    \Bind{\sigma}{i}{j},\;
+    b \not\in \Domain{S},\;
+    \SaysCanBind{F}{a}{b}
+  } \IS\\
+  R = \SetSuchThat{
+    a
+  }{
+    a \in R_i,\;
+    (\NotExists{b}{a \mapsto b \in B\}}
+    \text{ or $a$ is a pattern var})
+  } \IS\\
+  P = \SetSuchThat{
+    a
+  }{
+    a \in P_i,\;
+    \Prov{\sigma}{i},\;
+    a \not\in \Domain{S}
+  }
+}{
+  \SaysScope{\Sigma}{\Core{C}{p_1 ... p_n}}{P}{R}{B}
+}
+
+Two checks to make: fresh vars don't bind to non-fresh vars, and named
+vars only bind to vars of the same name:
+\begin{multicols}{3}
+  \Inference{}{
+    \SaysCanBind{F}{\Refn[1]{x}}{\Decl[2]{x}}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \SaysCanBind{F}{\Refn[1]{x}}{\PVarA}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \SaysCanBind{F}{\PVarA}{\Decl[1]{x}}
+  }
+  \Inference{}{
+    \SaysCanBind{F}{\PVarA}{\PVarB}
+  }
+  \Inference{}{
+    \SaysCanShadow{F}{\Decl[1]{x}}{\Decl[2]{x}}
+  }
+  \Inference{
+    x \not\in F
+  }{
+    \SaysCanShadow{F}{\Decl[1]{x}}{\PVarA}
+  }
+\end{multicols}
+
+\caption{Scope Checking Rules}
+\label{fig:scope}
+\end{figure}
+
 
 \end{document}
