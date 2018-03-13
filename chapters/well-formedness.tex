@@ -43,7 +43,15 @@ expressions, and addition expressions, that could be captured by the
 \end{Table}
 
 If parsing the surface language will respect this \Sc{ast} signature
-\emph{anyways}, why bother writing it down? First, note that  qqq
+\emph{anyways}, why bother writing it down? First, notice that there
+are \emph{two} \Sc{ast} signatures: the surface language signature and
+the core language signature. While parsing may ensure that the
+\emph{surface} \Sc{ast} is well-formed, it says nothing about whether
+the core \Sc{ast} will be well-formed after desugaring has taken
+place. We therefore show how to \emph{statically check} that
+desugaring will preserve well-formedness. (We leave termination
+unchecked, however, as it is undecidable in general [CITE], and we
+don't want to limit the expressiveness of desugaring.)
 
 Lemma: If rules wf check, then e obeys Surf implies ds(e) obeys
 Core.
