@@ -1,0 +1,1227 @@
+% For accent characters:
+% https://en.wikibooks.org/wiki/LaTeX/Special_Characters   #Escaped codes
+
+@string{tacs = "Symposium on Theoretical Aspects of Computer Science"}
+
+@string{dls = {Dynamic Languages Symposium}}
+@string{popl = {Principles of Programming Languages}}
+@string{lncs = {Springer Lecture Notes in Computer Science}}
+@string{jfp = {Journal of Functional Programming}}
+@string{gcse = {Generative and Component-Based Software Engineering}}
+@string{icfp = {International Conference on Functional Programming}}
+@string{toplas = {Transactions on Programming Languages and Systems}}
+@string{esop = {European Symposium on Programming Languages and Systems}}
+@string{pldi = {Programming Languages Design and Implementation}}
+@string{ecoop = {European Conference on Object-Oriented Programming}}
+@string{tacs = {International Symposium on Theoretical Aspects of
+                Computer Software}}
+@string{faoc = {Formal Aspects of Computing}}
+@string{sle = {Software Language Engineering}}
+@string{csf = {Computer Security Foundations Symposium}}
+@string{sigcse = {Special Interest Group on Computer Science Education}}
+@string{cacm = {Communications of the ACM}}
+@string{icm = {IEEE Computer Magazine}}
+@string{oopsla = {ACM SIGPLAN Conference on Object-Oriented
+                  Programming Systems, Languages and Applications}}
+@string{tosem = {Transactions on Software Engineering and Methodology}}
+@string{issta = {International Symposium on Software Testing and Analysis}}
+@string{webapps = {USENIX Conference on Web Application Development}}
+@string{sigcomm = {Special Interest Group on Data Communications}}
+@string{aplas = {Asian Symposium on Programming Languages and Systems}}
+@string{mst = {Mathematical Systems Theory}}
+@string{haskell = {ACM SIGPLAN Haskell Workshop}}
+@string{scala = {Scala Workshop}}
+
+@techreport{plt-tr1,
+ author = {Matthew Flatt and PLT},
+ title = {Reference: Racket},
+ number = {PLT-TR2010-1},
+ institution = {PLT Inc.},
+ year = {June 7, 2010},
+ note = {\url{racket-lang.org/tr1/}}
+}
+
+@techreport{gdp:struct-op-sem,
+  author="Gordon D.~Plotkin",
+  title="A Structured Approach to Operational Semantics",
+  institution="Computer Science Department, Aarhus University, Aarhus, Denmark",
+  year="1981",
+  number="DAIMI FN-19"}
+
+
+@inproceedings{gk:natural-semantics,
+  author="Gilles Kahn",
+  title="Natural Semantics",
+  booktitle=tacs,
+  year=1987}
+
+
+@phdthesis{clements:thesis,
+  author = "John Clements",
+  title = "Portable and high-level access to the stack with
+                  Continuation Marks",
+  school = "Northeastern University",
+  year = 2006
+}
+
+@INPROCEEDINGS{politz:s5,
+  author = {Joe Gibbs Politz and Matt Carroll and Benjamin S. Lerner and Justin
+	Pombrio and Shriram Krishnamurthi},
+  title = {A Tested Semantics for Getters, Setters, and Eval in {J}ava{S}cript},
+  booktitle = dls,
+  year = {2012},
+}
+
+@manual{coq-manual,
+  author = "{{The} {C}oq Development Team}",
+  title = "The {C}oq Proof Assistant Reference Manual",
+  year = 2012,
+  edition = "Version 8.4",
+  link = "http://coq.inria.fr/distrib/V8.4/files/Reference-Manual.pdf"
+}
+
+@inproceedings{fgkps:comb-bidir-tree-trans,
+  author="J. Nathan Foster and Michael B. Greenwald and
+    Jonathan T. Moore and Benjamin C. Pierce and Alan Schmitt",
+  title="Combinators for bi-directional tree transformations: 
+    a linguistic approach to the view update problem",
+  booktitle=popl,
+  year=2005,
+}
+
+@inproceedings{boomerang,
+  author = "Aaron Bohannon and J. Nathan Foster and Benjamin C. Pierce
+                  and Alexandre Pilkiewicz and Alan Schmitt",
+  title = "{B}oomerang: Resourceful Lenses for String Data",
+  booktitle = popl,
+  year = "2008",
+  doi = {http://dx.doi.org/10.1145/1328897.1328487}
+}
+
+@inproceedings{foster:quotient-lenses,
+  author = "J. Nathan Foster and Alexandre Pilkiewicz and Benjamin
+                  C. Pierce",
+  title = "Quotient Lenses",
+  booktitle = icfp,
+  year = 2008,
+}
+
+@article{deursen:origin-tracking,
+  author = {Van Deursen, A. and Klint, P. and Tip, F.},
+  title = {Origin Tracking},
+  journal = {Journal of Symbolic Computation},
+  year = {1993},
+  volume = {15},
+  number = {5--6},
+  doi = {http://dx.doi.org/10.1016/S0747-7171(06)80004-0},
+}
+
+@techreport{dinesh:error-reporters,
+  author = {Dinesh, T. B. and Tip, Frank},
+  title = {Animators and error reporters for generated programming
+                  environments},
+  year = {1992},
+  institution = {CWI (Centre for Mathematics and Computer Science)},
+  address = {Amsterdam, The Netherlands, The Netherlands},
+} 
+
+@article{sk:automata-macros,
+  author = {Shriram Krishnamurthi},
+  title = {Automata via Macros},
+  journal = jfp,
+  volume = 16,
+  number = 3,
+  year = 2006,
+  abstract =
+    "Lisp programmers have long used macros to extend their language.
+    Indeed, their success has inspired macro notations for a variety
+    of other languages, such as C and Java.  There is, however, a
+    paucity of effective pedagogic examples of macro use.  This paper
+    presents a short, non-trivial example that implements a construct
+    not already found in mainstream languages.  Furthermore, it
+    motivates the need for tail-calls, as opposed to mere
+    tail-recursion, and illustrates how support for tail-call
+    optimization is crucial to support a natural style of macro-based
+    language extension."
+}
+
+@inproceedings{sk:mcmicmac,
+  author={Shriram Krishnamurthi and Matthias Felleisen and Bruce
+    F.~Duba},
+  title={From Macros to Reusable Generative Programming},
+  booktitle=gcse,
+  year=1999,
+  abstract=
+    "Generative programming is widely used both to develop new
+    programming languages and to extend existing ones with
+    domain-specific sub-languages.  This paper describes {\sf
+    McMicMac}, a framework for generative programming.  {\sf McMicMac}
+    uses tree-transforming macros as language specifications, and
+    enhances them with inherited and synthesized attributes.  The
+    enhanced transformers can describe general compilation tasks.
+    Families of these specifications are grouped into mixin-like
+    collections called vocabularies.  Programmers can defined new
+    languages by composing these vocabularies.  We have implemented
+    {\sf McMicMac} for Scheme and used it to build several systems,
+    including the DrScheme programming environment.  The principles of
+    {\sf McMicMac} carry over to other languages and environments."
+}
+
+@book{redex,
+  title = {Semantics Engineering with PLT Redex},
+  publisher = {MIT Press},
+  year = {2009},
+  author = {Matthias Felleisen and Robert Bruce Findler and Matthew Flatt},
+}
+
+@book{tapl,
+  title = {Types and Programming Languages},
+  publisher = {MIT Press},
+  year = {2002},
+  author = {C. Pierce, Benjamin},
+  isbn = {978-0-262-16209-8}
+}
+
+@inproceedings{racket-stepper,
+ author = {Clements, John and Flatt, Matthew and Felleisen, Matthias},
+ title = {Modeling an Algebraic Stepper},
+ booktitle = esop,
+ year = {2001},
+ isbn = {3-540-41862-8},
+ numpages = {15},
+ doi = {http://dx.doi.org/10.1007/3-540-45309-1_21},
+ acmid = {651947},
+ publisher = {Springer-Verlag},
+ address = {London, UK},
+} 
+
+@inproceedings{guha-ajax,
+  author = {Guha, Arjun and Krishnamurthi, Shriram and Jim, Trevor},
+  title = {Using static analysis for {A}jax intrusion detection},
+  booktitle = {International Conference on the World Wide Web (WWW)},
+  year = {2009},
+  address = {New York, NY, USA},
+  publisher = {ACM},
+  acmid = {1526785},
+  doi = {http://doi.acm.org/10.1145/1526709.1526785},
+  isbn = {978-1-60558-487-4},
+  keywords = {Ajax, control-flow analysis, intrusion detection, {J}ava{S}cript},
+  location = {Madrid, Spain},
+  timestamp = {2011.09.23}
+}
+
+@inproceedings{regular-tree-expressions,
+  author = {Alexander Aiken and Brian R. Murphy},
+  title = {Implementing Regular Tree Expressions},
+  booktitle = {Conference on Functional Programming Languages and
+                Computer Architecture},
+  year = {1991},
+  publisher = {Springer-Verlag}
+}
+
+@article{hennessy-debugging,
+  author = {Hennessy, John},
+  title = {Symbolic Debugging of Optimized Code},
+  journal = toplas,
+  issue_date = {July 1982},
+  volume = {4},
+  number = {3},
+  year = {1982},
+  issn = {0164-0925},
+  doi = {http://doi.acm.org/10.1145/357172.357173},
+  acmid = {357173},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{expansion-passing-style,
+  author = {R. Kent Dybvig and Daniel P. Friedman and Christopher
+                T. Haynes},
+  title = {Expansion-Passing Style: A General Macro Mechanism},
+  booktitle = {Lisp and Symbolic Computation},
+  year = {1988},
+}
+
+@inproceedings{continuations-from-stack,
+  author    = {Greg Pettyjohn and
+               John Clements and
+               Joe Marshall and
+               Shriram Krishnamurthi and
+               Matthias Felleisen},
+  title     = {Continuations from generalized stack inspection},
+  booktitle = icfp,
+  year      = {2005},
+  doi        = {http://doi.acm.org/10.1145/1086365.1086393},
+}
+
+@article{stratego,
+author = "Martin Bravenboer and Karl Trygve Kalleberg and Rob Vermaas and
+                  Eelco Visser",
+title = {{Stratego/XT} 0.17. {A} language and toolset for program
+                  transformation},
+journal = "Science of Computer Programming",
+volume = "72",
+number = "1--2",
+year = "2008",
+}
+
+@misc{sdf,
+author = {J. Heering and P.R.H. Hendriks and P. Klint and J. Rekers},
+title = {The Syntax Definition Formalism {SDF} - {Reference} Manual},
+year = {2001},
+note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pdf}}
+}
+
+@inproceedings{spoofax,
+  title = {The {Spoofax} language workbench: {Rules} for declarative
+                  specification of languages and {IDEs}},
+  author = {Lennart C. L. Kats and Eelco Visser},
+  year = {2010},
+  doi = {http://doi.acm.org/10.1145/1869459.1869497},
+  pages = {444-463},
+  booktitle = oopsla,
+  publisher = {ACM},
+  isbn = {978-1-4503-0203-6},
+}
+
+@inproceedings{ziggurat,
+  address = {New York, NY, USA},
+  author = {Fisher, David and Shivers, Olin},
+  booktitle = icfp,
+  publisher = {ACM},
+  title = {Static analysis for syntax objects},
+  year = {2006},
+}
+
+@inproceedings{MacroML,
+  title = {Macros as Multi-Stage Computations:
+           Type-Safe, Generative, Binding Macros in MacroML},
+  author = {Ganz, Steve and Sabry, Amr and Taha, Walid},
+  booktitle = icfp,
+  year = {2001},
+  doi = {https://doi.org/10.1145/507546.507646},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{MetaHaskell,
+  title = {Explicitly Heterogeneous Metaprogramming with MetaHaskell},
+  author = {Mainland, Geoffrey},
+  booktitle = icfp,
+  year = {2012},
+  doi = {https://doi.org/10.1145/2398856.2364572},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{Wyvern-TSL,
+  author = {Omar, Cyrus and Kurilova, Darya and Nistor, Ligia
+            and Chung, Benjamin and Potanin, Alex and Aldrich, Jonathan},
+  title = {Safely Composable Type-Specific Languages},
+  booktitle = ecoop,
+  year = {2014},
+  doi = {https://doi.org/10.1007/978-3-662-44202-9_5},
+  publisher = {Springer-Verlag},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{a-normal-form,
+  author = {Flanagan, Cormac and Sabry, Amr and Duba, Bruce F. and
+                   Felleisen, Matthias},
+  title = {The Essence of Compiling with Continuations},
+  booktitle = pldi,
+  year = {1993},
+  isbn = {0-89791-598-4},
+  location = {Albuquerque, New Mexico, USA},
+  numpages = {11},
+  doi = {http://doi.acm.org/10.1145/155090.155113},
+  acmid = {155113},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+} 
+
+% #lang citation
+@inproceedings{flatt-macros,
+  author = {Flatt, Matthew},
+  title = {Composable and compilable macros: you want it when?},
+  booktitle = icfp,
+  year = {2002},
+  isbn = {1-58113-487-8},
+  location = {Pittsburgh, PA, USA},
+  numpages = {12},
+  doi = {http://doi.acm.org/10.1145/581478.581486},
+  acmid = {581486},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{macro-by-example,
+  author = {Kohlbecker, E. E. and Wand, M.},
+  title = {Macro-by-example: Deriving syntactic transformations from their
+                   specifications},
+  booktitle = popl,
+  year = {1987},
+  isbn = {0-89791-215-2},
+  location = {Munich, West Germany},
+  numpages = {8},
+  doi = {http://doi.acm.org/10.1145/41625.41632},
+  acmid = {41632},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+} 
+
+@techreport{syntax-case,
+  author = {Dybvig, Kent R.},
+  title = {Writing Hygienic Macros in Scheme with Syntax-Case},
+  year = {1992},
+  institution = {Indiana University Computer Science Department}
+}
+
+@article{k-framework,
+  title={An Overview of the {K} Semantic Framework},
+  author={Grigore Ro{\c s}u and Traian Florin {\c S}erb{\u a}nu{\c t}{\u
+                  a} },
+  journal={Journal of Logic and Algebraic Programming},
+  volume={79},
+  number={6},
+  year={2010},
+  ee={http://dx.doi.org/10.1016/j.jlap.2010.03.012},
+  doi={http://doi.acm.org/10.1016/j.jlap.2010.03.012},
+}
+
+@inproceedings{Perera-slicing,
+  author = {Perera, Roly and Acar, Umut A. and Cheney, James and Levy, Paul
+                   Blain},
+  title = {Functional Programs That Explain Their Work},
+  booktitle = {International Conference
+                   on Functional Programming},
+  year = {2012},
+  isbn = {978-1-4503-1054-3},
+  location = {Copenhagen, Denmark},
+  numpages = {12},
+  doi = {http://doi.acm.org/10.1145/2364527.2364579},
+  acmid = {2364579},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+  keywords = {debugging, program slicing, provenance},
+}
+
+@incollection{bidirectional-model-transfs,
+ author = {Stevens, Perdita},
+ title = {A Landscape of Bidirectional Model Transformations},
+ booktitle = {Generative and Transformational Techniques in Software
+                  Engineering II},
+ year = {2008},
+ isbn = {978-3-540-88642-6},
+ numpages = {17},
+ doi = {http://dx.doi.org/10.1007/978-3-540-88643-3_10},
+ acmid = {1462630},
+ publisher = {Springer-Verlag}
+}
+
+@inproceedings{hygienic-macros,
+ author = {Kohlbecker, Eugene and Friedman, Daniel P. and Felleisen,
+                  Matthias and Duba, Bruce},
+ title = {Hygienic Macro Expansion},
+ booktitle = {ACM Conference on LISP and Functional Programming},
+ year = {1986},
+ isbn = {0-89791-200-4},
+ location = {Cambridge, Massachusetts, USA},
+ numpages = {11},
+ doi = {http://doi.acm.org/10.1145/319838.319859},
+ acmid = {319859},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+@inproceedings{lambda-js,
+ author = {Guha, Arjun and Saftoiu, Claudiu and Krishnamurthi, Shriram},
+ title = {The Essence of {JavaScript}},
+ booktitle = {European Conference on Object-oriented Programming},
+ year = {2010},
+ isbn = {3-642-14106-4, 978-3-642-14106-5},
+ location = {Maribor, Slovenia},
+ numpages = {25},
+ doi = {http://dl.acm.org/citation.cfm?id=1883978.1883988},
+ acmid = {1883988},
+ publisher = {Springer-Verlag},
+ address = {Berlin, Heidelberg},
+} 
+
+@inproceedings{self-debugging,
+ author = {H\"{o}lzle, Urs and Chambers, Craig and Ungar, David},
+ title = {Debugging Optimized Code with Dynamic Deoptimization},
+ booktitle = pldi,
+ year = {1992},
+ isbn = {0-89791-475-9},
+ location = {San Francisco, California, USA},
+ numpages = {12},
+ doi = {http://doi.acm.org/10.1145/143095.143114},
+ acmid = {143114},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+@inproceedings{SoundExt,
+ author = {Lorenzen, Florian and Erdweg, Sebastian},
+ title = {Modular and Automated Type-Soundness for Language Extensions},
+ booktitle = icfp,
+ year = {2013},
+ isbn = {978-1-4503-2326-0},
+ location = {Boston, MA, USA},
+ numpages = {12},
+ doi = {http://doi.acm.org/10.1145/2544174.2500596},
+ acmid = {2500596},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+@inproceedings{SoundX,
+ author = {Lorenzen, Florian and Erdweg, Sebastian},
+ title = {Sound type-dependent syntactic language extension},
+ booktitle = popl,
+ year = {2016},
+ isbn = {978-1-4503-3549-2},
+ doi = {https://doi.org/10.1145/2837614.2837644},
+ publisher = {ACM},
+ address = {New York, NY, USA}
+}
+
+@inproceedings{TemplateHaskell,
+ author = {Sheard, Tim and Peyton Jones, Simon},
+ title = {Template Meta-programming for Haskell},
+ booktitle = haskell,
+ year = {2002},
+ doi = {https://doi.org/10.1145/636517.636528},
+ publisher = {ACM},
+ address = {New York, NY, USA}
+}
+
+@misc{Camlp5,
+ author = {de Rauglaudre, Daniel},
+ year = {2007},
+ title = {Camlp5 - Reference Manua},
+ note = {http://pauillac.inria.fr/~ddr/camlp5/doc/pdf/camlp5-5.06.pdf}
+}
+
+@inproceedings{scala-macros,
+ author = {Burmako, Eugene},
+ title = {Scala macros: let our powers combine!},
+ year = {2013},
+ booktitle = scala,
+ doi = {https://doi.org/10.1145/2489837.2489840},
+ publisher = {ACM},
+ address = {New York, NY, USA}
+}
+
+@inproceedings{fortifying-macros,
+ author = {Culpepper, Ryan and Felleisen, Matthias},
+ title = {Fortifying Macros},
+ booktitle = icfp,
+ year = {2010},
+ isbn = {978-1-60558-794-3},
+ location = {Baltimore, Maryland, USA},
+ numpages = {12},
+ pages = {235--246},
+ doi = {http://doi.acm.org/10.1145/1863543.1863577},
+ acmid = {1863577},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+@inproceedings{herman-hygiene,
+  author = {Herman, David and Wand, Mitchell},
+  title = {A Theory of Hygienic Macros},
+  booktitle = esop,
+  year = {2008},
+  location = {Budapest, Hungary},
+  pages = {48--62},
+  doi = {http://dx.doi.org/10.1007/978-3-540-78739-6_4},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg}
+}
+
+@inproceedings{erdweg-hygiene,
+  author = {Erdweg, Sebastian and van der Storm, Tijs and Dai, Yi},
+  title = {Capture-Avoiding and Hygienic Program Transformations},
+  booktitle = ecoop,
+  year = {2014},
+  location = {Uppsala, Sweden},
+  pages = {489--514},
+  doi = {dx.doi.org/10.1007/978-3-662-44202-9_20},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+  isbn = {978-3-662-44201-2}
+}
+
+@inproceedings{stansifer-romeo,
+  author = {Stansifer, Paul and Wand, Mitchell},
+  title = {Romeo: a System For More Flexible Binding-Safe Programming},
+  booktitle = icfp,
+  year = {2014},
+  location = {Gothenburg, Sweden},
+  pages = {53--65},
+  doi = {http://dx.doi.org/10.1145/2628136.2628162},
+  acmid = {2628162},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{neron-scope,
+  author = {Neron, Pierre and Tolmach, Andrew and Visser, Eelco
+   and Wachsmuth, Guido},
+  title = {A Theory of Name Resolution},
+  booktitle = esop,
+  year = {2015},
+  pages = {205--231},
+  doi = {http://dx.doi.org/10.1007/978-3-662-46669-8_9},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+}
+
+@inproceedings{nabl,
+  author = {Konat, Gabrie and Kats, Lennart  and
+            Wachsmuth, Guido and Visser, Eelco},
+  title = {Declarative Name Binding and Scope Rules},
+  booktitle = sle,
+  year = {2012},
+  location = {Dresden, Germany},
+  pages = {311--331},
+  doi = {http://dx.doi.org/10.1007/978-3-642-36089-3_18},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+  isbn = {978-3-642-36088-6}
+}
+
+@techreport{aczel-church-rosser,
+  author = {Aczel, Peter},
+  title = {A General Church-Rosser Theorem},
+  year = {1978},
+  institution = {University of Manchester},
+}
+
+@inproceedings{sewell-ott,
+  author = {Sewell, Peter and Nardelli, Francesco Zappa and
+            Owens, Scott and Peskine, Gilles and
+            Ridge, Thomas and Sarkar, Susmit and
+            Strni\v{s}a, Rok},
+  title = {Ott: Effective Tool Support for the Working Semanticist},
+  booktitle = icfp,
+  year = {2007},
+  location = {Freiburg, Germany},
+  pages = {1--12},
+  doi = {http://dx.doi.org/10.1145/1291151.1291155},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+  isbn = {978-1-59593-815-2}
+}
+
+@inproceedings{adams-hygiene,
+  author = {Adams, Michael D.},
+  title = {Towards the Essence of Hygiene},
+  booktitle = popl,
+  year = {2015},
+  location = {Mumbai, India},
+  pages = {457-469},
+  doi = {http://dx.doi.org/10.1145/2676726.2677013},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+  isbn = {978-1-4503-3300-9},
+}
+
+@article{nominal-logic,
+  author = {Gabbay, Murdoch J. and Pitts, Andrew M.},
+  title = {A New Approach to Abstract Syntax with Variable Binding},
+  journal = faoc,
+  year = {2000},
+  volume = {13},
+  number = {3--5},
+  pages = {341--363},
+  doi = {http://dx.doi.org/10.1007/s001650200016},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+}
+
+@inproceedings{weirich-scope,
+  author = {Weirich, Stephanie and Yorgey, Brent and Sheard, Tim},
+  title = {Binders Unbound},
+  booktitle = icfp,
+  year = {2011},
+  location = {Tokyo, Japan},
+  pages = {333-345},
+  isbn = {978-1-4503-0865-6},
+  doi = {http://dx.doi.org/10.1145/2034574.2034818},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{pombrio-resugar,
+  author = {Pombrio, Justin and Krishnamurthi, Shriram},
+  title = {Resugaring: Lifting Evaluation Sequences through Syntactic Sugar},
+  booktitle = pldi,
+  year = {2014},
+  location = {Edinburgh, United Kingdom},
+  pages = {361--371},
+  isbn = {978-1-4503-2784-8},
+  doi = {http://doi.acm.org/10.1145/2594291.2594319},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{pombrio-resugar-hygienic,
+  author    = {Pombrio, Justin and
+               Krishnamurthi, Shriram},
+  title     = {Hygienic Resugaring of Compositional Desugaring},
+  booktitle = icfp,
+  pages     = {75--87},
+  year      = {2015},
+  doi       = {http://doi.acm.org/10.1145/2784731.2784755},
+  publisher = {ACM},
+  address   = {New York, NY, USA}
+}
+
+@inproceedings{pombrio-scope,
+  author    = {Pombrio, Justin and
+               Krishnamurthi, Shriram and
+               Wand, Mitchell},
+  title     = {Inferring Scope through Syntactic Sugar},
+  booktitle = icfp,
+  year      = {2017},
+  doi       = {https://doi.org/10.1145/3110288},
+  publisher = {ACM},
+  address   = {New York, NY, USA}
+}
+
+@inproceedings{slimming-languages,
+  author="Junsong Li and Justin Pombrio and Joe Gibbs Politz and
+    Shriram Krishnamurthi",
+  title="Slimming Languages by Reducing Sugar:
+    A Case for Semantics-Altering Transformations",
+  booktitle=onward,
+  year=2015,
+}
+
+@book{scheme6,
+  title = {Revised [6] Report on the Algorithmic Language Scheme},
+  publisher = {Cambridge University Press},
+  year = {2010},
+  author = {Sperber, Michael and Dybvig, R. Kent and
+            Flatt, Matthew and van Straaten, Anton and
+            Findler, Robby and Matthews, Jacob},
+  isbn = {978-0521762014},
+}
+
+@inproceedings{phoas,
+  title = {Parametric Higher-Order Abstract Syntax for Mechanized Semantics},
+  author = {Chlipala, Adam},
+  booktitle = icfp,
+  year = {2008},
+  location = {Victoria, BC, Canada},
+  doi = {http://doi.acm.org/10.1145/1411204.1411226},
+  pages = {143--156},
+  isbn = {978-1-59593-919-7},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@article{syntactic-sugar,
+  author = {Landin, Pter J.},
+  title = {The Mechanical Evaluation of Expressions},
+  journal = {The Computer Journal},
+  year = {1964},
+  volume = {6},
+  number = {4},
+  pages = {308--320},
+  doi = {http://doi.acm.org/10.1093/comjnl/6.4.308},
+}
+
+@inproceedings{hoas,
+  title = {Higher-Order Abstract Syntax},
+  author = {Pfenning, Frank and Elliot, Conal},
+  booktitle = pldi,
+  year = {1988},
+  location = {Atlanta, Georgia, USA},
+  doi = {http://dx.doi.org/10.1145/53990.54010},
+  pages = {199--208},
+  isbn = {0-89791-269-1},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@article{evaluation-context,
+  title = {The Revised Report on the Syntactic Theories of Sequential
+                  Control and State},
+  author = {Felleisen, Matthias and Hieb, Robert},
+  journal = {Theoretical Computer Science},
+  year = {1992},
+  volume = {103},
+  number = {2},
+  pages = {235--271},
+  doi = {http://dx.doi.org/10.1016/0304-3975(92)90014-7},
+}
+
+@book{standard-ML,
+  title = {The Definition of Standard ML, revised edition},
+  publisher = {The MIT Press},
+  year = {1990},
+  author = {Milner, Robin and Harper, Robert
+    and MacQueen, David and Tofte, Mads},
+  isbn = {978-0262631815},
+}
+
+@book{haskell-language,
+  title = {Haskell 98 Language and Libraries: The Revised Report},
+  publisher = {{Cambridge University Press}},
+  year = {2003},
+  author = {{Peyton Jones, Simon}},
+  isbn = {978-0521826143}
+}
+
+@misc{ecma:es5,
+  author = {{ECMA International}},
+  title = {{ECMAScript Edition 5.1}},
+  year = {2011},
+  note = {\newline\url{http://www.ecma-international.org/publications/ files/ECMA-ST/Ecma-262.pdf}}
+}
+
+@misc{ecma:es5:testsuite,
+  author = {{ECMA International}},
+  title = {{ECMAScript Language test262}},
+  year = {},
+  note = {\newline\url{http://test262.ecmascript.org/}}
+}
+
+@book{the-good-parts,
+  title = {{JavaScript}: The Good Parts},
+  publisher = {O'Reilly Media},
+  year = {2008},
+  author = {Crockford, Douglas},
+  isbn = {978-0596517748},
+}
+
+@misc{javascript-strong-mode,
+  author = {{Google Chrome V8 development team}},
+  title = {Experiments with Strengthening {JavaScript}},
+  note = {\newline\url{https://developers.google.com/v8/experiments}},
+  year = {2015},
+}
+
+@inproceedings{javascript-isolation,
+  title = {Language-Based Isolation of Untrusted {JavaScript}},
+  author = {Maffeis, Sergio and Taly, Ankur},
+  booktitle = csf,
+  year = {2009},
+  location = {Port Jefferson, NY, USA},
+  doi = {http://dx.doi.org/10.1109/CSF.2009.11},
+  pages = {77-91},
+  isbn = {978-0-7695-3712-2},
+  publisher = {IEEE},
+  address = {Washington, DC, USA},
+}
+
+@inproceedings{PLC,
+  title = {A Sequence of Structured Subsets of {PL/I*}},
+  author = {C. Holt, Richard and B. Wortman, David},
+  booktitle = sigcse,
+  year = {1974},
+  doi = {http://dx.doi.org/10.1145/800183.810456},
+  pages = {129-132},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@article{drscheme,
+  author = {Bruce Findler, Robert and Clements, John and
+    Flanagan, Cormac and Flatt, Matthew and Krishnamurthi Shriram and
+    Steckler, Paul and Felleisen, Matthias},
+  title = {{DrScheme}: A Programming Environment for Scheme},
+  journal = jfp,
+  year = 2002,
+  volume = {12},
+  pages = {159--182},
+  doi = {http://dx.doi.org/10.1017/S0956796801004208},
+  publisher = {Cambridge University Press},
+  address = {New York, NY, USA},
+}
+
+@article{multi-language-semantics,
+  author = {Matthews, Jacob and Bruce Findler, Robert},
+  title = {Operational semantics for multi-language programs},
+  journal = toplas,
+  year = {2009},
+  volume = {31},
+  number = {12},
+  doi = {http://dx.doi.org/10.1145/1498926.1498930},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@article{repeatability-debate,
+  author = {Krishnamurthi, Shriram and Vitek, Jan},
+  title = {Viewpoint:  The Real Software  Crisis: Repeatability as a Core Value},
+  journal = cacm,
+  year = {2015},
+  month = mar,
+  volume = {58},
+  number = {3},
+  pages = {34--36},
+  doi = {http://dx.doi.org/10.1145/2658987},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@article{ousterhout:scripting,
+  author = {K. Ousterhout, John},
+  title = {Scripting: Higher Level Programming for the 21st Century},
+  journal = icm,
+  year = {1998},
+  month = mar,
+  volume = {31},
+  pages = {23--30},
+  doi = {http://dx.doi.org/10.1109/2.660187},
+  publisher = {IEEE},
+  address = {Washington, DC, USA},
+}
+
+@misc{wat,
+  author = {Bernhardt, Gary},
+  year = {2012},
+  title = {{Wat}},
+  note = {\newline\url{https://www.destroyallsoftware.com/talks/wat}},
+  howpublished = {A lightning talk from CodeMash},
+}
+
+@misc{leaky-abstractions,
+ author = {Spolsky, Joel},
+ year = {2002},
+ title = {The Law of Leaky Abstractions},
+ note = {https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/},
+ howpublished = {Blog post: Joel on Software}
+}
+
+@inproceedings{mechanized-js-spec,
+  author = {Bodin, Martin and Charg{\'{e}}raud, Arthur and
+    Filaretti, Daniele and Gardner, Philippa and
+    Maffeis, Sergio and Naud{\v{z}}i{\={u}}nien{\.{e}}, Daiva and
+    Schmitt, Alan and Smith, Gareth},
+  title = {A Trusted Mechanised {JavaScript} Specification},
+  booktitle = popl,
+  year = {2014},
+  location = {San Diego, CA, USA},
+  doi = {http://dx.doi.org/10.1145/2535838.2535876},
+  pages = {87--100},
+  isbn = {978-1-4503-2544-8},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{politz:python,
+  author    = {Joe Gibbs Politz and
+               Alejandro Martinez and
+               Matthew Milano and
+               Sumner Warren and
+               Daniel Patterson and
+               Junsong Li and
+               Anand Chitipothu and
+               Shriram Krishnamurthi},
+  title     = {Python: The Full Monty: A Tested Semantics for the
+                  Python Programming Language},
+  booktitle = oopsla,
+  year = {2013},
+  location = {Indianapolis, Indiana, USA},
+  doi = {http://dx.doi.org/10.1145/2544173.2509536},
+  pages = {217--232},
+  isbn = {978-1-4503-2374-1},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@article{smaragakis:partition-java,
+  author = {Tilevich, Eli and Smaragdakis, Yannis},
+  title = {{J-Orchestra}: Enhancing {Java} Programs with Distribution Capabilities},
+  journal = tosem,
+  year = {2009},
+  volume = {19},
+  pages = {1--40},
+  number = {1},
+  doi = {http://dx.doi.org/10.1145/1555392.1555394},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{chang:laziness,
+  author = {Chang, Stephen},
+  title = {Laziness by Need},
+  booktitle = esop,
+  year = {2013},
+  location = {Rome, Italy},
+  doi = {http://dx.doi.org/10.1007/978-3-642-37036-6_5},
+  pages = {81--100},
+  isbn = {978-3-642-37035-9},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+}
+
+@inproceedings{enerJ,
+  author = {Adrian Sampson and Werner Dietl and Emily Fortuna and Danushen
+                  Gnanapragasam and Luis Ceze and Dan Grossman},
+  title = {{EnerJ}: Approximate Data Types for Safe
+    and General Low-Power Computation},
+  booktitle = pldi,
+  year = {2011},
+  location = {San Jose, California, USA},
+  doi = {http://dx.doi.org/10.1145/1993316.1993518},
+  pages = {164--174},
+  isbn = {978-1-4503-0663-8},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@article{Westbrook:transformations,
+  author    = {Edwin M. Westbrook and Swarat Chaudhuri},
+  title     = {A Semantics for Approximate Program Transformations},
+  journal   = {CoRR},
+  volume    = {abs/1304.5531},
+  year      = {2013},
+  url       = {http://arxiv.org/abs/1304.5531},
+  timestamp = {Thu, 02 May 2013 15:54:12 +0200},
+  biburl    = {http://dblp.uni-trier.de/rec/bib/journals/corr/abs-1304-5531},
+  bibsource = {dblp computer science bibliography, http://dblp.org}
+}
+
+@inproceedings{test-case-reduction,
+  author = {John Regehr and
+    Yang Chen and
+    Pascal Cuoq and
+    Eric Eide and
+    Chucky Ellison and
+    Xuejun Yang},
+  title = {Test-Case Reduction for {C} Compiler Bugs},
+  booktitle = pldi,
+  year = {2012},
+  location = {Bejing, China},
+  doi = {http://dx.doi.org/10.1145/2345156.2254104},
+  pages = {335--346},
+  isbn = {978-1-4503-1205-9},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{analysis-preserving-transformations,
+  author = {Xiaolan Zhang and
+    Larry Koved and
+    Marco Pistoia and
+    Sam Weber and
+    Trent Jaeger and
+    Guillaume Marceau and
+    Liangzhao Zeng},
+  title = {The Case for Analysis Preserving Language Transformation},
+  booktitle = issta,
+  year = {2006},
+  location = {Portland, Maine, USA},
+  pages = {191--202},
+  isbn = {1-59593-263-1},
+  doi = {http://dx.doi.org/10.1145/1146238.1146260},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{guha:flowtypes,
+  author = {Arjun Guha and Claudiu Saftoiu and Shriram Krishnamurthi},
+  title = {Typing Local Control and State Using Flow Analysis},
+  booktitle = esop,
+  year = 2011,
+  location = {Saarbr\ddot{u}cken, Germany},
+  doi = {http://dx.doi.org/10.1007/978-3-642-19718-5_14},
+  isbn = {978-3-642-19717-8},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@inproceedings{filaretti:php-semantics,
+  author = {Daniele Filaretti and Sergio Maffeis},
+  title = {An executable formal semantics of {PHP}},
+  booktitle = ecoop,
+  year = {2014},
+  location = {Uppsala, Sweden},
+  doi = {http://dox.doi.org/10.1007/978-3-662-44202-9},
+  isbn = {978-3-662-44201-2},
+  pages = {567--592},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+}
+
+@inproceedings{lerner:dom,
+  author = {Benjamin S. Lerner and Matthew J. Carroll and Dan P. Kimmel and Hannah
+	Quay{-}de~la~Vallee and Shriram Krishnamurthi},
+  title = {Modeling and Reasoning about {DOM} Events},
+  booktitle = webapps,
+  year = {2012},
+  month = jun,
+  location = {Boston, Massachusetts},
+  publisher = {USENIX Association},
+  url={http://www.cs.brown.edu/~blerner/papers/webapps2012.html}
+}
+
+@inproceedings{tested-tcp-spec,
+  author = {Steve Bishop and Matthew Fairbairn and Michael Norrish and Peter
+                  Sewell and Michael Smith and Keith Wansbrough},
+  title = {Rigorous Specification and Conformance Testing Techniques
+                  For Network Protocols, as applied to {TCP}, {UDP},
+                  and Sockets},
+  booktitle = sigcomm,
+  year = {2005},
+  location = {Philadelphia, PA, USA},
+  doi = {http://dx.doi.org/10.1145/1080091.1080123},
+  isbn = {1-59593-009-4},
+  pages = {265--276},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+}
+
+@misc{PiP14,
+  author = {Peter Sewell and Steve Zdancewic},
+  title = {{Principles in Practice (PiP)}},
+  year = {2014},
+  note = {Co-located with \emph{Principles of Programming Languages}},
+}
+
+@book{felleisen:htdp,
+  author = {Matthias Felleisen and Robert Bruce Findler and Matthew Flatt and Shriram Krishnamurthi},
+  title = {How to Design Programs},
+  year = 2001,
+  publisher = {MIT Press}
+}
+@inproceedings{felleisen:expressiveness,
+    author = {Matthias Felleisen},
+    title = {On the Expressive Power of Programming Languages},
+    booktitle = {Science of Computer Programming},
+    year = {1990},
+    pages = {134--151},
+    doi = {http://dx.doi.org/10.1007/3-540-52592-0_60},
+    publisher = {Springer-Verlag}
+}
+
+@misc{macro-stepper,
+  author = {Ryan Culpepper},
+  title = {Macro Debugger: Inspecting Macro Expansion},
+  year = {2015},
+  note = {\newline\url{http://docs.racket-lang.org/macro-debugger/index.html}}
+}
+
+@unpublished{dylan-macros,
+  author = {J. Bachrach and K. Playford},
+  title = {{D-Expressions}: {Lisp} Power, {Dylan} Style},
+  year = {1999},
+  note = {\newline\url{http://people.csail.mit.edu/jrb/Projects/dexprs.pdf}}
+}
+
+@inproceedings{flatt:scope,
+  author = {Matthew Flatt},
+  title = {Binding as Sets of Scopes},
+  booktitle = popl,
+  year = {2016},
+  doi = {http://dx.doi.org/10.1145/2914770.2837620},
+  publisher = {ACM},
+}
+
+@inproceedings{maffeis-semantics-js,
+  author = {Sergio Maffeis and John C. Mitchell and Ankur Taly},
+  title = {An Operational Semantics for {JavaScript}},
+  booktitle = aplas,
+  year = {2008},
+  doi = {http://dx.doi.org/10.1007/978-3-540-89330-1_22},
+  pages = {307--325},
+  publisher = {Springer-Verlag}
+}
+
+
+@book{fowler:refactoring,
+  title = {Refactoring: Improving the Design of Existing Code},
+  publisher = {Addison-Wesley Professional},  
+  year = {1999},
+  author = {Martin Fowler and Kent Beck and John Brant
+            and William Opdyke and Don Roberts},
+  isbn = {978-0201485677},
+}
+
+@phdthesis{rees:security,
+  author = {Jonathan A. Rees},
+  title = {A Security Kernel Based on the Lambda-Calculus},
+  school = {MIT},
+  year = {1995}
+}
+
+@inproceedings{knuth-attribute-grammar,
+  author = {Knuth, Donald E.},
+  title = {Semantics of Context-Free Languages},
+  year = {1968},
+  booktitle = mst,
+  doi = {http://dx.doi.org/10.1007/BF01692511},
+  publisher = {Springer-Verlag}
+}
+
+@inproceedings{TeJaS,
+  author = {Benjamin S. Lerner and Joe Gibbs Politz
+            and Arjun Guha and Shriram Krishnamurthi},
+  title = {TeJaS: Retrofitting Type Systems for JavaScript},
+  booktitle = dls,
+  year = {2013},
+  doi = {http://dx.doi.org/10.1145/2508168.2508170},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{languages-as-libraries,
+  author = {Sam Tobin-Hochstadt and Vincent St-Amour
+            and Ryan Culpepper and Matthew Flatt
+            and Matthias Felleisen},
+  title = {Languages as Libraries},
+  booktitle = pldi,
+  year = {2011},
+  doi = {https://doi.org/10.1145/1993316.1993514},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{typed-clojure,
+  title = {Practical Optional Types for Clojure},
+  author = {Ambrose Bonnaire-Sergeant and Rowan Davies
+            and Sam Tobin-Hochstadt},
+  booktitle = esop,
+  year = {2016},
+  doi = {https://doi.org/10.1007/978-3-662-49498-1_4},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg}
+}  
+
+@inproceedings{turnstile,
+  title = {Type systems as macros},
+  author = {Stephen Chang and Alex Knauth and Ben Greenman},
+  booktitle = popl,
+  year = {2017},
+  doi = {https://doi.org/10.1145/3093333.3009886},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{type-error-edsl,
+  title = {Type Error Diagnosis for Embedded DSLs
+    by Two-Stage Specialized Type Rules},
+  author = {Alejandro Serrano and Jurriaan Hage},
+  booktitle = esop,
+  year = {2016},
+  doi = {https://dl.acm.org/citation.cfm?id=2958906},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{type-error-inference,
+  title = {Scripting the Type Inference Process},
+  author = {Bastiaan Heeren and Jurriaan Hage and S. Doaitse Swierstra},
+  booktitle = icfp,
+  year = {2003},
+  doi = {https://dl.acm.org/citation.cfm?doid=944746.944707},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}

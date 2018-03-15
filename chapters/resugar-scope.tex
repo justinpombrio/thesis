@@ -1,127 +1,3718 @@
 \chapter{Resugaring Scope}\label{chap:resugar-scope}
 
-\section{Scope Checking}
+\textbf{TODO: This whole chapter is copy-pasted from the paper.}
 
-(See \cref{fig:scope}.)
+\paragraph{Abstract}
+  Many languages use syntactic sugar to define parts of their surface
+  language in terms of a smaller core. Thus some properties of the
+  surface language, like its \emph{scoping rules}, are not immediately
+  evident. Nevertheless, \textsc{ide}s, refactorers, and other tools
+  that traffic in source code depend on these rules to present
+  information to users and to soundly perform their operations.  In
+  this paper, we show how to lift scoping rules defined on a core
+  language to rules on the surface, a process of \emph{scope inference}.
+  In the process we introduce a new representation
+  of binding structure---scope as a preorder---and present a
+  theoretical advance: proving that a desugaring system preserves
+  $\alpha$-equivalence even though scoping rules have been provided
+  \emph{only} for the core language. We have also implemented the
+  system presented in this paper.
 
-\begin{figure}
-\TypeLabel{\SaysScope{\Sigma}{e}
-  {\{\Decl{x}\}}
-  {\{\Refn{x}\}}
-  {\{\Decl{x}\}}
-  {\{\Refn{x}\mapsto\Decl{x}\}}}
 
-\Inference[scope-e-decl]{}{
-  \SaysScope{\Sigma}{\Decl{x}}{\{\Decl{x}\}}{\{\}}{\{\Decl{x}\}}{\{\}}
+\section{Introduction}
+
+Syntactic sugar is pervasive in language technology. Language
+designers use it to shrink the size of a surface language to a small
+core, to make it tractable for processing. In addition, programmers
+use it to define domain-specific languages, and---if their language
+provides macros or other meta-programming capabilities---even to extend
+their language. Thus, syntactic sugar is a valuable weapon in the
+programming arsenal.
+
+Unfortunately, syntactic sugar also obscures the relationship between
+the user's source program and the program that is actually
+type-checked, analyzed, or evaluated. In particular, traditionally,
+scoping rules are defined on the core language, not on the
+surface. However, many tools depend on source representations. For
+instance, editors need to know the surface language's scoping in order
+to perform auto-complete, distinguish free from bound variables, or draw
+arrows to show bound and binding instances. Likewise, refactorers need
+to know binding structure to perform correct transformations.
+These tools are hard to construct if scoping is only known
+for the core language.
+
+Many tools that exploit binding information for the source
+do so by desugaring the program and obtaining its binding in the core
+language (this, for instance, is the approach used by
+DrRacket~\cite{drscheme} for overlaying binding arrows on the
+source).
+However, this approach is far from ideal. It requires tools to be able
+to desugar programs and to resolve binding in the core
+language. This is an intimate level of knowledge of a language, though:
+syntactic sugar is supposed to be an abstraction, so external tools
+should ideally be unaware that a language even \emph{has} syntactic
+sugar. Additionally, this approach fails completely if the source
+program cannot be desugared because it is incomplete or syntactically
+invalid (as programs are most of the time while editing). It is
+therefore better to disentangle the editor from the language,
+providing the editor precisely what it needs: scoping rules for the
+surface language.
+
+We therefore present a static inference process that, given a
+specification of syntactic sugar\footnote{
+  We make no assumption that the core language is a subset of the
+  surface language, so our results can be applied to, e.g., EDSLs.
+}\,%
+and scoping rules on a core language,
+\emph{automatically constructs} scoping rules for the surface
+language. The inferred rules are guaranteed to give the same binding
+structure to a surface program as that program would have in the core language
+after desugaring (\cref{thm:rscope-resugar}).
+Essentially, scope inference ``pushes scope back through the sugar''. We
+can think of this as statically lifting a ``lightweight semantics'' of
+the language. Thus it is a precursor to lifting other notions of semantics
+(whether type-checking rules or the evaluation rules themselves),
+though of course the mechanics of doing so will depend heavily on the
+semantics itself.
+
+The intended application of this work is as follows:
+\begin{enumerate}
+\item Begin with a core language with known scoping rules, and a set
+  of pattern-based desugaring rules. (We give a formal description of
+  scope in \cref{sec:rscope-sap}, and a language for specifying scope in
+  \cref{sec:rscope-rules}.)
+\item Infer surface language scoping rules from the core scoping
+  rules. (We give a scope inference algorithm in
+  \cref{sec:rscope-resugar}, and show how to make it hygienic in
+  \cref{sec:rscope-hygiene}.)
+\item Add these inferred scoping rules to various tools that can exploit
+  them (Sublime, Atom, CodeMirror, etc.).
+\end{enumerate}
+
+An alternative approach would be to specify scoping rules for the
+surface language, and verify that they are consistent with the core
+language. This approach has been advocated for
+scoping~\cite{herman-hygiene,stansifer-romeo},
+type systems~\cite{typechecking-exts},
+and formal semantics~\cite{ziggurat}.
+However, this assumes that language developers are always programming
+language experts who are knowledgeable about binding, able to verify consistency, and willing
+to do this extra work. These are particularly unsafe assumptions for
+domain-specific languages, which we believe are a strong use case for
+our technique.
+
+\subsection*{Contributions and Outline}
+\begin{description}
+\item[Modelling Scope] In \cref{sec:rscope-sap}, we give a formal
+  description of scope as a \emph{preorder} 
+  (which we motivate through examples in
+  \cref{sec:rscope-example}).
+  This preorder then defines the name
+  binding structure of a program, such as where variable
+  references are bound, and which variable declarations shadow others.
+\item[Binding Specification Language] In \cref{sec:rscope-rules}, we
+  present a \emph{binding specification language}, i.e., a language
+  for specifying the name binding structure of a programming
+    language. This specification makes it possible to compute the
+    scope structure (a preorder) of concrete programs in that language.
+  \item[Scope Inference] In \cref{sec:rscope-resugar}, we show how to
+  \emph{infer} these scoping rules through syntactic sugar. This is our main contribution. We describe our
+  implementation and provide case studies in
+  \cref{sec:rscope-impl}, and prove that---given reasonable
+  assumptions---desugaring after scope inference will be hygienic in
+  \cref{sec:rscope-hygiene}.
+\end{description}
+
+
+\section{Two Worked Examples}\label{sec:rscope-example}
+
+We will begin by building up to our scope inference technique via two
+worked examples.
+\textbf{They are slightly simplified for expository purposes}. 
+\Cref{sec:rscope-rules} describes the generalization, and
+\cref{sec:rscope-for-example,sec:rscope-named-let-example}
+provide examples.
+(While the generalization is sometimes important, it has no effect on the
+examples of this section.)
+
+\subsection{Example: Single-arm Let}
+For the first example, consider a simple Let construct that allows
+only a single binding:
+\begin{Table}
+  $t$ &$::=$& $\NodeRm{Let}{\DeclX\;t_1\;t_2}$
+  & ``Let $\DeclX$ equal $t_1$ in $t_2$'' \\
+  &$|$& $\ldots$
+\end{Table}
+(Here the superscript \textbf{\textsc{d}} indicates that this
+occurrence of the variable $\VarX$ is a declaration of $\VarX$.
+In general, we
+will distinguish \emph{declarations}, i.e., binding sites, from
+\emph{references}, i.e., use sites.)
+
+This Let may be desugared to Apply and Lambda by the following desugaring rule, which
+we will write using s-expressions:
+\begin{LongTable}
+  $\NodeRm{Let}{\PVarA\;\PVarB\;\PVarC}$
+  &$\To$&
+  $\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\PVarC}\;\PVarB}$
+\end{LongTable}
+
+Now suppose that we know the scoping rules of Apply and Lambda, and
+wish to derive what the scoping rules for Let must be, given
+the desugaring rule and assuming the language is statically and lexically
+scoped. More precisely, we wish to find a scoping rule
+for Let such that the desugaring rules \emph{preserve binding structure}
+(and thus neither cause variable capture nor cause
+variables to become unbound).
+
+The first step will be to write down what we know about the
+scope on the \textsc{rhs} (right hand side) of the rule.
+Pictorially, we might draw:
+\begin{center}
+\sideLabel{\textsc{rhs}}{
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Apply}
+      {B}{\tikzParentTwo{Lambda}
+        {C}{\tikzChild{$\PVarA$}}
+        {D}{\tikzChild{$\PVarC$}}}
+      {G}{\tikzChild{$\PVarB$}}}
+  \begin{tikzEdges}
+    \tikzEdgeL{C}{D};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
 }
+\end{center}
+where the dotted lines show the tree structure of the \textsc{ast}, and
+where the teal/solid arrow means that the Lambda's parameter ($\PVarA$) can be
+used in its body ($\PVarC$).
+Similarly, there are no arrows among the children
+of Apply because function application does not introduce any binding.
 
-\Inference[scope-e-refn]{}{
-  \SaysScope{\Sigma}{\Refn{x}}{\{\}}{\{\Refn{x}\}}{\{\}}{\{\}}
+We also know from lexical scope that any declarations in scope at a
+node in an \textsc{ast} should also be in scope at its children. This
+can be denoted with upward arrows:
+\begin{center}
+\sideLabel{\textsc{rhs}}{
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Apply}
+      {B}{\tikzParentTwo{Lambda}
+        {C}{\tikzChild{$\PVarA$}}
+        {D}{\tikzChild{$\PVarC$}}}
+      {E}{\tikzChild{$\PVarB$}}}
+  \begin{tikzEdges}
+    \tikzEdgeL{C}{D};
+    \tikzEdge{A}{B};
+    \tikzEdge{A}{E};
+    \tikzEdge{B}{C};
+    \tikzEdge{B}{D};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
 }
+\end{center}
+In general, the meaning of the arrows is that a variable declaration
+is in scope at every part of the program which has a (directed) path to it.
+(In the case of variable shadowing, the outer declaration is in scope
+at the inner declaration, which in turn is in scope at some region;
+references in this region will be bound to the dominating inner declaration.)
 
-\Inference[scope-e-con]{
-  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
-  \SaysScope{\Sigma}{e_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
-  S = \SetSuchThat{
-    \Decl[a]{x} \mapsto \Decl[b]{x}
-  }{
-    \Decl[a]{x} \in P_i,\;
-    \Decl[b]{x} \in P_j,\;
-    \Bind{\sigma}{i}{j}
-  } \IS\\
-  B = \SetSuchThat{
-    \Refn[a]{x} \mapsto \Decl[b]{x}
-  }{
-    \Refn[a]{x} \in R_i,\;
-    \Decl[b]{x} \in P_j,\;
-    \Bind{\sigma}{i}{j},\;
-    \Decl[b]{x} \not\in \Domain{S}
-  } \IS\\
-  R = \SetSuchThat{
-    \Refn[a]{x}
-  }{
-    \Refn[a]{x} \in R_i,\;
-    \NotExists{\Decl[b]{x}}{\Refn[a]{x} \mapsto \Decl[b]{x} \in B\}}
-  } \IS\\
-  P = \SetSuchThat{
-    \Decl[a]{x}
-  }{
-    \Decl[a]{x} \in P_i,\;
-    \Prov{\sigma}{i},\;
-    \Decl[a]{x} \not\in \Domain{S}
+Now we can begin to infer what the scope must look like on the
+\textsc{lhs} (left hand side) of the desugaring rule. We want the rule to
+\emph{preserve} binding, therefore there should be a path from one
+hole to another in the \textsc{lhs} iff there is a similar path in the
+\textsc{rhs}. If there was a path from $\PVarA$ to $\PVarB$ in the
+\textsc{lhs} but not in the \textsc{rhs}, that would mean that a
+variable (in $\PVarA$) that used to be bound (by $\PVarB$) could
+become unbound. Likewise, if there was a path between two holes in the
+\textsc{rhs} but not in the \textsc{lhs}, that could result in
+unwanted variable capture.
+
+Thus, since there is a path from $\PVarC$ to $\PVarA$ in the rule's
+\textsc{rhs}, there must also be a path from $\PVarC$ to $\PVarA$ in the
+\textsc{lhs}. This gives:
+\begin{center}
+  \sideLabel{\textsc{lhs}}{
+  \begin{tikzScopeDiagram}[simple]
+    \tikzRoot
+      {A}{\tikzParentThree{Let}
+        {B}{\tikzChild{$\PVarA$}}
+        {C}{\tikzChild{$\PVarB$}}
+        {D}{\tikzChild{$\PVarC$}}}
+    \begin{tikzEdges}
+      \tikzEdgeL{B}{D};
+    \end{tikzEdges}
+  \end{tikzScopeDiagram}
   }
-}{
-  \SaysScope{\Sigma}{\Core{C}{e_1 ... e_n}}{P}{R}{B}
+\end{center}
+In English, this arrow says that the variable declared at $\PVarA$ is
+in scope at the Let's body $\PVarC$, as expected.
+
+There are still some missing arrows, however: there should be down
+arrows to indicate that any declaration in scope at the Let should
+also be in scope at its children. These can be inferred in a similar
+way: whenever there is a path from the root to a hole on the
+\textsc{rhs}, there should be a similar path on the \textsc{lhs}.
+Since on the \textsc{rhs} there are paths to each hole from the root,
+the same should hold true on the \textsc{lhs}:
+\begin{center}
+\sideLabel{\textsc{lhs}}{
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentThree{Let}
+      {B}{\tikzChild{$\PVarA$}}
+      {C}{\tikzChild{$\PVarB$}}
+      {D}{\tikzChild{$\PVarC$}}}
+  \begin{tikzEdges}
+    \tikzEdgeL{B}{D};
+    \tikzEdge{A}{B};
+    \tikzEdge{A}{C};
+    \tikzEdge{A}{D};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
 }
+\end{center}
+This gives a complete scoping rule for this Let construct.
 
 
-\Inference[scope-p-con]{
-  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
-  \SaysScope{\Sigma}{p_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
-  S = \SetSuchThat{
-    a \mapsto b
-  }{
-    a \in P_i,\;
-    b \in P_j,\;
-    \Bind{\sigma}{i}{j},\;
-    \SaysCanShadow{F}{a}{b}
-  } \IS\\
-  B = \SetSuchThat{
-    a \mapsto b
-  }{
-    a \in R_i,\;
-    b \in P_j,\;
-    \Bind{\sigma}{i}{j},\;
-    b \not\in \Domain{S},\;
-    \SaysCanBind{F}{a}{b}
-  } \IS\\
-  R = \SetSuchThat{
-    a
-  }{
-    a \in R_i,\;
-    (\NotExists{b}{a \mapsto b \in B\}}
-    \text{ or $a$ is a pattern var})
-  } \IS\\
-  P = \SetSuchThat{
-    a
-  }{
-    a \in P_i,\;
-    \Prov{\sigma}{i},\;
-    a \not\in \Domain{S}
-  }
-}{
-  \SaysScope{\Sigma}{\Core{C}{p_1 ... p_n}}{P}{R}{B}
+\subsection{Example: Multi-arm Let*}
+\label{sec:rscope-example2}
+
+Next, take a more involved example: a multi-armed Let* construct (in
+the style of Lisp/Scheme/Racket).
+It will have the following grammar:
+\begin{Table}
+  $t$ &$::=$& $\NodeRm{Let*}{b\;t}$
+  & ``Let-bind $b$ in $t$'' \\
+  &$|$& $\ldots$ \\
+  $b$ &$::=$& $\NodeRm{Bind}{\DeclX\;t\;b}$
+  & ``Bind $\DeclX$ to $t$, and bind $b$'' \\
+  &$|$&   $\ConstRm{EndBinds}$
+  & ``No more bindings''
+\end{Table}
+This grammar separates out the Let's bindings into nested
+subterms.\footnote{
+  We call the bindings just ``Bind'', even though they are specific
+  to Let. If a language has other forms of binding as well, ``Bind'' may need a more
+  specific name such as ``LetBind''.
+} %
+It is
+necessary to do this if more complex binding patterns are allowed,
+such as arbitrarily deep pattern-matching.
+
+Let* can then be implemented with two desugaring rules:
+\begin{LongTable}
+$\NodeRm{Let*}{\NodeRm{Bind}{\PVarA\;\PVarB\;\PVarC}\;\PVarD}$\\
+\quad $\To$
+$\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\NodeRm{Let*}{\PVarC\;\PVarD}}\;\PVarB}$
+\\ \\
+$\NodeRm{Let*}{\ConstRm{EndBinds}\;\PVarA}$
+$\To$
+$\NodeRm{Begin}{\PVarA}$
+\end{LongTable}
+These rules would, for example, make the following transformation:
+\begin{Table}
+$\NodeRm{Let*}{\NodeRm{Bind}{\DeclX\;1\;\NodeRm{Bind}{\DeclY\;2\;\ConstRm{EndBinds}}}\;\NodeRm{Plus}{\RefnX\;\RefnY}}$ \\
+\quad $\To$
+$\NodeRm{Apply}{\NodeRm{Lambda}{\DeclX\;$ \\
+$\hspace{2em}\NodeRm{Apply}{\NodeRm{Lambda}{\DeclY\;\NodeRm{Plus}{\RefnX\;\RefnY}}\;2}}\;1}$
+\end{Table}
+
+Given that we know the scoping rules of Apply, Lambda, and Begin,
+we can use them to derive the scoping rules for Let* and Bind. The scoping for
+the second rule is trivial, so we will concentrate just on the first rule.
+
+As before, the first step is to write down what we know about the
+scope on the \textsc{rhs}:
+\begin{center}
+\sideLabel{\textsc{rhs}}{
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Apply}
+      {B}{\tikzParentTwo{Lambda}
+        {C}{\tikzChild{$\PVarA$}}
+        {D}{\tikzParentTwo{Let*}
+          {E}{\tikzChild{$\PVarC$}}
+          {F}{\tikzChild{$\PVarD$}}}}
+      {G}{\tikzChild{$\PVarB$}}}
+  \begin{tikzEdges}
+    \tikzEdgeL{C}{D};
+    \tikzEdge{A}{B};
+    \tikzEdge{A}{G};
+    \tikzEdge{B}{C};
+    \tikzEdge{B}{D};
+    \tikzEdge{D}{E};
+    \tikzEdge{D}{F};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
 }
+\end{center}
+Unlike in the previous example, this diagram is not (necessarily)
+complete, since we don't yet know the scoping rule for
+Let*.\footnote{This will happen when desugaring rules use recursion.}
+We have drawn two upward arrows on Let*, despite the fact that we
+don't yet know its scoping rule: technically, these arrows should
+(and can) be inferred, but we start with them to simplify this example.
 
-Two checks to make: fresh vars don't bind to non-fresh vars, and named
-vars only bind to vars of the same name:
-\begin{multicols}{3}
-  \Inference{}{
-    \SaysCanBind{F}{\Refn[1]{x}}{\Decl[2]{x}}
-  }
-  \Inference{
-    x \not\in F
-  }{
-    \SaysCanBind{F}{\Refn[1]{x}}{\PVarA}
-  }
-  \Inference{
-    x \not\in F
-  }{
-    \SaysCanBind{F}{\PVarA}{\Decl[1]{x}}
-  }
-  \Inference{}{
-    \SaysCanBind{F}{\PVarA}{\PVarB}
-  }
-  \Inference{}{
-    \SaysCanShadow{F}{\Decl[1]{x}}{\Decl[2]{x}}
-  }
-  \Inference{
-    x \not\in F
-  }{
-    \SaysCanShadow{F}{\Decl[1]{x}}{\PVarA}
-  }
-\end{multicols}
+Now we can begin to infer what the scope must look like on the
+\textsc{lhs}. As before, we want the rule to preserve
+binding. Thus, since the \textsc{rhs} has a path from $\PVarC$ to
+$\PVarA$ and from $\PVarD$ to $\PVarA$, the same must be true in the
+\textsc{lhs} (labeling the arrows for reference):
+\begin{center}
+\sideLabel{\textsc{lhs}}{
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Let*}
+      {B}{\tikzParentThree{Bind}
+        {C}{\tikzChild{$\PVarA$}}
+        {D}{\tikzChild{$\PVarB$}}
+        {E}{\tikzChild{$\PVarC$}}}
+      {F}{\tikzChild{$\PVarD$}}}
+  \begin{tikzEdges}
+    \tikzEdgeRR{C}{E}[][c];
+    \tikzEdge{C}{B}[][b];
+    \tikzEdgeL{B}{F}[][a];
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+}
+\end{center}
+Notice that we drew the path from $\PVarD$ to $\PVarA$ with \emph{two}
+arrows. This is because we will assume that scoping rules are local,
+relating only terms and their immediate children.
 
-\caption{Scope Checking Rules}
-\label{fig:scope}
+We have now learned something about the scoping rules for Let* and
+Bind! When read in English, these three arrows say that:
+\begin{enumerate}
+\item[a.] Declarations from a Let*'s binding list are visible in its body.
+\item[b.] A Bind's variable declaration is provided by the Bind (so
+  that it can be used by the Let*).
+\item[c.] A Bind's variable declaration is visible to later Binds in the
+  binding list.
+\end{enumerate}
+
+This information can now be applied to fill in the previously
+incomplete \textsc{rhs} picture. Arrow (a) represents a
+fact about the scoping of \emph{every} Let*, so it must also apply in the
+\textsc{rhs} (highlighting it orange/dashed for exposition):
+\begin{center}
+\sideLabel{\textsc{rhs}}{
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Apply}
+      {B}{\tikzParentTwo{Lambda}
+        {C}{\tikzChild{$\PVarA$}}
+        {D}{\tikzParentTwo{Let*}
+          {E}{\tikzChild{$\PVarC$}}
+          {F}{\tikzChild{$\PVarD$}}}}
+      {G}{\tikzChild{$\PVarB$}}}
+  \begin{tikzEdges}
+    \tikzEdgeL{C}{D};
+    \tikzEdge{A}{B};
+    \tikzEdge{A}{G};
+    \tikzEdge{B}{C};
+    \tikzEdge{B}{D};
+    \tikzEdge{D}{E};
+    \tikzEdge{D}{F};
+    \tikzEdgeL{E}{F}[color=arrowColorHL,dashed];
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+}
+\end{center}
+Adding this arrow introduces a path from $\PVarD$ to $\PVarC$,
+however, that needs to be reflected back at the \textsc{lhs}!
+\begin{center}
+\sideLabel{\textsc{lhs}}{
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Let*}
+      {B}{\tikzParentThree{Bind}
+        {C}{\tikzChild{$\PVarA$}}
+        {D}{\tikzChild{$\PVarB$}}
+        {E}{\tikzChild{$\PVarC$}}}
+      {F}{\tikzChild{$\PVarD$}}}
+  \begin{tikzEdges}
+    \tikzEdgeRR{C}{E}[][c];
+    \tikzEdge{C}{B}[][b];
+    \tikzEdgeL{B}{F}[][a];
+    \tikzEdge{E}{B}[color=arrowColorHL,dashed][d];
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+}
+\end{center}
+In general, the algorithm is to monotonically add arrows until
+reaching the least fixpoint. In this particular case, arrow $d$ is the last
+fact to be inferred:
+\begin{enumerate}
+\item[d.] A Bind also provides any declarations provided by later Binds
+  in the binding list.
+\end{enumerate}
+This concludes the interesting facts to be inferred about the scoping
+rules for Let* and Bind. We have ignored the upward arrows that reflect
+lexical scope from parent to child for simplicity, but these can
+be inferred by the same process.
+
+
+\subsection{Scope as a Preorder}
+
+In the two preceding examples, we have expressed the scope of a program
+diagrammatically with arrows. When reasoning about scope, it will be
+helpful to be able to \emph{transcribe} these diagrams into a
+textual form.
+
+To do so, recall the (approximate) meaning of the arrows:\footnote{
+  We make their meaning precise in \cref{sec:rsugar-sap-defs}.
+}
+a declaration is in scope at every part of the program which has a
+(directed) path to it, and is shadowed by declarations of the same name
+that have a path to it. Thus the arrows are only meaningful insofar as
+they produce paths. Furthermore, paths have two important properties:
+\begin{enumerate}
+  \item They are closed under reflexivity: there is always an (empty) path
+    from $a$ to $a$.
+  \item They are closed under transitivity: if there is a path from
+    $a$ to $b$ and a path from $b$ to $c$, then there is a path from
+    $a$ to $c$.
+\end{enumerate}
+These are also precisely the properties that define a \emph{preorder}.
+Thus, we will transcribe scope diagrams as preorders, writing $a \< b$
+when there is a path from $a$ to $b$.
+For example, in the (incomplete) diagram we inferred for the \textsc{lhs} of the
+multi-arm Let* sugar:
+\begin{center}
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Let*}
+      {B}{\tikzParentThree{Bind}
+        {C}{\tikzChild{$\PVarA$}}
+        {D}{\tikzChild{$\PVarB$}}
+        {E}{\tikzChild{$\PVarC$}}}
+      {F}{\tikzChild{$\PVarD$}}}
+  \begin{tikzEdges}
+    \tikzEdgeRR{C}{E};
+    \tikzEdge{C}{B};
+    \tikzEdgeL{B}{F};
+    \tikzEdge{E}{B};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+The corresponding preorder is:
+$\hspace{2em} \PVarD \< \ConstRm{Bind} \< \PVarC \< \PVarA$
+
+
+
+\section{Describing Scope as a Preorder}
+\label{sec:rscope-sap}
+
+We have informally described the notion of scope as a preorder,
+primarily using diagrams. In this section, we will describe it
+formally. First, however, we need to lay down some
+starting assumptions and basic definitions.
+
+\subsection{Basic Assumptions}
+\label{sec:rscope-prelim}
+
+We will make a number of assumptions to make reasoning about scope
+more tractable:
+  \begin{itemize}
+  \item We only deal with scoping that is \emph{static} and \emph{lexical}.
+  \item Scoping rules will be as local as possible, only relating a
+    term to its \emph{immediate} children. Longer relationships will
+    be achieved by transitivity.\footnote{
+      If we allowed non-local arrows, then in the previous example,
+      inference would produce a single arrow from $\PVarD$
+      to $\PVarA$ instead of arrows ``a'' and ``b''. Then the orange/dashed arrow
+      could \emph{not} be inferred, since it relied on the existence
+      of arrow ``a'', and the inference process would fail at its task.
+      }
+  \item We work on an \textsc{ast}, instead of directly on the surface
+    syntax.  Variable references (use sites) and declarations
+    (binding sites) are syntactically distinguished in this
+    \textsc{ast}.
+  \item Each kind of term has a fixed arity. (Indefinite arity is
+    possible using a list encoding, as in Let* above.)
+  \end{itemize}
+
+The last two of these assumptions guide our definition of (\textsc{ast}) terms.
+Terms will be parameterized over a set of \emph{term constructors}
+$\mathcal{T}$, each with an
+$\Arity{} : \mathcal{T} \to \mathbb{N}$, and also over a
+set of \emph{syntactic constants} $\mathcal{C}$.
+We will write the \textsc{ast} in s-expression form:
+\begin{Table}
+$t$ &$::=$& $\Decl[i]{x}$ & (declaration at position $i$) \\
+   &$|$& $\Refn[i]{x}$ & (reference at position $i$) \\
+   &$|$& $\Node{C}{t_1\,...\,t_n}$ & ({\sc ast} node) \\
+   &&where $P \in \mathcal{T}$ \\
+   &&and $\Arity{P} = n$ \\
+ &$|$& $\Value$ & (syntactic constant) \\
+   &&where $\Value \in \mathcal{C}$
+\end{Table}
+References and declarations have both a name \textsc{x} (as written in
+the source), and an \textsc{ast} position $i$ (that uniquely
+distinguishes them).
+Occasionally it will be useful to refer to a variable which could be
+either a declaration or a reference: in this case
+we omit the superscript, e.g. $\VarXi$.
+Likewise, we will omit the position subscript $\mathit{\mathbf{i}}$
+when there is no ambiguity. We will also sometimes write $P$ in place
+of $\Node{C}{t_1\,...\,t_n}$ when there is no danger of ambiguity.
+
+\subsection{Basic Definitions}
+\label{sec:rscope-sap-defs}
+
+  We define scope in terms of a perorder.
+  A \emph{preorder} ($\<$) is a reflexive and transitive relation. It
+  need not be anti-symmetric, however, so it is possible that $a \< b$
+  and $b \< a$ for distinct $a$ and $b$.
+We capture scope as a preorder on a term $t$ as follows:
+
+\begin{definition}[Scope]\label{def:rscope-scope}
+  A \emph{scope preorder} on a term $t$ is a preorder ($\<$) on the references
+  and declarations in $t$ such that references are least in this
+  preorder (i.e., nothing is ever smaller than a reference).
+\end{definition}
+\begin{definition}
+  A reference $\RefnXi$ is \emph{in scope of} a declaration
+  $\DeclXj$ when $\RefnXi \< \DeclXj$.
+\end{definition}
+\begin{definition}
+  A declaration $\DeclXi$ is \emph{more specific than}
+    another $\DeclXj$ when $\DeclXi \< \DeclXj$.
+\end{definition}
+Note that these definitions rely on the \emph{existence} of a preorder
+($\<$), but don't say how to determine it for a given term. We will present
+\emph{scoping rules} to do so in \cref{sec:rscope-rules}.
+These definitions therefore provide very little on their own, but they can be built upon to define
+some common concepts:
+
+\begin{definition}[Bound]
+  \label{def:rscope-bound}
+  A reference is \emph{bound} by the most specific declaration(s) that
+  it has the same name as and is in scope of. More formally, we write:
+  \[ \RefnX \Bound \DeclX \Defeq
+  \DeclX \in \min \St{\DeclXi}{\RefnX \< \DeclXi} \]
+  where $\min S$ finds the (zero or more) least elements of $S$:
+\[ \min S \Defeq \St{a \in S}{
+  \NotExists{b \in S}
+    b \< a \text{ and } a \not\< b}
+\]
+\end{definition}
+
+\begin{definition}[Unbound]
+A reference is \emph{unbound} (or \emph{free}) when it is not bound by
+any declaration.
+\end{definition}
+
+\begin{definition}[Ambiguously Bound]\label{def:rscope-ambig}
+  A variable reference is \emph{ambiguously bound} when it is bound by
+  more than one declaration.
+\end{definition}
+
+Ambiguous binding may occur, for instance, if two declarations
+have the same name and are both parameters to the same function.
+In this case, a reference in the body of the function would be
+ambiguously bound to both of them.
+We also capture the idea of \emph{shadowing}, where a more specific
+declaration hides a less specific declaration:
+
+\begin{definition}[Shadowing]
+  \label{def:rscope-shadow}
+  A declaration \emph{shadows} the most specific declarations that it
+  has the same name as and is more specific than. Formally, $\DeclXi$
+  shadows $\DeclXj$ when:
+  \[ \DeclXi \Bound \DeclXj \Defeq
+  \DeclXj \in \min \St{\DeclXk}{i \neq k \text{ and } \DeclXi \< \DeclXk}
+  \]
+(We use the same notation $\square \Bound \square$ for both binding
+and shadowing because the definitions are analogous.)
+\end{definition}
+
+\subsection{Validating the Definitions}
+Since this description of scope is new, readers might wonder
+whether our definitions of concepts match their vernacular meaning.
+We provide evidence that they do in three forms.
+
+First, we prove a simple lemma below showing that shadowing
+behaves as one would expect.
+Second, we show (\cref{sec:rscope-sos}) that the notion of scope used in
+``Binding as Sets of Scopes''~\cite{flatt:scope} obeys our {\sap}
+definitions, for an appropriate choice of preorder $(\<)$.
+Finally, we introduce a second, very intuitive definition of
+scope called {\sas}, and show that it is equivalent to {\sap} up to
+a normalization.
+
+\begin{lemma}[Shadowing]
+  If one declaration shadows another, then a reference in scope of the
+  shadowing declaration cannot be bound by the shadowed declaration.
+\end{lemma}
+\begin{proof}
+  Suppose that $\DeclXj$ shadows $\DeclXi$ ($\DeclXj$ is the shadowing
+  declaration and $\DeclXi$ is the shadowed declaration), and
+  $\RefnXk$ is in scope of $\DeclXj$.
+  By definition, $\RefnXk$ will be bound by
+  $\min \St{\DeclXl}{\RefnXk \< \DeclXl}$.  But $\RefnXk \<
+  \DeclXj \< \DeclXi$, so $\DeclXi$ cannot be in this set, and $\RefnXk$
+  cannot be bound by $\DeclXi$.
+\end{proof}
+
+ubsection{Relationship to ``Binding as Sets of Scopes''}
+\label{sec:rscope-sos}
+{\Sap} aligns with the notion of scope expressed by \cite{flatt:scope}.
+In his formulation,
+each subterm in the program is labeled with a \emph{set of scopes},
+called its \emph{scope set}. A reference's binding (i.e., declaration)
+is then found ``as one whose set of scopes is a subset of the
+reference's own scopes (in addition to having the same symbolic
+name)''. If there is more than one such declaration, a reference is
+bound by the one with the largest (superset-wise) scope set. If there
+is no unique such element, then the reference is
+``ambiguous''~\cite[pp. 3]{flatt:scope}.
+
+This can be expressed in terms of {\sap}. Take the preorder
+$(\<)$ to be (the least relation such that):
+\begin{Table}
+$\RefnXi \< \RefnXi$ \\
+$\RefnX \< \DeclY$   iff $\Scopeset{\RefnX} \supseteq \Scopeset{\DeclY}$ \\
+$\DeclXi \< \DeclYj$ iff $\Scopeset{\DeclXi} \supseteq \Scopeset{\DeclYj}$
+\end{Table}
+Then our definition of a reference's binding agrees with Flatt's, and
+our definition of an ``ambiguously bound'' reference agrees with his
+definition of an ``ambiguous'' reference.
+
+\subsection{Axiomatizing Scope as Sets (Supplement Only)}
+\label{sec:rscope-sas}
+
+In this section, we describe an alternative axiomatization of scope,
+called \emph{\sas}.
+In {\sas}, instead of there being a preorder over variables, each
+declaration has a \emph{scope}, which is the part of the program in
+which it can be referenced. For example, the scope of a function's
+parameter is that function's body. The axioms for a term $t$ are then:
+
+\begin{description}
+\item[Scope]
+  Each declaration in $t$ has a \emph{scope}---written
+  $\Scope{\DeclX}$---given by the parts of the program in which it can
+  be referenced.
+  We will say that:
+  \begin{itemize}
+  \item A reference $\RefnX$ is \emph{in scope of} a declaration
+    $\DeclX$ when $\RefnX \in \Scope{\DeclX}$.
+  \item One declaration $\DeclX$ is \emph{more specific than} another
+    $\DeclY$ when $\Scope{\DeclX} \subseteq \Scope{\DeclY}$.
+  \end{itemize}
+\item[Binding]
+  A reference is \emph{bound} to the most specific declaration that
+  it has the same name as and is in scope of, provided such a unique
+  element exists. Again, if there is no (unique) most specific
+  declaration, we will say that the reference is \emph{ambiguously
+    bound}.
+%% \item[Renamability]
+%%   The scope of a declaration is determined solely by the shape
+%%   of the term it is in (and, in particular, not by the name of any
+%%  variable).
+\end{description}
+
+These axioms differ from the {\sap} definitions in that the relations
+``in scope of'' and ``more specific than'' are defined differently.
+However, all of the other definitions of \cref{sec:rscope-sap}
+(including binding, shadowing, ambiguous declarations, etc.)
+are based on the relations ``in scope of'' and
+``more specific than''. Thus all of those definitions apply just as
+well to {\sas}.
+
+Furthermore, the two axiomatizations of scope we have presented are closely
+related. In fact, {\sap} is simply a normalized form of {\sas}.
+To begin with, either form can be converted to the other.
+
+\paragraph{\textit{Conv1}: From {\sap} to {\sas}}
+Given a preorder ($\<$), define its conversion into a {\sas}
+function $\Scope{}$ by:
+\[ \Scope{\DeclY} \Defeq
+   \St{\RefnX}{\RefnX \< \DeclY}
+   \cup
+   \St{\DeclX}{\DeclX \< \DeclY} \]
+
+\paragraph{\emph{Conv2}: From {\sas} to {\sap}}
+Given a {\sas} function $\Scope{}$, define its conversion into a
+preorder ($\<$) by letting ($\<$) be the least relation such that:
+\begin{Table}
+  $\RefnXi \< \RefnXi$ \\
+  $\RefnX \< \DeclY$
+  &when& $\RefnX \in \Scope{\DeclY}$ \\
+  $\DeclX \< \DeclY$
+  &when& $\Scope{\DeclX} \subseteq \Scope{\DeclY}$
+\end{Table}
+
+Both of these conversions preserve all of the binding concepts of
+\cref{sec:rscope-sap-defs}:
+
+\begin{lemma}[Binding Preservation] \label{thm:rscope-preservation}
+  Both $\ConvA{}$ and $\ConvB{}$ preserve ``in scope of'' and ``more
+  specific than'' in both directions
+  (and thus all of the concepts of \cref{sec:rscope-rules}).
+\end{lemma}
+\begin{proof}
+  Under both conversions, ``in scope of'' is preserved:
+  \begin{Table}
+    \hphantom{iff}\; $\RefnX$ in scope of $\DeclY$ (under {\SAS}) \\
+    iff\; $\RefnX \in \Scope{\DeclY}$ \\
+    iff\; $\RefnX \< \DeclY$ \\
+    iff\; $\RefnX$ in scope of $\DeclY$ (under {\SAP})
+  \end{Table}
+
+  And under both conversions, ``more specific than'' is preserved:
+  \begin{Table}
+    \hphantom{iff}\;
+          $\DeclX$ more specific than $\DeclY$ (under {\SAS}) \\
+    iff\; $\Scope{\DeclX} \subseteq \Scope{\DeclY}$ \\
+    iff\; $\DeclX \< \DeclY$ \\
+    iff\; $\DeclX$ more specific than $\DeclY$ (under {\SAP})
+  \end{Table}
+\end{proof}
+
+Furthermore, these conversions are inverses in one direction: from
+{\sap} to {\sas} back to {\sap}. This implies that there is a normal
+form for {\sas}, given by $\ConvA{\ConvB{\Scope{}}}$, such that the
+conversions are exact inverses whenever this normal form is used.
+
+We first show that the conversions are inverses in one direction:
+\begin{lemma}[Inverses1] \label{lemma:rscope-inverses}
+  For every scope preorder ($\<$), \\
+  $\ConvB{\ConvA{\<}} = (\<)$
+\end{lemma}
+\begin{proof}
+  \begin{Table}
+    $\RefnXi \< \RefnXj$
+    &when& $i = j$ \\
+    $\RefnX \< \DeclY$
+    &when& $\RefnX \in \Scope{\DeclY}$ \\
+    && iff $\RefnX \in \St{\RefnX}{\RefnX \< \DeclY}$ \\
+    && iff $\RefnX \< \DeclY$ \\
+    $\DeclX \< \DeclY$
+    &when& $\Scope{\DeclX} \subseteq \Scope{\DeclY}$ \\
+    && iff $\DeclX \< \DeclY$
+  \end{Table}
+\end{proof}
+
+And they're inverses in the other direction when $\Scope{}$ is in a
+\emph{normal form}. Specifically, we will say that a
+{\sas} function $\Scope{}$ is in \emph{normal form} when:
+\begin{Table}
+  &(i)&  $\Forall{\DeclX} \Scope{\DeclX}$ contains only variables \\
+  &(ii)& $\Forall{\DeclX} \Forall{\DeclY}
+    \DeclX \in \Scope{\DeclY}
+    \text{ iff } \Scope{\DeclX} \subseteq \Scope{\DeclY}$
+\end{Table}
+
+\begin{lemma}[Inverses2]
+  For any {\sas} function $\Scope{}$ in normal form,
+  $\ConvA{\ConvB{\Scope{}}} = \Scope{}$.
+\end{lemma}
+\begin{proof}
+  \begin{LongTable}
+    && $\Scope{\DeclY}$ \\
+    &$=$& $\St{\RefnX}{\RefnX \< \DeclY} \cup
+           \St{\DeclX}{\DeclX \< \DeclY}$
+           &($\ConvA{}$) \\
+    &$=$& $\St{\RefnX}{\RefnX \in \Scope{\DeclY}} \cup$ \\
+       && $\St{\DeclX}{\Scope{\DeclX} \subseteq \Scope{\DeclY}}$
+           &($\ConvB{}$) \\
+    &$=$& $\St{\RefnX}{\RefnX \in \Scope{\DeclY}} \cup
+           \St{\DeclX}{\DeclX \in \Scope{\DeclY}}$
+           &(by (ii)) \\
+    &$=$& $\Scope{\DeclY}$ &(by (i))
+  \end{LongTable}
+\end{proof}
+
+The normal form of a {\sas} scope function can be computed as:
+\[ \Norm{\Scope{}} = \ConvA{\ConvB{\Scope{}}} \]
+
+\begin{lemma}
+  For any {\sas} scope function $\Scope{}$, $\Norm{\Scope{}}$ is in
+  fact in normal form.
+\end{lemma}
+\begin{proof}
+  The first requirement---that the range of $\Scope{}$ only contains
+  variables---is immediately fulfilled by $\ConvA{}$. The second
+  requirement follows from the definitions of $\ConvA{}$ and $\ConvB{}$: \\
+  $\DeclX \in \Scope{\DeclY}$
+  iff $\DeclX \< \DeclY$
+  iff $\Scope{\DeclX} \subseteq \Scope{\DeclY}$
+\end{proof}
+
+Putting a {\sas} scope function in normal form preserves its binding
+structure. Furthermore, once it is in normal form, converting it to
+{\sap} (and back) have no effect.
+
+\begin{lemma}
+  $\Norm{}$ preserves ``in scope of'' and ``more specific than''
+  (and thus all of the concepts of \cref{sec:rscope-rules}).
+\end{lemma}
+\begin{proof}
+  Follows directly from \cref{thm:rscope-preservation}.
+\end{proof}
+
+This concludes the demonstration that {\sap} is simply a normalized
+version of {\sas}, and can effectively be used in its place. The
+axioms of {\sas} are basic enough that they ought to apply in
+basically any lexically-scoped setting; thus {\sap} should too.
+We use {\Sap} in the paper, however, because it is more canonical (per
+normalization) and because it more closely aligns with the binding
+language described next.
+
+
+
+\section{A Binding Specification Language}
+\label{sec:rscope-rules}
+
+The previous section presented definitions for \emph{representing} the
+scoping of a term. It did not, however, say how to \emph{determine}
+the scoping of a term, i.e., what the specific preorder should be. In
+this section, we give a language for specifying \emph{scoping rules}
+that, given a term, determine a preorder over its variables.
+
+\subsection{Scoping Rules: Simplified}
+
+The basic idea behind our binding language is that the binding structure of
+a term should be determined piecewise by its subterms. Thus every term
+constructor (e.g., $\lambda$ or $+$) should specify a \emph{scoping rule}
+that gives a preorder amongst itself and its children. A term's {\sap}
+can then be found by taking the transitive closure of these local
+preorders across the whole term.
+
+As an example, take the term
+$\NodeRm{Lambda}{\DeclX[1]\;\NodeRm{Plus}{\RefnX[2]\;3}}$.  To find
+the bindings of this term, we must know the scoping rules for Lambda
+and Plus. A sensible rule for Plus is that a term
+$\NodeRm{Plus}{\PVarA\;\PVarB}$ has preorder
+$\PVarA \< \NodeRm{Plus}{\PVarA\;\PVarB}$
+and $\PVarB\< \NodeRm{Plus}{\PVarA\;\PVarB}$,
+meaning that whatever a Plus term is in scope of, its
+children are too.
+For brevity, we will typically write $\PVarA \< \ConstRm{Plus}$
+and $\PVarB\< \ConstRm{Plus}$ instead.
+Likewise, a sensible rule for Lambda is that a term
+$\NodeRm{Lambda}{\PVarA\;\PVarB}$ has preorder $(\PVarB \< \PVarA
+\< \ConstRm{Lambda})$,
+meaning that whatever a Lambda term is in scope of, its
+children are too, and that $\PVarB$ (its body) is in
+scope of $\PVarA$ (its declaration). Put together, and applied to the
+example term, these rules give that:
+\[  \NodeRm{Lambda}{\DeclX[1]\;\NodeRm{Plus}{\RefnX[2]\;3}} \]
+has preorder:
+\[
+  \RefnX[2], 3 \<
+  \ConstRm{Plus} \< \DeclX[1] \< \ConstRm{Lambda}
+\]
+Thus $\RefnX[2] \Bound \DeclX[1]$ by \cref{def:rscope-bound}, as it should be.
+
+
+\subsection{A Problem}
+
+This isn't quite the whole picture, though. Consider the term
+\[
+\NodeRm{Lambda}{\DeclX[1]\;
+  \NodeRm{Let*}{
+    \NodeRm{Bind}{\DeclX[2]\;\RefnX[3]\;\ConstRm{EndBinds}}\;
+    \RefnX[4]}}
+\]
+
+What will these scoping rules look like? Whatever they are, they
+should cause $\DeclX[2]$ to shadow $\DeclX[1]$, $\RefnX[3]$ to be
+bound by $\DeclX[1]$, and $\RefnX[4]$ to be bound by $\DeclX[2]$.
+Formally, we should have:
+\[ \DeclX[2] \Bound \DeclX[1] \text{ and }
+   \RefnX[3] \Bound \DeclX[1] \text{ and }
+   \RefnX[4] \Bound \DeclX[2]
+\]
+which implies that, at a minimum:
+\[ \DeclX[2] \< \DeclX[1] \text{ and }
+   \RefnX[3] \< \DeclX[1] \text{ and }
+   \RefnX[4] \< \DeclX[2]
+\]
+
+This places a set of requirements on the scoping rules for Lambda,
+Let*, and Bind. For instance, $\RefnX[3] \< \DeclX[1]$ can only be
+achieved if $\RefnX[3] \< \ConstRm{Bind} \< \ConstRm{Let*} \< \DeclX[1]$.
+Continuing this way gives the requirements (shown both pictorially and
+textually):
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}[simple]
+  \tikzRoot
+    {A}{\tikzParentTwo{Lambda}
+      {B}{\tikzChild{$\DeclX[1]$}}
+      {C}{\tikzParentTwo{Let*}
+        {D}{\tikzParentThree{Bind}
+          {E}{\tikzChild{$\DeclX[2]$}}
+          {F}{\tikzChild{$\RefnX[3]$}}
+          {G}{\tikzChild{EndBinds}}}
+        {H}{\tikzChild{$\RefnX[4]$}}}}
+      
+  \begin{tikzEdges}
+    \tikzEdgeL{B}{C};
+    \tikzEdge{C}{D};
+    \tikzEdgeL{D}{E};
+    \tikzEdge{D}{F};
+    \tikzEdgeL{E}{D};
+    \tikzEdgeL{D}{H};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{Table}
+  \ConstRm{Let*} &$\<$& $\DeclX[1]$ \\
+  \ConstRm{Bind} &$\<$& \ConstRm{Let*} \\
+  $\RefnX[4]$    &$\<$& \ConstRm{Bind} \\
+  $\DeclX[2]$    &$\<$& \ConstRm{Bind} \\
+  $\RefnX[3]$    &$\<$& \ConstRm{Bind} \\
+  \ConstRm{Bind} &$\<$& $\DeclX[2]$
+\end{Table}
+\end{scopeDescription}
+
+However, this puts $\RefnX[3]$ in scope of $\DeclX[2]$, and as a
+result, $\RefnX[3]$ will be bound by $\DeclX[2]$! The problem is that
+Bind is trying to provide $\DeclX[2]$, to make it available in the
+body of Let*, but in doing so it incidentally makes it available in the
+Bind's definition (to $\RefnX[3]$). This is not how scoping
+dependencies should flow, and in the next two subsections we present
+the full, un-simplified version of our scoping rules that avoid this
+problem.
+
+\subsection{The Solution}
+\label{sec:rscope-the-solution}
+
+The solution is to separate the bindings a term \emph{imports} (i.e.,
+requires) from the bindings it \emph{exports} (i.e., provides). In the
+running example, for instance, the Bind \emph{imports} $\DeclX[1]$,
+and \emph{exports} $\DeclX[1]$ and $\DeclX[2]$ (with $\DeclX[2]$
+shadowing $\DeclX[1]$). We will call imports and exports \emph{ports}.
+
+The scoping rules can now be re-interpreted with this in mind. Given a
+term $t$, they will determine a preorder not over the subterms of $t$
+(like we have presented it so far), but instead over the \emph{ports}
+of the subterms of $t$. With this in mind, we offer four kinds of bindings:\footnote{
+  There is a close analogy between ports and attributes in attribute
+  grammars~\cite{knuth-attribute-grammar}:
+  namely, imports are analogous to inherited
+  attributes and exports are analogous to synthesized attributes.
+  The paths between imports and exports that are allowed by our
+  binding language (e.g., child export to parent export, but not
+  child export to parent import) are precisely the relationships
+  between inherited and synthesized attributes that are allowed in
+  attribute grammars. Most algorithms for evaluating attribute
+  grammars disallow cycles, however, while our preorders allow them.
+}
+\begin{enumerate}
+\item[A.] \textbf{\SpecBind{j}{i}:} A term may make its $i$'th child's bindings
+  available in its $j$'th child. If so, any declarations
+  \emph{exported} by child $i$ will be \emph{imported} by child $j$.
+\item[B.] \textbf{\SpecImpt{i}:} A term's $i$'th child may import its
+  parent's declarations. If so, it \emph{imports} the declarations \emph{imported}
+  by its parent. (This is almost universal:
+  declarations in scope at a node in an \textsc{ast} should
+  also be in scope at its children. However, we do allow a term to
+  hide all bindings from its child, if it so desires.)
+\item[C.] \textbf{\SpecExpt{i}:} A term's $i$'th child may export its
+  declarations to its parent. If so, the term \emph{exports} child $j$'s
+  \emph{exports}.
+\item[D.] \textbf{\SpecSelf:} A term may take the declarations it
+  \emph{imported}, and \emph{export} them. (This is not terribly useful
+  in practice, but we offer it for completion.)
+\end{enumerate}
+These four kinds of paths may be represented graphically,
+showing imports as $\ImSymbCirc$ and exports as $\ExSymbCirc$:
+
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentTwo{Parent}
+      {B}{\tikzChild{Child1}}
+      {C}{\tikzChild{Child2}}}
+  \begin{tikzEdges}
+    \tikzEdge{A-}{B-}[][B];
+    \tikzEdgeLL{B+}{C-}[][A];
+    \tikzEdge{C+}{A+}[][C];
+    \tikzEdgeRRR{A-}{A+}[][D];
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+
+With these new bindings in mind, the requirements for the example from
+the previous subsection become:
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentTwo{Lambda}
+      {B}{\tikzChild{$\DeclX[1]$}}
+      {C}{\tikzParentTwo{Let*}
+        {D}{\tikzParentThree{Bind}
+          {E}{\tikzChild{$\DeclX[2]$}}
+          {F}{\tikzChild{$\RefnX[3]$}}
+          {G}{\tikzChild{EndBinds}}}
+        {H}{\tikzChild{$\RefnX[4]$}}}}
+
+  \begin{tikzEdges}
+    \tikzEdgeLL{B+}{C-};
+    \tikzEdge{C-}{D-};
+    \tikzEdge{D-}{E-};
+    \tikzEdge{D-}{F-};
+    \tikzEdgeRRRR{E-}{E+};
+    \tikzEdge{E+}{D+};
+    \tikzEdgeLL{D+}{H-};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{LongTable}
+  \\ \\
+  $\im{}$\ConstRm{Let*}       &$\<$& $\ex{}\DeclX[1]$ \\
+  $\im{}$\ConstRm{Bind}      &$\<$& $\im{}$\ConstRm{Let*}  \\
+  $\im{}\RefnX[4]$ &$\<$& $\ex{}$\ConstRm{Bind} \\
+  $\im{}\DeclX[2]$ &$\<$& $\im{}$\ConstRm{Bind} \\
+  $\im{}\RefnX[3]$ &$\<$& $\im{}$\ConstRm{Bind} \\
+  $\ex{}\DeclX[2]$ &$\<$& $\im{}\DeclX[2]$ \\
+  $\ex{}$\ConstRm{Bind}      &$\<$& $\ex{}\DeclX[2]$
+\end{LongTable}
+\end{scopeDescription}
+
+Under this new preorder, $\RefnX[3] \Bound \DeclX[1]$ and $\RefnX[4]
+\Bound \DeclX[2]$ as desired.
+
+
+\subsection{Scoping Rules: Unsimplified}
+
+We have given an intuition behind our scoping rules;
+now we present them formally.
+
+Each port will have one of two \emph{signs} (import or export):
+\begin{Table}
+$d$ &$::=$& $\ImSymb$ & (import) \\
+   &$\mid$& $\ExSymb$ & (export)
+\end{Table}
+A \emph{port}, then, pairs a term $t$ with a sign:
+\begin{Table}
+$a,b,c$ &$::=$& $\im{}t \;|\; \ex{}t$ &(port)
+\end{Table}
+
+A set of \emph{scope rules} $\Sigma$ gives a relation
+for each term constructor $P$ that describes the scoping relationships
+between a term constructed with $P$ and its subterms:
+\begin{definition} \label{def:rscope-scope-rules}
+  A set of \emph{scope rules} $\Sigma$ is a partial map from term
+  constructors $P$ of arity $n$ to binary relations over
+  $\{1,\,...,\,n,\Exp,\Imp\}$, such that:
+  \begin{itemize}
+  \item The relation is transitive.
+  \item $\Exp$ is a least element ($\NotExists{a} (a,\,\Exp) \in \Sigma[P]$)
+  \item $\Imp$ is a greatest element ($\NotExists{a} (\Imp,\,a) \in \Sigma[P]$)
+  \end{itemize}
+\end{definition}
+Here $i$ represents the $i$th child term,
+$\Exp$ represents the parent term's exports, and
+$\Imp$ represents the parent term's imports.
+We will call pairs in the relation (e.g., $(1,\,\Imp)$) \emph{facts},
+and will equate them with their description in our binding
+language (so that $(1,\,\Imp) = \SpecImpt{1}$).
+The sign on the port on $i$ can be determined knowing that the fact it is part of must be
+one of the four kinds of bindings described in \cref{sec:rscope-the-solution}.
+We will write $s \Subterm t$ to mean that $s$ is a subterm of $t$,
+and write $a \Subterm t$ to mean
+$\Exists{s} (a=\im{s} \text{ or } a=\ex{s}) \text{ and } s \Subterm t$.
+
+As an example of scope rules, the rules for Lambda are:
+\[
+\Sigma[\text{Lambda}] = \{(1,\,\Imp),\,(2,\,\Imp),\,(2,\,1)\} = \{\SpecImpt{1},\,\SpecImpt{2},\,\SpecBind{2}{1}\}
+\]
+
+These scope rules determine the scoping for individual (sub)terms.
+The scoping of a \emph{full} term is found by applying the scoping rules
+locally at each subterm, then taking the reflexive transitive closure
+of this global relation:
+\begin{definition}
+The \emph{scoping} of a full term $t$ under scoping rules $\Sigma$
+is the set of judgements of the form $\SaysScope{t}{a}{b}$
+defined by the ``Declarative Rules'' and ``Shared Rules'' of 
+\cref{fig:rscope-SD}.
+\end{definition}
+
+The judgments in the figure have the form
+$\SaysScope{t}{a}{b}$, which means that
+``$a \< b$ in term $t$ using scoping rules $\Sigma$''.
+A judgment is \emph{well formed} when $a, b \Subterm t$.
+(Later, we will also use judgments of the form $\SaysScope{C}{a}{b}$; these
+are governed by identical rules, allowing each term $t$ to instead be
+a context $C$.)
+
+Rules SD-Import, SD-Export, SD-Bind, and S-ReExport capture the
+direct meaning of the scoping rules.
+S-Refl, S-Refl2, and SD-Trans give the transitive reflexive
+closure.
+SD-Decl allows declarations to extend the current scope.
+S-Lift says that facts learned about a subterm remain true in
+the whole term.
+
+\begin{figure}[ht]
+  \begin{flushleft}
+    \hspace{5em}\TypeLabel{\SaysScope{t}{a}{b}}
+  \end{flushleft}
+  \[ \textbf{Declarative Rules} \]
+  \[
+  \inference[SD-Trans]
+      {\SaysScope{t}{a}{b} \quad \SaysScope{t}{b}{c}}
+      {\SaysScope{t}{a}{c}}
+  \]
+
+  \[
+  \inference[SD-Import]
+      {\SigPImpt{i}}
+      {\SaysScope{\NodeStd}{\im t_i}{\im \NodeStd}}
+  \]
+
+  \[
+  \inference[SD-Export]
+      {\SigPExpt{i}}
+      {\SaysScope{\NodeStd}{\ex{}\NodeStd}{\ex t_i}}
+  \]
+  \[
+  \inference[SD-Bind]
+      {\SigPBind{i}{j}}
+      {\SaysScope{\NodeStd}{\im t_i}{\ex t_j}}
+  \]
+
+  \[ \textbf{Shared Rules (Declarative \& Algorithmic)} \]
+  \[
+  \inference[S-Refl1]
+      {}
+      {\SaysScope{t}{\im t}{\im t}}
+  \qquad
+  \inference[S-Refl2]
+      {}
+      {\SaysScope{t}{\ex t}{\ex t}}
+  \]
+
+  \[    
+  \inference[S-Lift]
+      {\SaysScope{t_i}{a}{b}}
+      {\SaysScope{\NodeStd}{a}{b}}
+  \]
+
+  \[
+  \inference[S-Decl]
+      {}
+      {\SaysScope{\DeclX}{\ex{}\DeclX}{\im{}\DeclX}}
+  \]
+  \[
+  \inference[S-ReExport]
+      {\SigPSelf}
+      {\SaysScope{\NodeStd}{\ex{}\NodeStd}{\im{}\NodeStd}}
+  \]
+
+  \[ \textbf{Algorithmic Rules} \]
+  \[
+  \inference[SA-Import]
+      {\SaysScope{t_i}{a}{\im t_i} \quad
+       \SigPImpt{i}}
+      {\SaysScope{\NodeStd}{a}{\im{}\NodeStd}}
+  \]
+  \[
+  \inference[SA-Export]
+      {\SigPExpt{i} \quad
+       \SaysScope{t_i}{\ex t_i}{a}}
+      {\SaysScope{\NodeStd}{\ex{}\NodeStd}{a}}
+  \]
+
+  \[
+  \inference[SA-Bind]
+      {\SaysScope{t_i}{a}{\im t_i} \quad
+       \SigPBind{i}{j} \quad
+       \SaysScope{t_j}{\ex t_j}{b}}
+      {\SaysScope{\NodeStd}{a}{b}}
+  \]
+
+\caption{Scope Checking}
+\label{fig:rscope-SD}
 \end{figure}
+
+These rules are not, however, syntax-directed. We give a
+syntax-directed version of the rules in the figure, under
+``Algorithmic Rules'' and ``Shared Rules''.
+These two rule sets are equivalent:
+
+\begin{theorem}[Algorithmic Scope Checking]\label{thm:rscope-rules}
+The declarative and algorithmic scope
+checking rules (\cref{fig:rscope-SD}) [with shared rules common to both]
+are equivalent.
+\end{theorem}
+  \begin{proof}\label{proof:rscope-rules}
+  We will show that the Algorithmic (SA-) and Declarative (SD-) rules
+  are equivalent by giving translations in both directions
+  (omitting the symbol $\Sigma$ throughout for brevity).
+  \cref{fig:rscope-rules-proof-1,fig:rscope-rules-proof-4} give the translations.
+  The translations make use of the fact that the scoping rule relations
+  are transitive.
+  
+  The conversion from SA to SD is straightforward.
+  However, the conversion from SD to SA is more difficult,
+  as it has to handle the many ways the SD-Trans rule can be used.
+  It proceeds by recursively pushing SD-Trans toward the leaves of the
+  derivation.
+  
+  The following table shows which inference rules can occur above
+  SD-Trans (and are thus included in
+  \cref{fig:rscope-rules-proof-1,fig:rscope-rules-proof-3}),
+  and which are impossible (and thus not included):
+  \begin{center}
+  \begin{tabular}{r | c c c c c}
+    left \textbackslash\ right & re-export & export & import & bind & lift \\
+    \hline
+   re-export & \xmark & \xmark & \xmark & \xmark & \xmark
+  \\ export  & \xmark & \xmark & \checkmark & \checkmark & \checkmark
+  \\ import  & \xmark & \xmark & \xmark & \xmark & \xmark
+  \\ bind    & \xmark & \xmark & \checkmark & \checkmark & \checkmark
+  \\ lift    & \xmark & \xmark & \checkmark & \checkmark & \checkmark
+  \end{tabular}
+  \end{center}
+\end{proof}
+\fi
+
+These scope checking rules say how to find a preorder over all of the
+\emph{ports} in a term.
+However, \cref{sec:rscope-sap} is based on preorders over the
+\emph{variables} in a term.\footnote{
+  In fact, {\sap} could be used with a \emph{different} binding
+  language, so long as it can be used to extract a preorder.
+}
+This is obtained as the restriction of
+the entire preorder to variables, as captured by the following rule:
+\[
+  \TypeLabel{\SaysScope{t}{\VarX}{\VarY}}
+  \hspace{3em}
+  \inference[S-Var]
+     {\SaysScope{t}{\im{}\VarXi}{\im{}\VarYj}}
+     {\SaysScope{t}{\VarXi}{\VarYj}}
+  \hspace{6em}
+\]
+
+  The definitions for binding and shadowing
+  (\cref{def:rscope-bound,def:rscope-shadow}) can then be expressed as inference rules:
+  \[
+    \TypeLabel{\SaysScopeBound{t}{\VarX}{\VarY}}
+    \hspace{3em}
+    \inference[S-Bound]
+        {\DeclX \in \min
+          \St{\DeclXi}{\SaysScope{t}{\RefnX}{\DeclXi}}}
+        {\SaysScopeBound{t}{\RefnX}{\DeclX}}
+    \hspace{5em}
+  \]
+  \[
+    \hspace{5em}
+    \inference[S-Shadow]
+        {\DeclX[j] \in \min \St{\DeclX[k]}{i \neq k \text{ and } \SaysScope{t}{\DeclX[i]}{\DeclX[k]}}}
+        {\SaysScopeBound{t}{\DeclX[i]}{\DeclX[j]}}
+  \]
+  These definitions form a scope preorder:
+\begin{lemma}
+  For any set of scoping rules $\Sigma$ and term $t$, the relation
+  $\St{(\VarXi, \VarXj)}{\SaysScope{t}{\VarXi}{\VarXj}}$ is a scope
+  preorder satisfying the requirements of \cref{def:rscope-scope}.
+\end{lemma}
+  \begin{proof}[Proof sketch]
+      The relation is a preorder by the derivation rules S-Refl1,
+      S-Refl2, and SD-Trans. We must also show that references
+      are least. Suppose instead that $\VarXi \< \RefnXj$ for some
+      $i \neq j$. Then $\im{}\VarXi \< \im{}\RefnXj$ (by S-Var), which is
+      syntactically impossible to achieve by the declarative judgements.
+  \end{proof}
+
+
+\subsection{Well-Boundedness}
+
+\Cref{def:rscope-bound} (on being bound) can be used to define $\alpha$-equivalence. Two
+terms are $\alpha$-equivalent if (i) each term is ``well-bound'';
+(ii) they have the same ``shape'' (i.e.,
+they are identical ignoring their variable names); and (iii) for every
+binding $\RefnX \Bound \DeclX$ in one term, an analogous binding
+exists in the same location in the other term. To formalize what
+``same location'' means, we will use a \emph{join} operator
+($s \bowtie t$) that checks that $s$ and $t$ have the same shape and
+finds a bijection between their variable occurrences as a witness to
+this fact:
+\begin{LongTable}
+  $\DeclXi$ &$\bowtie$& $\DeclYj$ &$=$& $\{\DeclXi \leftrightarrow \DeclYj\}$ \\
+  $\RefnXi$ &$\bowtie$& $\RefnYj$ &$=$& $\{\RefnXi \leftrightarrow \RefnYj\}$ \\
+  $\mathit{const}$ &$\bowtie$& $\mathit{const}$ &$=$& $\emptyset$ \\
+  $\Node{P}{\Seqn[1]{s}[n]}$ &$\bowtie$& $\Node{P}{\Seqn[1]{t}[n]}$
+  &$=$& $\bigcup_{i \in 1..n} s_i \bowtie t_i$ \\
+  $s$ &$\bowtie$& $t$           &$=$& \textsc{undefined} &otherwise
+\end{LongTable}
+
+Likewise, to formalize ``well-bound'', we will use the rules to
+determine when two declarations
+\emph{conflict}; for instance if they have the same name and are both
+parameters to the same function.
+We will consider terms with conflicting declarations to be ill-bound.
+\begin{definition}[Conflicting Declarations]
+  \label{def:rscope-conflict}
+  Two variable declarations $\DeclXi$ and $\DeclXj$ \emph{conflict} in
+  a term $t$ when:
+  \[
+  \inference[S-Conflict]
+    { \SaysScope{t}{a}{\DeclXi}
+      \quad \SaysScope{t}{a}{\DeclXj} \\
+      \min_{\Sigma,t} \{ \DeclXi, \DeclXj \} = \{ \DeclXi, \DeclXj \}}
+    { \SaysScopeConflict{t}{\DeclXi}{\DeclXj} }
+  \]
+\end{definition} \noindent
+(If a variable reference is \emph{ambiguously bound}
+(\cref{def:rscope-ambig}), then its bindings declarations must be in conflict.)
+
+A term $t$ is \emph{well-bound} with respect to scoping rules $\Sigma$
+when every
+reference is bound by exactly one declaration, and there are no
+conflicting declarations:
+\[
+\inference[S-WB]
+          { \Forall{\RefnX \!\in\! t} \ExistsUnique{\DeclX \!\in\! t}
+            \SaysScopeBound{t}{\RefnX}{\DeclX} \\
+            \NotExists{\DeclX[i],\DeclX[j] \!\in\! t}
+            \SaysScopeConflict{t}{\DeclX[i]}{\DeclX[j]}}
+          { \SaysScopeWB{t} }
+\]
+
+The definition of $\alpha$-equivalence with respect to the scoping rules
+$\Sigma$ is then:
+\begin{definition}[$\alpha$-equivalence]
+  \label{def:rscope-eqa}
+\[
+  \inference[S-$\alpha$-Eqv]
+      { \SaysScopeWB{s} \quad \SaysScopeWB{t} \quad s \bowtie t = \psi \\
+        \Forall{\RefnX,\DeclX}{\SaysScopeBound{s}{\RefnX}{\DeclX} \text{ iff }
+        \SaysScopeBound{t}{\psi(\RefnX)}{\psi(\DeclX)}}}
+      {\SaysScopeEqa{s}{t}}
+\]
+(We will also talk about $\alpha$-equivalence and well-boundedness of
+patterns. The definitions are identical.)
+\end{definition}
+
+In \cref{sec:rscope-catalog}, we show a catalog of scoping rules
+that can be expressed in our binding language.
+
+%% % Interpretation
+%% % (An intermediate formulation that simplifies the above)
+%% \begin{Table}
+%% $\interpSign[d]{0}{\Node{n}{\Seqn[1]{t}[k]}}$
+%%   &$=$& $\port{n}{\negport{d}}$ \\
+%% $\interpSign[d]{i}{\Node{n}{\Seqn[1]{t}[k]}}$
+%%   &$=$& $\port{t_i}{d}$
+%%   &when $i > 0$
+%% \end{Table}
+%% \begin{Table}
+%% ... \\
+%% $\interpSign[\im]{j}{s, \seq{t_i}}$
+%%   &$\<$& $\interpSign[\ex]{k}{s, \seq{t_i}}$
+%%   &for each $s = \Node{n}{\seq{t_i}} \in t$ \\
+%% &&&and $[j] \<: [k] \in \sign{n}$ \\
+%% ...
+%% \end{Table}
+
+
+
+\section{Inferring Scope}
+\label{sec:rscope-resugar}
+
+In this section we show how to infer scope by lifting scoping
+rules from a core language to the surface language.
+The input to this inference process is twofold: first, the
+core language must have associated scoping rules, and second, the
+syntactic sugar must be given as a set of pattern-based rewrite rules.
+The output of scope inference is a set of scoping rules for the surface
+language.
+
+The process is loosely analogous to type inference:
+type inference finds the most general type annotations such that a
+program type-checks; scope inference will find the smallest set of
+surface scoping rules under which desugaring preserves $\alpha$-equivalence.
+More precisely, given a core language with scoping rules $\SigmaCore$,
+and a desugaring $f$, our algorithm finds scoping rules $\SigmaSurf$
+that preserves $\alpha$-equivalence (\cref{thm:rscope-hygiene}), so that:
+\[ \SaysScopeEqa[\SigmaSurf]{s}{t} \text{\quad implies\quad }
+   \SaysScopeEqa[\SigmaCore]{f(s)}{f(t)}
+\]
+Furthermore, $\SigmaSurf$ will be least, so that if
+$\SigmaSurf'$ also has this property, then
+$\Forall{P} \SigmaSurf[P] \subseteq \SigmaSurf'[P]$.
+
+The general algorithm for scope inference is given in
+\cref{fig:rscope-resugar}. The next three subsections explain our assumptions
+about desugaring, and then the algorithm.
+
+\begin{figure*}
+\begin{LongTable}
+  $\displaystyle \Op{inferScope}{\Sigma,\,\{C_i \To C_i'\}_{i \in 1..n}}$
+  &$\Defeq$&
+  Let $\SigmaSurf = \displaystyle \Op{solve}{\Sigma,\,
+    \bigcup_{i \in 1..n} \Op{genConstrs}{C_i \To C_i'}}$ \\
+  && $\Op{checkScope}{\SigmaSurf,\,\{C_i \To C_i'\}_{i \in 1..n}}$ \\
+  && Return $\SigmaSurf$
+  \vspace{0.9em} \\
+  $\displaystyle \Op{genConstrs}{C \To C'}$
+  &$\Defeq$&
+  $\displaystyle \left\{
+  \Op{genConstr}{a \< b,\;C \To C'} \right\}_{a,b \in H}$ \\
+  &&where $H = \PVars{C} \cup \PVars{C'} \cup \{\Root\}$
+  \vspace{0.9em} \\
+  $\Op{genConstr}{a \< b,\; C \To C'}$
+  &$\Defeq$&
+  $\left(\Op{genConj}{a \< b,\; C}, \Op{genConj}{a \< b,\; C'}\right)$ \\
+  &&where $(p, q)$ means a constraint ``$p$ iff $q$''
+  \vspace{0.9em} \\
+  $\Op{genConj}{a \< b,\; C}$
+  &$\Defeq$&
+  Smallest $\SigmaSurf$ such that $\SaysScope{C}{a}{b}$. \\
+  && (To compute this, take the premises of
+     the (unique) \\
+  && derivation of $\SaysScope{C}{a}{b}$ using the \\
+  && Algorithmic Scope Checking rules (\cref{fig:rscope-SD}).)
+  \vspace{0.9em} \\
+  $\displaystyle \Op{solve}{\SigmaCore,\,constraints}$
+  &$\Defeq$&
+  \parbox[t][][t]{0.8\linewidth}{
+    Initialize $\SigmaSurf$ = $\SigmaCore$ \\
+    Until fixpoint:
+    \begin{itemize}
+    \item If a fact $f$ in a constraint is in $\SigmaSurf$: \\
+      \Indent Delete $f$ from the constraint
+    \item If one side of a constraint is empty: \\
+      \Indent Delete the constraint \\
+      \Indent Add the other side to $\SigmaSurf$ \\
+      \Indent\Indent (maintaining transitive closure)
+    \item If any fact in $\SigmaSurf$ is in the complement of $\SigmaCore$: \\
+      \Indent ERROR: Reject this sugar
+    \end{itemize}
+    Return $\SigmaSurf$
+    }
+  \vspace{0.9em} \\
+  $\displaystyle \Op{checkScope}{\Sigma,\,\{C_i \To C_i'\}_{i \in 1..n}}$
+  &$\Defeq$&
+  For each rule $C \To C'$: \\
+  &&\quad Assert that if $\SaysScope{C}{a}{b}$
+          and $a \in C'$ then $b \in C'$ \\
+          && \Indent (otherwise ERROR) \\
+  &&\quad Assert that each reference $\RefnX \in C'$ is bound by a \\
+          && \Indent unique declaration $\DeclX \in C'$
+\end{LongTable}
+\caption{Scope Inference Algorithm}
+\label{fig:rscope-resugar}
+\end{figure*}
+
+\subsection{Assumptions about Desugaring} \label{sec:rscope-des-assumptions}
+
+We will assume that desugaring is given (externally to the language)
+by a set of rewrite rules of
+the form $C \To C'$, where $C$ and $C'$ are contexts (terms with
+\emph{holes} $\PVar_i$ in them, \emph{not} evaluation contexts).\footnote{
+  Formally, this is a term rewriting system (TRS)~\cite{trs}. We are
+  calling the TRS's variables \emph{holes} to avoid confusing them
+  with references and declarations, which are constants from the
+  perspective of the TRS.}~\footnote{
+  For now, we will admit \emph{unhygienic} sugars; hygiene will be
+  addressed in \cref{sec:rscope-hygiene}.
+}
+\begin{Table}
+  $C$ &$::=$& ... & (as in term $t$) \\
+      &$\mid$& $\PVar_i$ & (hole)
+\end{Table}
+Furthermore, we assume that for every rule $C \To C'$:
+\begin{enumerate}
+\item Every hole in $C'$ also appears in $C$.
+\item No hole in $C$ or $C'$ appears more than once.
+\item $C$ contains no references or declarations. (Rather, these
+  should be contained in its holes during expansion.)
+\item References and declarations in $C'$ are given fresh names during
+  expansion to ensure hygiene. (Our implementation also supports
+  \emph{global} references---e.g., calling \Code{print}---but we leave
+  this out of the paper for simplicity.)
+\end{enumerate}
+
+When desugaring, there may be more than one rewrite rule that applies
+to a given term. We make no assumption about which will be chosen;
+even a non-deterministic desugaring is allowed. A more typical choice
+is to apply rules in outside-in order, as is done by Scheme-style
+\Code{syntax-rules} macros~\cite{scheme5}.
+
+In general, a rewrite will look like:
+\[ E[C[t_1,...,t_n]] \To E[C'[t_1,...,t_n]] \]
+where $E$ and $C$ are contexts, and $C[t_1,...,t_n]$ denotes
+replacing the $n$ holes of context $C$ with
+terms $t_1,...,t_n$. (In \cref{sec:rscope-example}, $C$ was
+called the \textsc{lhs}, and $C'$ the \textsc{rhs}.)
+The outer context $E$ is important
+because when a piece of sugar expands, while its \emph{expansion}
+doesn't typically depend on its surrounding context, its binding
+structure might. For example, $E$ might be $\NodeRm{Lambda}{\DeclX\;\PVar}$,
+and $\RefnX$ inside the hole may be unbound without it.
+
+
+\subsection{Constraint Generation}
+\label{sec:rscope-constr}
+
+The first step to scope inference is generating a set of constraints
+for each desugaring rule that, if satisfied, ensure that it will
+preserve binding structure. 
+Specifically, fix a rewrite rule $C \To C'$.
+It is important that this rewrite does not change the binding of any
+variable \emph{outside} of $C$. To achieve this, it will suffice that
+the preorder on the \emph{boundary} of $C$ is the same as the
+preorder among the boundary of $C'$. The boundary, here, is the set of
+holes in $C$, together with the root (i.e., the whole term).
+For example, in $E[C[t_1,...,t_n]]$, $\PVar_i$ bounds $t_i$, and $C$ (the root)
+bounds $E$. In general, we will call this property
+\emph{scope-equivalence}:
+\begin{definition}[Scope-equivalence of contexts]
+  $\SaysScopeEqv{C}{C'}$ means that
+  $\Forall{a, b \in \{\PVar_1,...,\PVar_n,\Root\}}$
+  \[ \SaysScope{C}{a}{b} \text{ iff } \SaysScope{C'}{a}{b} \]
+  where $\Root$ (``root'') stands in for $C$ or $C'$, as appropriate,
+  and omitted port signs are determined by what our binding language allows:
+  \begin{Table}
+    $\SaysScope{C}{\PVar_i}{\PVar_j}$ &$\Defeq$&
+    $\SaysScope{C}{\im{}\PVar_i}{\ex{}\PVar_j}$
+    \\
+    $\SaysScope{C}{\PVar_i}{\Root}$ &$\Defeq$&
+    $\SaysScope{C}{\im{}\PVar_i}{\im{}C}$
+    \\
+    $\SaysScope{C}{\Root}{\PVar_j}$ &$\Defeq$&
+    $\SaysScope{C}{\ex{}C}{\ex{}\PVar_j}$
+    \\
+    $\SaysScope{C}{\Root}{\Root}$ &$\Defeq$&
+    $\SaysScope{C}{\ex{}C}{\im{}C}$
+  \end{Table}
+\end{definition}
+
+When two contexts are scope-equivalent, rewriting one to the other
+within a term does not change the scope of the rest of the term:
+\begin{definition}[Scope-preservation]
+  A rewrite
+  \[ E[C[t_1,...,t_n]] \To E[C'[t_1,...,t_n]] \]
+  \emph{preserves scope} relative to a set of scoping rules $\Sigma$
+  if $\forall\,a,b \Subterm E,t_1,...,t_n$ (i.e.,
+  each of $a$ and $b$ lies in one of $E,t_1,...,t_n$):
+  \[ \SaysScope{E[C[t_1,...,t_n]]}{a}{b} \text{ iff }
+     \SaysScope{E[C'[t_1,...,t_n]]}{a}{b} \]
+\end{definition}
+
+\begin{lemma}[Scope-equivalent contexts preserve scope]
+  \label{lemma:scope-rscope-preservation}
+  If $\SaysScopeEqv{C}{C'}$, then any rewrite
+  $E[C[t_1,...,t_n]] \To E[C'[t_1,...,t_n]]$
+  preserves scope.
+\end{lemma}
+  \begin{proof}
+    We will prove the forward implication of the \textit{iff} in
+    scope-preservation; the reverse is symmetric.
+    View the ($\<$) preorder as a directed graph.
+    Our given is that there is a path from $a$ to $b$ in
+    $E[C[t_1,...,t_n]]$, where neither $a$ nor $b$ lies in $C$.
+    Some subpaths of this path may traverse $C$; these subpaths are
+    bounded by
+    $\im{}t_1,\ex{}t_1,...,\im{}t_n,\ex{}t_n,\im{}C,\ex{}C$.
+    The fact that $\SaysScopeEqv{C}{C'}$ means that these subpaths can be
+    converted to subpaths in $C'$, bounded instead by
+    $\im{}t_1,\ex{}t_1,...,\im{}t_n,\ex{}t_n,\im{}C',\ex{}C'$.
+    Replace these subpaths. Now the whole path goes from $a$ to $b$ in
+    $E[C'[t_1,...,t_n]]$.
+  \end{proof}
+
+We can use scope-equivalence to turn a rewrite rule $C \To C'$ into a
+set of constraints that hold iff the rewrite rule preserves
+scope. There will be one constraint for every pair $(a, b)$ from the
+boundary. Each constraint will have the form:
+\[F_1 \wedge F_2 \wedge ... F_n \texttt{ iff } F_1' \wedge F_2' \wedge ... F_m' \]
+where each $F_i$ is a fact (e.g. $\SigBind{Let}{1}{2}$). This constraint is
+found by stating that the premises of the derivation of
+$\SaysScope{C}{a}{b}$ hold iff the premises of the derivation
+$\SaysScope{C'}{a}{b}$ hold. These derivations are guaranteed to be unique,
+and can found efficiently, because the algorithmic scope-checking
+rules (\cref{fig:rscope-SD}) are syntax-directed.
+
+As an example of this constraint generation, take the desugaring rule
+for Let:
+\begin{LongTable}
+  $\NodeRm{Let}{\PVarA\;\PVarB\;\PVarC}$
+  &$\To$&
+  $\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\PVarC}\;\PVarB}$
+\end{LongTable}
+One of the necessary constraints says that:
+\begin{Table}
+&& $\SaysScope{\NodeRm{Let}{\PVarA\;\PVarB\;\PVarC}}{\PVarA}{\PVarB}$ \\
+&iff& $\SaysScope{\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\PVarC}\;\PVarB}}{\PVarA}{\PVarB}$
+\end{Table}
+
+Each side of this ``iff'' has a unique derivation using the
+algorithmic scope-checking rules (\cref{fig:rscope-SD}).
+Replacing each side with the premises of its derivation
+yields the constraint:
+\begin{Table}
+  $\SigBindRm{Let}{1}{2}$ iff $\SigBindRm{App}{1}{2} \wedge \SigImptRm{Lam}{1}$
+\end{Table}
+
+Since the boundary has size four ($\PVarA$, $\PVarB$, $\PVarC$, and $\Root$),
+continuing this way leads to a total of $4^2=16$ constraints:
+\begin{center}\begin{tabular}
+  {r @{\;\;} c @{\;\;} r @{\,} c @{\,} r}
+
+  $\SigBindRm{Let}{1}{1}$
+  &iff& && $\SigBindRm{Lam}{1}{1}$ \\
+
+  $\SigBindRm{Let}{1}{2}$
+  &iff& $\SigBindRm{App}{1}{2}$ &$\wedge$& $\SigImptRm{Lam}{1}$ \\
+
+  $\SigBindRm{Let}{1}{3}$
+  &iff& && $\SigBindRm{Lam}{1}{2}$ \\
+
+  $\SigImptRm{Let}{1}$
+  &iff& $\SigImptRm{App}{1}$ &$\wedge$& $\SigImptRm{Lam}{1}$ \\
+
+  $\SigBindRm{Let}{2}{1}$
+  &iff& $\SigBindRm{App}{2}{1}$ &$\wedge$& $\SigExptRm{Lam}{1}$ \\
+
+  $\SigBindRm{Let}{2}{2}$
+  &iff& $\SigBindRm{App}{2}{2}$ && \\
+
+  $\SigBindRm{Let}{2}{3}$
+  &iff& $\SigBindRm{App}{2}{1}$ &$\wedge$& $\SigExptRm{Lam}{2}$ \\
+
+  $\SigImptRm{Let}{2}$
+  &iff& $\SigImptRm{App}{2}$ && \\
+
+  $\SigBindRm{Let}{3}{1}$
+  &iff& && $\SigBindRm{Lam}{2}{1}$ \\
+
+  $\SigBindRm{Let}{3}{2}$
+  &iff& $\SigBindRm{App}{1}{2}$ &$\wedge$& $\SigImptRm{Lam}{2}$ \\
+
+  $\SigBindRm{Let}{3}{3}$
+  &iff& && $\SigBindRm{Lam}{2}{2}$ \\
+
+  $\SigImptRm{Let}{3}$
+  &iff& $\SigImptRm{App}{1}$ &$\wedge$& $\SigImptRm{Lam}{2}$ \\
+
+  $\SigExptRm{Let}{1}$
+  &iff& $\SigExptRm{App}{1}$ &$\wedge$& $\SigExptRm{Lam}{1}$ \\
+
+  $\SigExptRm{Let}{2}$
+  &iff& $\SigExptRm{App}{2}$ && \\
+  
+  $\SigExptRm{Let}{3}$
+  &iff& $\SigExptRm{App}{1}$ &$\wedge$& $\SigExptRm{Lam}{2}$ \\
+  
+  $\SigSelfRm{Let}$
+  &iff& $\SigSelfRm{App}$ && \\
+\end{tabular}\end{center}
+
+We have just described how to generate constraints---covering the
+$\mathit{gen}$ functions in \cref{fig:rscope-resugar}---and the previous lemma shows
+that the constraints generated this way capture our aim in scope
+inference. We now turn to solving these constraints.
+
+
+\subsection{Constraint Solving}
+
+These constraints can be solved by searching for their least
+fixpoint, starting with the initial knowledge of the scoping rules for
+the core language. Finding the \emph{least} fixpoint is sensible,
+because by default, declarations should not be in scope.
+Since all of the constraints have the form of an
+``iff'' between conjunctions, the least fixpoint exists and can be
+found by monotonically growing the set of known facts.
+
+Solving for the least fixpoint gives a set of scoping rules for the
+surface and core languages such that the desugaring rules preserve
+this scope. Since the least fixpoint was seeded with the known scoping
+rules for the core language, its output will contain at least those
+facts.  However, they may have inferred \emph{additional}, incorrect
+facts about the scope of the core language. For instance, consider the
+following ``Lambda flip flop'' rule (where $\ConstRm{Flip}$ and
+$\ConstRm{Flop}$ are constants, i.e., nodes of arity 0):
+\begin{Table}
+  $\NodeRm{LambdaFF}{\ConstRm{Flip}\,\PVar_1\,\PVar_2} \To
+  \NodeRm{Lambda}{\PVar_1\,\PVar_2}$
+  \\ \\
+  $\NodeRm{LambdaFF}{\ConstRm{Flop}\,\PVar_1\,\PVar_2} \To
+  \NodeRm{Lambda}{\PVar_2\,\PVar_1}$
+\end{Table}
+In traditional hygienic macro expansion systems this desugaring is
+considered to be OK: the scope of a term is \emph{defined} by the
+scope of its desugaring, which may vary on things such as the choice
+between Flip and Flop constants. However, we will take the opposite
+view: this desugaring should be rejected because the scope it produces
+for LambdaFF cannot be captured by (reasonable) static scoping rules.
+
+Let us work through scope inference for this example. From the first
+rule, we can learn (from the Lambda on the \textsc{rhs}) that
+$\SigBind{\text{LambdaFF}}{3}{2}$, and from the second rule, we can learn that
+$\SigBind{\text{LambdaFF}}{2}{3}$. Applying either of these facts to the
+\emph{other} rule gives that $\SigBind{\text{Lambda}}{1}{2}$: the \emph{body} of
+the Lambda is in scope at its \emph{parameter}!  This contradicts the
+known signature for Lambda (we know that $\SigNotBind{\text{Lambda}}{1}{2}$),
+so these rules would be rejected.
+In general, scope inference fails when the least fixpoint contains
+facts about the scope of a core language construct that are not part
+of that construct's signature.
+
+\subsection{Ensuring Hygiene}
+
+We have described how to infer scope by generating and then solving
+constraints. There are two checks we should
+perform, however, to ensure that desugaring cannot produce unbound
+identifiers. These checks are performed by $\Op{checkScope}{}$
+in \cref{fig:rscope-resugar}:
+\begin{itemize}
+
+\item
+Any references introduced on the \textsc{rhs} of a sugar must
+be bound. For instance, a sugar could not simply expand to $\RefnX$,
+because that would be unbound.
+
+\item
+A sugar cannot delete a hole that might contain a bound
+declaration. For instance, it could not rewrite
+$\NodeRm{lambda}{\PVarA\,\PVarB}$ to $\PVarB$, because $\PVarB$ might
+contain a reference bound by a declaration in $\PVarA$. In general,
+if a sugar deletes any hole, then it must also delete all smaller
+holes (those that are less in the preorder).
+
+\end{itemize}
+These two checks ensure that sugars cannot cause unbound identifier
+exceptions. Besides obviously being a problem, we would like to
+prevent this because it violates our notion of \emph{hygiene}.
+However, these problematic sugars would not be considered unhygienic
+in the traditional sense.
+
+Traditionally, research on hygiene has focused on preventing sugars
+from accidentally capturing user-defined references and vice versa.
+For instance, if a user binds $\DeclXi$ and then uses $\RefnX$
+inside a sugar, and the sugar locally binds $\DeclXj$, then $\RefnX$
+should not be bound by $\DeclXj$. These hygiene violations are called
+``introduced-binder'' and ``introduced-reference'' violations,
+respectively. There are also more subtle violations in which
+desugaring makes observations about declaration
+equality~\cite{adams-hygiene}.
+
+However, there is a simpler goal we can aim for that gets at the heart
+of the problem, and subsumes all of these specific properties.
+The goal is that if two programs are $\alpha$-equivalent, then they
+will still be $\alpha$-equivalent after a desugaring $f$:
+\[ \SaysScopeEqa[\SigmaSurf]{s}{t} \text{ \,implies\, }
+   \SaysScopeEqa[\SigmaCore]{f(s)}{f(t)}
+\]
+(Recall from \cref{def:rscope-eqa} that $\alpha$-equivalence is parameterized
+by $\Sigma$. Therefore, in the above antecedent and consequent,
+$\alpha$-equivalence is respectively defined by $\SigmaSurf$ and
+$\SigmaCore$.)
+
+This prevents accidental variable capture because $\alpha$-renaming
+the captured variable would cause it to not be captured, changing the
+$\alpha$-equivalence-class of the program. It also prevents the
+introduction of unbound identifiers, because a program with an unbound
+identifier is not $\alpha$-equivalent to any other program (it is
+outside the domain of $\alpha$-equivalence).
+
+Most hygiene papers don't mention this criterion for a simple reason:
+$=_\alpha$ is not defined on their surface language, so they cannot even
+state the requirement. Recent exceptions to this
+rule~\cite{herman-hygiene,stansifer-romeo}
+get around it by requiring sugar-writers to supply scoping rules
+for the surface language. These scoping rules then define
+$\alpha$-equivalence for the surface language.
+In contrast, we \emph{infer} scoping rules for the surface language,
+and can then ask whether these inferred rules preserve
+$\alpha$-equivalence. In \cref{sec:rscope-hygiene} we will show that they do,
+so long as inference was successful and $\Op{scopeCheck}{}$ passed.
+
+This covers the $\Op{solve}{}$ algorithm in \cref{fig:rscope-resugar}, and
+completes our description of scope inference: (i) find constraints for
+every desugaring rule; (ii) find their least fixpoint, starting
+with the known scoping rules for the core language; and (iii) check
+that none of the sugars can produce unbound identifiers.
+
+
+\subsection{Correctness and Runtime}
+
+The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
+
+\begin{theorem}[Rewrites preserve scope]\label{thm:rscope-resugar}
+  \whitePhantom{.}\\%Newline
+  Let $\SigmaSurf =
+  \Op{inferScope}{\SigmaCore,\,\{C_i \To C_i'\}_{i \in 1..n}}$.
+  Then any rewrite of the form
+  $E[C_i[t_1,...,t_n]] \To E[C_i'[t_1,...,t_n]]$
+  will preserve scope.
+  Furthermore, $\SigmaSurf$ is least (it is contained in every other
+  set of scoping rules that would be preserved).
+\end{theorem}
+  \begin{proof}
+    By construction, the constraints generated by $\Op{inferScope}{}$
+    ensure that $\SaysScopeEqv[\SigmaSurf]{C_i}{C_i'}$ for each $i$.
+    By \cref{lemma:rscope-scope-preservation},
+    this implies that any rewrite
+    $E[C_i[t_1,...,t_n]] \To E[C_i'[t_1,...,t_n]]$ will preserve scope.
+    Thus it suffices to show that $\Op{solve}{}$ does, in fact, find the
+    least solution to the constraints given $\SigmaCore$.
+  
+    $\Op{solve}{}$ works with scope signatures $\SigmaCore$ and
+    $\SigmaSurf$, and a set of constraints $\mathbb{C}$:
+    \begin{Table}
+      $f_{11}' \wedge  f_{12}' \wedge ...$ &iff&
+      $f_{11}'' \wedge f_{12}'' \wedge ...$ \\
+      $f_{21}' \wedge  f_{22}' \wedge ...$ &iff&
+      $f_{21}'' \wedge f_{22}'' \wedge ...$ \\
+      &...&
+    \end{Table}
+    At any point during the evaluation of $\Op{solve}{}$, let the
+    \emph{meaning} $\phi$ of $\SigmaCore$, $\SigmaSurf$, and $Cs$ be:
+    \[ \bigwedge_{f \in \SigmaSurf}\hspace{-0.5em}f \wedge
+       \bigwedge_{f \in \SigmaCore}\hspace{-0.5em}f \wedge
+       \bigwedge_{f \in \overline \SigmaCore}\hspace{-0.5em}\neg f \wedge
+       \bigwedge_i \left(\bigwedge_j f_{ij}' \text{ iff } \bigwedge_k f_{ik}''\right)
+    \]
+    That is,
+    \begin{enumerate}
+      \item Every fact in $\SigmaSurf$ is true
+      \item Every fact in $\SigmaCore$ is true
+      \item Every fact in the core language but \emph{not} in
+        $\SigmaCore$ is false (i.e., we assume that $\SigmaCore$ lists
+        \emph{all} scoping rules for the core language)
+      \item The constraints hold.
+    \end{enumerate}
+  
+    Upon initialization during $\Op{solve}{}$, $\phi$ follows from
+    $\SigmaCore$ and $\mathbb{C}$. Furthermore, every step of $\Op{solve}{}$
+    maintains $\phi$. There are three kinds of steps to consider, and
+    each follows from a logical equivalence:
+    \begin{itemize}
+    \item ``If a fact $f$ in a constraint is in $\SigmaSurf$:
+      Delete $f$ from the constraint.''
+      \[ f \wedge (f \wedge f_2 \wedge ...
+         \text{ iff } f_1' \wedge f_2' \wedge ...)
+         \equiv
+         f \wedge (f_2 \wedge ...
+         \text{ iff } f_1' \wedge f_2' \wedge ...)
+      \]
+    \item ``If one side of a constraint is empty:
+      Delete the constraint;
+      Add the other side to $\SigmaSurf$ (maintaining trans. closure).''
+      \[ (\mathit{true} \text{ iff } f_1 \wedge ... \wedge f_n)
+         \equiv
+         f_1 \wedge ... \wedge f_n
+      \]
+    \item ``If any fact $f$ in $\SigmaSurf$ is in the complement of
+      $\SigmaCore$: ERROR''
+      \[ f \wedge \neg f \equiv \mathit{false} \]
+    \end{itemize}
+  
+    Finally, when $\Op{solve}{}$ halts, it is because the facts in $\mathbb{C}$
+    and $\SigmaSurf$ are disjoint, and every constraint in $\mathbb{C}$ has at
+    least one fact on each side. Therefore it is valid to obtain a
+    minimal set of facts by setting every
+    fact in $\overline\SigmaSurf$ to $\mathit{false}$; doing so will
+    satisfy $\mathbb{C}$ by making both sides of every remaining constraint
+    false. Thus we have shown that the final $\SigmaSurf$:
+    \[ \bigwedge_{f \in \SigmaSurf}\hspace{-0.5em}f \wedge
+       \bigwedge_{f \in \overline \SigmaSurf}\hspace{-0.5em}\neg f
+    \]
+    is a minimal solution to the initial $\SigmaCore$ and $\mathbb{C}$:
+    \[ \bigwedge_{f \in \SigmaCore}\hspace{-0.5em}f \wedge
+       \bigwedge_{f \in \overline \SigmaCore}\hspace{-0.5em}\neg f \wedge
+       \bigwedge_i \left(\bigwedge_j f_{ij}' \text{ iff } \bigwedge_k f_{ik}''\right)
+    \]
+    Thus the surface language scoping rules $\SigmaSurf$ found by
+    $\Op{solve}{}$ are valid and minimal, given the core language scoping rules
+    $\SigmaCore$ plus the constraints $\mathbb{C}$.
+  \end{proof}
+  
+  \begin{corollary}[Desugaring preserves scope]
+    \whitePhantom{.}\\%Newline
+    Let $\SigmaSurf =
+    \Op{inferScope}{\SigmaCore,\,\{C_i \To C_i'\}_{i \in 1..n}}$.
+    Then desugaring with the rules $\{C_i \To C_i'\}_{i \in 1..n}$
+    will preserve scope.
+  \end{corollary}
+  \begin{proof}
+    Induct on the number of rewrites performed.
+  \end{proof}
+
+  Furthermore, scope inference runs in time
+  $O(\Sigma_{P \in \mathit{surf}} \Arity{P}^3)$:
+
+  \begin{lemma}
+    $\Op{inferScope}{\Sigma,\,\mathbb{C}}$ runs in time
+    $O(\Op{size}{\mathbb{C}} + \Sigma_{P \in \mathit{surf}} \Arity{P}^3)$.
+  \end{lemma}
+
+  \begin{proof}
+    The running time of $\Op{inferScope}{}$ is dominated by
+    $\Op{solve}{}$, which in turn is dominated by two operations:
+    iterating over the facts in $\mathbb{C}$, and adding facts to $\SigmaSurf$.
+    Iterating over the facts in $\mathbb{C}$ takes time $\Op{size}{\mathbb{C}}$, where
+    $\Op{size}{\mathbb{C}}$ is the total number of facts in $\mathbb{C}$.  Each fact
+    added to $\SigmaSurf$ requires maintaining the transitive closure of
+    $\SigmaSurf$, for the node type $P$ of the fact. This can be done
+    with an amortized cost of $O(\Arity{P})$ per $P$-fact added.  (To
+    add a fact $\FactP{a}{b}$ that does not appear in $\SigmaSurf$,
+    insert it and then recursively add $\FactP{a}{c}$ for every fact
+    $\FactP{b}{c}$, and add $\FactP{c}{b}$ for every fact $\FactP{c}{a}$.)
+    Since there are $O(\Arity{P}^2)$ possible $P$-facts to add, this
+    adds an additional $O(\Sigma_{P \in \mathit{surf}} \Arity{P}^3)$
+    running time.
+  \end{proof}
+
+The cubic parameter is concerning, but not a problem in practice for a
+number of reasons. First, $\Arity{P}$ tends to be small.
+Second, this algorithm is run off-line, and once per language.
+Finally, as we discuss in \cref{sec:rscope-impl}, in practice the running
+time is extremely small.
+
+
+\section{Implementation and Evaluation}
+\label{sec:rscope-impl}
+
+We have implemented the scope inference algorithm. Beyond what is
+shown in the paper, the implementation also allows (i) marking
+variables as \emph{global references} that should refer to globally
+available identifiers in the expanded program, such as \Code{print},
+and (ii) a select form of copying a hole, where the hole contains a
+declaration and the copy is meant to be a reference of the same name.
+The implementation is available at \url{https://github.com/brownplt/scope-graph}.
+
+Besides the examples shown earlier in the paper, we have tested this
+implementation on sugars from three languages:
+\begin{itemize}
+  \item All of the sugars that bind values in the Pyret language
+    (pyret.org): namely \texttt{for} expressions, \texttt{let}
+    statement clustering (nested bindings are grouped into a single
+    \texttt{let}), and \texttt{function} declarations.
+  \item Haskell list comprehensions, which include guards, generators,
+    and local bindings.
+  \item All of the sugars that bind values in R5RS
+    Scheme~\cite{scheme5}: namely \texttt{let}, \texttt{let*},
+    \texttt{letrec}, and \texttt{do}.
+\end{itemize}
+
+Some of the desugarings use ellipses in their definition, and thus had
+to be translated to match our fixed-arity assumption. (To do so, we
+introduced auxiliary \textsc{ast} node types and used those to express the
+equivalent looping.) \texttt{letrec}
+required one further adjustment to successfully infer scope.\footnote{
+  The change was to have the desugaring distinguish between the letrec
+  having zero bindings or one-or-more bindings. This prevented a
+  fact of the form \SpecBind{i}{i} from being applied to the binding
+  list of the desugared \texttt{let}, which would make its bindings
+  recursive. We have not found a principled account for why this
+  was necessary.
+} After
+that, our tool successfully inferred scope for all of the sugars
+except for Scheme's \texttt{do}. In the rest of this section, we will
+describe many of these sugars in more detail, ending with \texttt{do}.
+
+In practice, the running times are very modest. In our implementation in
+Rust (\url{rust-lang.org}) all of the sugars we have tested run in
+about 130ms on a generic desktop, of which ~60ms is parsing
+time. Therefore, the speed is even fast enough for scope inference to
+be used as part of a language developer's rapid prototyping workflow.
+
+\subsection{Case Study: Pyret \texttt{for} Expressions}
+\label{sec:for-rscope-example}
+Consider the ``for expressions'' of the Pyret language:
+\begin{verbatim}
+for fold(p from 1, n from range(1, 6)):
+  p * n
+end # Produces 5! = 120
+\end{verbatim}
+  This example desugars into:
+\begin{verbatim}
+fold(lam(p, n): p * n end, 1, range(1, 6))
+\end{verbatim}
+  In general, the \Code{for} syntax takes a function
+  expression, any number of \Code{from} clauses, and a body. It desugars
+  into a call to the function, passing it as arguments (i) a lambda whose
+  parameters are the \textsc{lhs}s of each \Code{from} and whose body
+  is the body of the \Code{for}, and (ii) the
+  \textsc{rhs} of each \Code{from}.
+
+  Our system produces the following scoping rules for \Code{for},
+  shown both textually and pictorially:\footnote{
+    In the textual representation of the scoping rules, we give names
+    to a node's children. Formally, these should be indices.
+}
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentThree{For}
+      {B}{\tikzChild{func}}
+      {C}{\tikzChild{froms}}
+      {D}{\tikzChild{body}}}
+      
+  \begin{tikzEdges}
+    \tikzEdgeR{C+}{D-};
+    \tikzEdge{A-}{D-};
+    \tikzEdge{A-}{C-};
+    \tikzEdge{A-}{B-};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{For}{func} \\
+  \RuleImpt{For}{froms} \\
+  \RuleImpt{For}{body} \\
+  \RuleBind{For}{body}{froms}
+\end{ScopeRules}
+\end{scopeDescription}
+
+\vspace{1em}
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentThree{From}
+      {B}{\tikzChild{param}}
+      {C}{\tikzChild{arg}}
+      {D}{\tikzChild{froms}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{A-}{B-};
+    \tikzEdge{A-}{C-};
+    \tikzEdge{A-}{D-};
+    \tikzEdge{B+}{A+};
+    \tikzEdge{D+}{A+};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{From}{param} \\
+  \RuleImpt{From}{arg} \\
+  \RuleImpt{From}{froms} \\
+  \RuleExpt{From}{param} \\
+  \RuleExpt{From}{froms}
+\end{ScopeRules}
+\end{scopeDescription}
+
+
+\subsection{Case Study: Haskell List Comprehensions}
+\label{sec:list-rscope-example}
+Haskell list comprehensions consist of sugar for \emph{boolean
+  guards} that filter the list, \emph{generators} that specify the
+domain of the elements in the list, and \emph{local bindings}.
+To quote the language standard~\cite[section 3.11]{haskell-language}:
+``List comprehensions satisfy these identities, which may be used as a
+translation into the kernel:''
+\begin{Table}
+  \texttt{[ e | True ]}
+  &=& \texttt{[e]}
+  & (Base case)
+  \\
+  \texttt{[ e | q ]}
+  &=& \texttt{[ e | q, True ]}
+  & (Base case)
+  \\
+  \texttt{[ e | b, Q ]}
+  &=& \texttt{if b then [ e | Q ] else []}
+  & Boolean guards
+  \\
+  \texttt{[ e | p <- l, Q ]}
+  &=& \texttt{let ok p = [ e | Q ]} \\
+  &&  \texttt{\phantom{....}ok \_ = []} \\
+  &&  \texttt{in concatMap ok l}
+  & Generators
+  \\
+  \texttt{[ e | let decls, Q ]}
+  &=& \texttt{let decls in [ e | Q ]}
+  & Local bindings
+\end{Table}
+``where $e$ ranges over expressions,
+$p$ over patterns, $l$ over list-valued expressions, $b$ over boolean
+expressions, $decls$ over declaration lists, $q$ over qualifiers, and
+$Q$ over sequences of qualifiers.''
+
+For example, the perfect numbers (those equal to the sum of their
+divisors) can be calculated by:
+\[
+\texttt{[n | n <- [1..], let d = divisors n, sum d == n]}
+\]
+
+Our system successfully infers the scope of these sugars. We will
+describe them one at a time. First, list comprehensions
+\texttt{[e | Q]} consist of an expression $e$ and a list of
+\emph{qualifiers} $Q$. Any declarations exported by $Q$ (such as $n$
+above) should be in scope at $e$:
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentTwo{\;[e $\vert$ Q]\;}
+      {B}{\tikzChild{\;e\tall\;}}
+      {C}{\tikzChild{\;Q\;}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{A-}{B-};
+    \tikzEdge{A-}{C-};
+    \tikzEdgeLLL{C+}{B-};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{ListComprehension}{e} \\
+  \RuleImpt{ListComprehension}{Q} \\
+  \RuleBind{ListComprehension}{e}{Q}
+\end{ScopeRules}
+\end{scopeDescription}
+
+Boolean guards $b, Q$ have a boolean expression $b$ that is used to
+filter the list, and a sequence of more qualifiers $Q$. The scope of a
+boolean guard expression is simple: besides lexical scope, any
+declarations from $Q$ are exported:
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentTwo{\;b, Q\;}
+      {B}{\tikzChild{\;b\tall\;}}
+      {C}{\tikzChild{\;Q\;}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{A-}{B-};
+    \tikzEdge{A-}{C-};
+    \tikzEdge{C+}{A+};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{LC\_Guard}{b} \\
+  \RuleImpt{LC\_Guard}{Q} \\
+  \RuleExpt{LC\_Guard}{Q}
+\end{ScopeRules}
+\end{scopeDescription}
+
+A generator expression \texttt{p $\leftarrow$ l, Q} binds elements of
+list $l$ to pattern $p$. $p$ is bound in $Q$, and the declarations of
+both $p$ and $Q$ are exported:
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentThree{\;p $\leftarrow$ l, Q\;}
+      {B}{\tikzChild{\;p\tall\;}}
+      {C}{\tikzChild{\;l\tall\;}}
+      {D}{\tikzChild{\;Q\;}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{A-}{B-};
+    \tikzEdge{A-}{C-};
+    \tikzEdge{A-}{D-};
+    \tikzEdgeRRR{B+}{D-};
+    \tikzEdge{B+}{A+};
+    \tikzEdge{D+}{A+};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{LC\_Generator}{p} \\
+  \RuleImpt{LC\_Generator}{l} \\
+  \RuleImpt{LC\_Generator}{Q} \\
+  \RuleBind{LC\_Generator}{Q}{p} \\
+  \RuleExpt{LC\_Generator}{p} \\
+  \RuleExpt{LC\_Generator}{Q}
+\end{ScopeRules}
+\end{scopeDescription}
+
+Finally, local bindings $decls$ are bound in the rest of the
+qualifiers $Q$, and also exported:
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentTwo{\;let decls, Q\;}
+      {B}{\tikzChild{\;decls\tall\;}}
+      {C}{\tikzChild{\;Q\;}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{A-}{B-};
+    \tikzEdge{A-}{C-};
+    \tikzEdgeRR{B+}{C-};
+    \tikzEdge{B+}{A+};
+    \tikzEdge{C+}{A+};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{LC\_Let}{decls} \\
+  \RuleImpt{LC\_Let}{Q} \\
+  \RuleBind{LC\_Let}{Q}{decls} \\
+  \RuleExpt{LC\_Let}{decls} \\
+  \RuleExpt{LC\_Let}{Q}
+\end{ScopeRules}
+\end{scopeDescription}
+
+
+\subsection{Case Study: Scheme's Named-Let}
+\label{sec:rscope-named-let-example}
+
+The Scheme language standard defines two variants of
+the \texttt{let} sugar. The regular variant of \texttt{let} has the syntax
+\texttt{(let ((x val) ...) body)}, and binds each declaration \texttt{x}
+to the corresponding \texttt{val} in \texttt{body}. The scope of this
+variant can be inferred similarly to how we inferred the scope of
+\texttt{let*} in \cref{sec:rscope-example}.
+
+The other variant is called ``named'' let. Its syntax is
+\texttt{(let f ((x val) ...) body)}, and it behaves like the regular
+\texttt{let} except that it additionally binds \texttt{f} to
+\texttt{(lambda (x ...) body)}. It can thus be used for recursive
+computations, such as reversing a list:
+\begin{lstlisting}
+(define (reverse lst)
+  (let rev ([unreversed lst]
+            [reversed empty])
+    (if (empty? unreversed)
+        reversed
+        (rev (cdr unreversed)
+             (cons (car unreversed) reversed)))))
+\end{lstlisting}
+
+Named-let desugars by the rule:\footnote{
+  We describe Racket's desugaring because it is slightly more clear
+  (using better variable names, and putting the application inside of
+  the \texttt{letrec}). These differences have no effect on scope
+  inference.
+}
+\begin{lstlisting}
+(define-syntax-rule
+  ;;; The named let sugar:
+  (let proc-id ([arg-id init-expr] ...) body)
+  ;;; Desugars into:
+  (letrec ([proc-id (lambda (arg-id ...) body)])
+    (proc-id init-expr ...)))
+\end{lstlisting}
+
+We will represent the \textsc{ast} for named-let expressions with the grammar:
+\begin{Table}
+  $t$ &$::=$&
+    $\NodeRm{Let}{\DeclX\;b\;t}$
+      & ``Named-let: bind initial values $b$ and recursive function $\DeclX$ in $t$'' \\
+    &$|$& $\ldots$ \\
+  $b$ &$::=$&
+    $\NodeRm{Bind}{\DeclX\;t\;b}$
+      & ``Bind $\DeclX$ to $t$, and bind $b$'' \\
+    &$|$&   $\ConstRm{EndBinds}$
+      & ``No more bindings''
+\end{Table}
+
+Translating the desugaring to use this grammar, our system correctly
+infers the binding structure:
+
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentThreeWide{Let}
+      {B}{\tikzChild{proc-id}}
+      {C}{\tikzChild{bindings}}
+      {D}{\tikzChild{body}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{B+}{C-};
+    \tikzEdgeRR{B+}{D-};
+    \tikzEdge{C+}{D-};
+    \tikzEdge{A-}{D-};
+    \tikzEdge{A-}{C-};
+    \tikzEdge{A-}{B-};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{Let}{proc-id} \\
+  \RuleImpt{Let}{bindings} \\
+  \RuleImpt{Let}{body} \\
+  \RuleBind{Let}{bindings}{proc-id} \\
+  \RuleBind{Let}{body}{proc-id} \\
+  \RuleBind{Let}{body}{bindings}
+\end{ScopeRules}
+\end{scopeDescription}
+
+\vspace{1em}
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentThreeWide{Bind}
+      {B}{\tikzChild{arg-id}}
+      {C}{\tikzChild{init-expr}}
+      {D}{\tikzChild{bindings}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{B+}{A+};
+    \tikzEdge{D+}{A+};
+    \tikzEdge{A-}{D-};
+    \tikzEdge{A-}{C-};
+    \tikzEdge{A-}{B-};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\begin{ScopeRules}
+  \RuleImpt{Bind}{arg-id} \\
+  \RuleImpt{Bind}{init-expr} \\
+  \RuleImpt{Bind}{bindings} \\
+  \RuleExpt{Bind}{arg-id} \\
+  \RuleExpt{Bind}{bindings}
+\end{ScopeRules}
+\end{scopeDescription}
+
+\noindent
+While this correctly reflects the scoping of named-let, observe that
+it permits the let-bindings to shadow the function name. This follows
+because \texttt{(arg-id ...)} can shadow
+\texttt{proc-id} in the macro definition. Of course, if a program
+actually did this, it would render the named part of the named-let
+useless! Nevertheless, we faithfully reflect the language, and indeed
+our inferred scope may be a useful diagnostic to the language designer.
+
+\subsection{Case Study: Scheme's \texttt{do}}
+
+Scheme's \texttt{do} expression can be used to perform what
+\texttt{do-while} and \texttt{for} loops might do in another
+language. For instance, this \texttt{do} expression reads three
+numbers off of \texttt{stdin}, before displaying their sum.
+\begin{lstlisting}
+(do ((sum 0)
+     (i 0 (+ i 1)))
+  ((= i 3) (display "The sum is: ") (display sum) (newline))
+    (set! sum (+ sum (string->number (read-line)))))
+\end{lstlisting}
+
+In general, \texttt{do} binds a list of variables [\texttt{sum} and
+\texttt{i}] to initial values [\texttt{0} and \texttt{0}], and then
+repeatedly evaluates the body of the loop [\texttt{(set! sum ...)}]  and
+updates the variables according to optional step expressions
+[\texttt{(+ i 1)}] until a condition [\texttt{(= i 3)}] is met, at which
+point it evaluates a final sequence of expressions [\texttt{(display
+  "The sum is: ") (display sum) (newline)}].
+
+The desugaring of \texttt{do} is given by~\cite[derived forms]{scheme5}:
+\begin{lstlisting}
+  (define-syntax do (syntax-rules ()
+    ((do ((var init step ...) ...)
+         (test expr ...)
+         command ...)
+    (letrec ((loop (lambda (var ...)
+                     (if test
+                       (begin #f expr ...)
+                       (begin command ...
+                        (loop (do "step" var step ...) ...))))))
+      (loop init ...)))
+    ((do "step" x) x)
+    ((do "step" x y) y)))
+\end{lstlisting}
+
+We will focus on the scope of the binding list, as scope inference
+fails on it. Its correct scope is:\\%Newline (strangely necessary)
+\begin{scopeDescription}
+\begin{center}
+\begin{tikzScopeDiagram}
+  \tikzRoot
+    {A}{\tikzParentFour{DoBind}
+      {B}{\tikzChild{var}}
+      {C}{\tikzChild{init}}
+      {D}{\tikzChild{step}}
+      {E}{\tikzChild{binds}}}
+
+  \begin{tikzEdges}
+    \tikzEdge{A-}{B-};
+    \tikzEdge{A-}{C-};
+    \tikzEdge{A-}{D-};
+    \tikzEdge{A-}{E-};
+    \tikzEdge{B+}{A+};
+    \tikzEdge{E+}{A+};
+    \tikzEdgeRRR{B+}{D-};
+    \tikzEdgeLLL{E+}{D-};
+  \end{tikzEdges}
+\end{tikzScopeDiagram}
+\end{center}
+\hspace{3em}%Not sure why these overlap by default.
+\begin{ScopeRules}
+  \RuleImpt{DoBind}{var} \\
+  \RuleImpt{DoBind}{init} \\
+  \RuleImpt{DoBind}{step} \\
+  \RuleImpt{DoBind}{binds} \\
+  \RuleExpt{DoBind}{var} \\
+  \RuleExpt{DoBind}{binds} \\
+  \RuleBind{DoBind}{step}{var} \\
+  \RuleBind{DoBind}{step}{binds}
+\end{ScopeRules}
+\end{scopeDescription}
+
+While our binding language can express this scope, our algorithm is
+unable to handle inferring scope for it: it incorrectly infers that
+\texttt{var} is in scope at \texttt{init}. In more detail, whatever a
+desugaring does, it must at some point take apart the binding
+list. However, once one of the declarations \texttt{var} has been
+removed from the list, it must have a path to the rest of the
+list. Unfortunately that path will put both \texttt{init} \emph{and}
+\texttt{step} in scope of it. Therefore we cannot infer scope for this
+macro. In general, we cannot handle binding lists in which the
+bindings are visible in some expressions within the list
+(\texttt{step}) but not others (\texttt{init}).
+
+This can naturally be fixed by putting \texttt{do} in the core
+language, but can also be addressed by altering the \emph{syntax}
+slightly: separating the \texttt{init} list from the \texttt{step}
+list (which are semantically different entities) in the \textsc{ast}
+would avoid this unwanted conflation.
+More broadly, however, we believe that
+extending scope inference to work on desugaring rules with ellipses
+can solve this problem directly, as it is only the intermediate
+steps where the binding list is deconstructed that pose a problem.
+This raises questions that we leave for future work.\footnote{
+  What do scope specifications over arbitrary-length lists look like?
+  Can the $i$th element be bound in the $(i\!+\!1)$st element (e.g., for
+  \texttt{let*})? How about $(i\!+\!1)$ in $i$, or $i$ in $j$ for all $i$ and $j$? How
+  does scope inference handle these cases, while still being
+  correct, fast, and hygienic?}
+
+  \subsection{Catalog of Scoping Rules (Extended)}
+  \label{sec:rscope-catalog}
+  In \cref{fig:rscope-catalog}, we demonstrate the expressiveness of our
+  scoping rule language by showcasing a small catalog of scoping rules.
+  They are shown diagrammatically. Some arrows have been omitted when
+  they are implied by transitivity (e.g., the arrow between
+  \ConstRm{Lambda} and its \ConstRm{(body)} is omitted). The names written for the
+  children of each term (such as ``(arg)'' and ``$\DeclX$'') are
+  only expository, but meant to suggest a grammar the language might follow.
+  
+  \emph{Single-binding Lambda and Let}
+  shows scoping rules for Lambda and Let when they have only a single
+  binding position. \emph{Multi-argument Lambda} extends this to functions
+  of more than one argument. Notice that the scoping rule for Lambda
+  is the same in each case: the only difference is that one is meant to
+  be used with a single declaration while the other is meant to use a
+  Param.
+  
+  The next three rules describe the binding for Scheme-style Let, Let*,
+  and Letrec let-bindings. Akin to Lambda, the rules for various Lets
+  are identical; only their bindings differ.
+  
+  \emph{Pattern Matching} shows a rule for (nestable) pattern
+  matching (or deconstructive assignment to) a pair. Its ``left'' and
+  ``right'' children would typically be variable declarations, although
+  they could themselves be nested pattern matches. Its ``MatchPair''
+  construct can be used in any of the binding sites of the other scoping
+  constructs.
+  
+  Finally, we show the (correctly) inferred scope for the three sugars
+  in Pyret that bind values:
+  \begin{itemize}
+  
+  \item For ``loops'' are actually syntactic sugar for the application of a
+    higher-order function (like \Code{map}).
+  
+  \item Pyret has both statement and expression forms of \Code{let}. The
+    statements desugar into \Code{let} expressions, which then merge
+    with adjacent \Code{let}s to form a single binding block.
+  
+  \item Pyret function declarations desugar into lambdas with explicit
+    recursive bindings.
+  
+  \end{itemize}
+  
+  \begin{figure*}
+    \begin{center}
+    \begin{tabular}{p{8em} c @{\hspace{-1em}} c @{\hspace{-1em}} c}
+  
+    \textbf{Single-binding Lambda and Let}&
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+          {A}{\tikzParentTwo{Lambda1}
+            {B}{\tikzChild{$\DeclX$}}
+            {C}{\tikzChild{(body)}}}
+      \begin{tikzEdges}
+        \tikzEdge{A-}{B-};
+        \tikzEdgeLL{B+}{C-};
+      \end{tikzEdges}
+    \end{tikzScopeDiagram}&
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+          {A}{\tikzParentThree{Let1}
+            {B}{\tikzChild{$\DeclX$}}
+            {C}{\tikzChild{(val)}}
+            {D}{\tikzChild{(body)}}}
+      \begin{tikzEdges}
+        \tikzEdge{A-}{B-};
+        \tikzEdge{A-}{C-};
+        \tikzEdgeLL{B+}{D-};
+      \end{tikzEdges}
+    \end{tikzScopeDiagram}
+  
+    \\
+  
+    \textbf{Multi-argument Lambda}&
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+          {A}{\tikzParentTwo{Lambda}
+            {B}{\tikzChild{(params)}}
+            {C}{\tikzChild{(body)}}}
+      \begin{tikzEdges}
+        \tikzEdge{A-}{B-};
+        \tikzEdgeLL{B+}{C-};
+      \end{tikzEdges}
+    \end{tikzScopeDiagram}&
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+          {A}{\tikzParentTwo{Param}
+            {B}{\tikzChild{$\DeclX$}}
+            {C}{\tikzChild{(params)}}}
+      \begin{tikzEdges}
+        \tikzEdge{A-}{B-};
+        \tikzEdge{A-}{C-};
+        \tikzEdge{B+}{A+};
+        \tikzEdge{C+}{A+};
+      \end{tikzEdges}
+    \end{tikzScopeDiagram}
+  
+    \\
+  
+    \textbf{Multi-arm Let}&
+      \begin{tikzScopeDiagram}
+        \tikzRoot
+            {A}{\tikzParentTwo{Let}
+              {B}{\tikzChild{(binds)}}
+              {C}{\tikzChild{(body)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdgeLL{B+}{C-};
+        \end{tikzEdges}
+      \end{tikzScopeDiagram}&
+      \begin{tikzScopeDiagram}
+        \tikzRoot
+            {A}{\tikzParentThree{Bind}
+              {B}{\tikzChild{$\DeclX$}}
+              {C}{\tikzChild{(val)}}
+              {D}{\tikzChild{(binds)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdge{A-}{C-};
+          \tikzEdge{A-}{D-};
+          \tikzEdge{B+}{A+};
+          \tikzEdge{D+}{A+};
+        \end{tikzEdges}
+      \end{tikzScopeDiagram}
+  
+      \\
+  
+      \textbf{Multi-arm Let* (Pyret)}&
+      \begin{tikzScopeDiagram}
+        \tikzRoot
+            {A}{\tikzParentTwo{Let*}
+              {B}{\tikzChild{(binds)}}
+              {C}{\tikzChild{(body)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdgeLL{B+}{C-};
+        \end{tikzEdges}
+      \end{tikzScopeDiagram}&
+      \begin{tikzScopeDiagram}
+        \tikzRoot
+            {A}{\tikzParentThree{Bind*}
+              {B}{\tikzChild{$\DeclX$}}
+              {C}{\tikzChild{(val)}}
+              {D}{\tikzChild{(binds)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdge{A-}{C-};
+          \tikzEdgeLL{B+}{D-};
+          \tikzEdge{D+}{A+};
+        \end{tikzEdges}
+      \end{tikzScopeDiagram}
+      
+      \\
+  
+      \textbf{Multi-arm Letrec}&
+      \begin{tikzScopeDiagram}
+        \tikzRoot
+            {A}{\tikzParentTwo{Letrec}
+              {B}{\tikzChild{(binds)}}
+              {C}{\tikzChild{(body)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdgeLL{B+}{C-};
+        \end{tikzEdges}
+      \end{tikzScopeDiagram}&
+      \begin{tikzScopeDiagram}
+        \tikzRoot
+            {A}{\tikzParentThreeWide{Bindrec}
+              {B}{\tikzChild{$\DeclX$}}
+              {C}{\tikzChild{(val)}}
+              {D}{\tikzChild{(binds)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdge{B+}{A+};
+          \tikzEdgeRR{B+}{D-};
+          \tikzEdgeLL{D+}{B-};
+          \tikzEdge{B+}{C-};
+        \end{tikzEdges}
+      \end{tikzScopeDiagram}
+  
+    \\
+      
+    \textbf{Pattern Matching}&
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+          {A}{\tikzParentTwo{MatchPair}
+            {B}{\tikzChild{(left)}}
+            {C}{\tikzChild{(right)}}}
+      \begin{tikzEdges}
+        \tikzEdge{A-}{B-};
+        \tikzEdge{A-}{C-};
+        \tikzEdge{B+}{A+};
+        \tikzEdge{C+}{A+};
+      \end{tikzEdges}
+    \end{tikzScopeDiagram}
+  
+    \\
+  
+    \textbf{For Loops (Pyret)}&
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+        {A}{\tikzParentThreeWide{For}
+          {B}{\tikzChild{(iter)}}
+          {C}{\tikzChild{(binds)}}
+          {D}{\tikzChild{(body)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdge{A-}{C-};
+          \tikzEdge{A-}{D-};
+          \tikzEdgeRRR{C+}{D-};
+        \end{tikzEdges}
+    \end{tikzScopeDiagram}&
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+        {A}{\tikzParentThree{Bindfor}
+          {B}{\tikzChild{$\DeclX$}}
+          {C}{\tikzChild{(val)}}
+          {D}{\tikzChild{(binds)}}}
+        \begin{tikzEdges}
+          \tikzEdge{A-}{B-};
+          \tikzEdge{A-}{C-};
+          \tikzEdge{A-}{D-};
+          \tikzEdge{B+}{A+};
+          \tikzEdge{D+}{A+};
+        \end{tikzEdges}
+    \end{tikzScopeDiagram}
+  
+    \\
+  
+    \textbf{Functions (Pyret)}&
+     \multicolumn{2}{c}{
+    \begin{tikzScopeDiagram}
+      \tikzRoot
+        {A}{\tikzParentFour{Function}
+          {B}{\tikzChild{F}}
+          {C}{\tikzChild{(params)}}
+          {D}{\tikzChild{(body)}}
+          {E}{\tikzChild{(stmts)}}}
+         \begin{tikzEdges}
+           \tikzEdge{A-}{B-};
+           \tikzEdge{A-}{C-};
+           \tikzEdge{A-}{D-};
+           \tikzEdge{A-}{E-};
+           \tikzEdge{B+}{A+};
+           \tikzEdge{E+}{A+};
+           \tikzEdgeLL{B+}{C-};
+           \tikzEdgeLL{C+}{D-};
+           \tikzEdgeR{B+}{E-};
+         \end{tikzEdges}
+    \end{tikzScopeDiagram}
+    }
+    \\
+  
+    \end{tabular}
+    \end{center}
+      
+  \caption{Catalog of Scoping Rules %\\ Newline here would be nice, but breaks the build
+    (Arrows that follow from transitivity omitted)}
+  \label{fig:rscope-catalog}
+  \end{figure*}
+
+
+
+\section{Proof of Hygiene}
+\label{sec:rscope-hygiene}
+
+We will show that our scope inference algorithm (when successful)
+always produces surface scoping rules such that desugaring is
+hygienic. Again, we say that a desugaring $f$ is hygienic when it
+preserves $\alpha$-equivalence:
+\[ \SaysScopeEqa[\SigmaSurf]{s}{t} \text{\quad implies\quad }
+   \SaysScopeEqa[\SigmaCore]{f(s)}{f(t)}
+\]
+We will show this by way of a theorem that provides a necessary and
+sufficient condition for hygiene,
+assuming that desugaring obeys our assumptions.
+Recall that our definition of $\alpha$-equivalence is
+strong, including that both terms are well-bound; thus we will need
+to show that the result of desugaring remains well-bound (so long as
+its input is).
+
+To discuss the properties required for this theorem,
+we will divide variables into categories:
+variables in $f(t)$ are either New (fresh) or Copied from $t$,
+and variables in $t$ are either Used (if they were copied) or Unused
+otherwise. Formally,
+let $\phi$ be the mapping from \emph{copied} variables in $f(t)$ to
+their sources in $t$, and:
+\begin{Table}
+  $\mathit{Used}$   &$\Defeq$& $\Range{\phi}$ \\
+  $\mathit{Unused}$ &$\Defeq$& $\Op{vars}{t} - \Range{\phi}$ \\
+  $\mathit{Copied}$ &$\Defeq$& $\Domain{\phi}$ \\
+  $\mathit{New}$    &$\Defeq$& $\Op{vars}{f(t)} - \Domain{\phi}$
+\end{Table}
+(where $\Op{vars}{t}$ is the set of \emph{all} variables in $t$).
+
+We now turn to the properties required for hygiene.
+We will first list some clearly necessary properties, and then show
+that they are also sufficient.
+
+First, $f$ must avoid variable capture; thus $f(t)$ cannot contain
+bindings between new variables (introduced by $f$) and copied
+variables (taken from $t$):
+
+\begin{property} \label{rscope-prop1}
+  \whitePhantom{.}
+\begin{LongTable}
+  $\forall{\RefnX \!\in\! \mathit{Copied}}.$
+  && $\forall{\DeclX \!\in\! \mathit{New}}.$
+  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+
+  $\forall{\RefnX \!\in\! \mathit{New}}.$
+  && $\forall{\DeclX \!\in\! \mathit{Copied}}.$
+  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+\end{LongTable}
+\end{property}
+
+Second, $f$ must preserve binding structure among the variables
+it copies:\footnote{
+  This property does not appear in prior work on hygiene because such
+  work typically assumes that the binding structure of a surface term
+  is \emph{defined by} the binding structure of its desugaring,
+  causing this property to be true by definition.
+}
+
+\begin{property} \label{rscope-prop2}
+  \whitePhantom{.}
+\begin{LongTable}
+  $\forall{\RefnX,\DeclX \!\in\! \mathit{Copied}}.$ \\
+     $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$ iff 
+     $\SaysScopeBound{t}{\phi(\RefnX)}{\phi(\DeclX)}$
+\end{LongTable}
+\end{property}
+
+Finally, $f$ must preserve well-boundedness. Thus, it must not cause a
+reference to become unbound or introduce a new unbound reference:
+
+\begin{property} \label{rscope-prop3}
+  \whitePhantom{.}
+\begin{LongTable}
+  $\forall{\RefnX \!\in\! \mathit{Used}}.$
+  && $\forall{\DeclX \!\in\! \mathit{Unused}}.$
+  && $\SaysScopeNotBound{t}{\RefnX}{\DeclX}$ \\
+
+  $\forall{\RefnX \!\in\! \mathit{New}}.$
+  && $\exists!{\DeclX \!\in\! \mathit{New}}.$
+  && $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$ \\
+\end{LongTable}
+\end{property}
+
+While these three properties are clearly necessary, it is by no means
+clear that they are sufficient to guarantee $\alpha$-equivalence
+preservation. However, the following theorem shows that they
+are both necessary and sufficient to ensure that
+$f$ preserves $\alpha$-equivalence:
+
+\begin{theorem}[Fundamental Hygiene Theorem] \label{thm:rscope-hygiene}
+Let $f$ be a desugaring function over terms with respect to
+scoping rules $\Sigma$ that obeys the assumptions of \cref{sec:rscope-des-assumptions}.
+Then $f$ respects $\alpha$-equivalence iff
+for every (well-bound) input term $t$ (numbering by property number):
+\begin{LongTable}
+  1. $\forall{\RefnX \!\in\! \mathit{Copied}}.$
+  && $\forall{\DeclX \!\in\! \mathit{New}}.$
+  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+
+  1. $\forall{\RefnX \!\in\! \mathit{New}}.$
+  && $\forall{\DeclX \!\in\! \mathit{Copied}}.$
+  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+
+  2. $\forall{\RefnX \!\in\! \mathit{Copied}}.$
+  && $\forall{\DeclX \!\in\! \mathit{Copied}}.$
+  && $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$ \\
+  &&&& iff\; $\SaysScopeBound{t}{\phi(\RefnX)}{\phi(\DeclX)}$ \\
+
+  3. $\forall{\RefnX \!\in\! \mathit{Used}}.$
+  && $\forall{\DeclX \!\in\! \mathit{Unused}}.$
+  && $\SaysScopeNotBound{t}{\RefnX}{\DeclX}$ \\
+
+  3. $\forall{\RefnX \!\in\! \mathit{New}}.$
+  && $\exists!{\DeclX \!\in\! \mathit{New}}.$
+  && $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$
+\end{LongTable}
+where $\phi$ is the mapping from \emph{copied} variables in $f(t)$ to
+their sources in $t$.
+\end{theorem}
+
+  \begin{proof}\label{proof:rscope-hygiene}
+    $f$ respects $\alpha$-equivalence iff (i) $f$ maps well-bound terms
+    to well-bound terms, and (ii) $\alpha$-renaming any declaration
+    $\DeclX$ in any well-bound term $t$ does not change the binding
+    structure of $f(t)$.
+  
+    Address parts (i) and (ii) in reverse order.
+  
+    For part (ii), do a case analysis on $\DeclX$. In both cases, let
+    $t$ be the input term.
+    \begin{enumerate}
+    \item ($\DeclX \in \mathit{Unused}$) $\alpha$-varying $\DeclX$ renames
+      both $\DeclX$ and also $\RefnX$ for every $\RefnX \Bound \DeclX$
+      in $t$.
+      Renaming $\DeclX$ itself is fine: since it doesn't appear in
+      $f(t)$, it cannot change the binding structure of $f(t)$.
+      Now do case analysis on every such $\RefnX$:
+      \begin{enumerate}
+        \item ($\RefnX \in \mathit{Unused}$) Similarly, this case is OK
+          because $\RefnX$ does not appear in $f(t)$.
+        \item ($\RefnX \in \mathit{Used}$) This case is problematic:
+          renaming $\RefnX$ in $t$ will rename $\Image{\RefnX}$ in $f(t)$,
+          which will cause its binding to change. Thus:
+          \begin{equation}
+            \Forall{\RefnX \in \mathit{Used}}
+            \Forall{\DeclX \in \mathit{Unused}}
+            \SaysScopeNotBound{t}{\RefnX}{\DeclX}
+          \end{equation}
+      \end{enumerate}
+    \item ($\DeclX \in \mathit{Used}$) $\alpha$-varying $\DeclX$
+      renames both $\DeclX$ and $\RefnX$ for every $\RefnX \Bound \DeclX$
+      in $t$. Renaming $\DeclX$ is problematic iff
+      $\Exists{\RefnXi}$ s.t. $\SaysScopeBound{f(t)}{\RefnXi}{\DeclXi}$
+      where $\DeclXi \in \Image{\DeclX}$ but $\RefnXi \not\in
+      \Image{\RefnX}$ for some $\RefnX \Bound \DeclX$
+      (hence $\RefnXi$'s binding will change when $\DeclX$ is renamed).
+      Thus:
+      \begin{equation}
+        \text{If } \SaysScopeBound{f(t)}{\RefnXi}{\DeclXi}
+        \text{ and } \phi(\DeclXi) \text{ exists},
+        \text{ then } \phi(\RefnXi) \text{ exists and }
+        \phi(\RefnXi) \Bound \phi(\DeclXi)
+      \end{equation}
+  
+      That dealt with the direct effects of renaming $\DeclX$.
+      Now consider the effects of renaming $\RefnX$ for some
+      $\SaysScopeBound{t}{\RefnX}{\DeclX}$. Do case analysis on every such $\RefnX$:
+      \begin{enumerate}
+        \item ($\RefnX \in \mathit{Unused}$) Renaming $\RefnX$ in $t$ is
+          OK since it does not appear in $f(t)$.
+        \item ($\RefnX \in \mathit{Used}$) Consider some
+          $\RefnXi \in \Image{\RefnX}$.
+          Let $\RefnXi \Bound \DeclXi \in f(t)$ (it must be bound, since
+          $f(t)$ is well-bound).
+          For the binding of $\RefnXi$ to not change when $\DeclX$ (and $\RefnX$) is
+          renamed, $\DeclXi$ must be in $\Image{\DeclX}$. Thus:
+          \begin{equation}
+            \text{If } \SaysScopeBound{f(t)}{\RefnXi}{\DeclXi}
+            \text{ and } \phi(\RefnXi) \text{ exists },
+            \text{ then } \phi(\DeclXi) \text{ exists, and }
+            \phi(\RefnXi) \Bound \phi(\DeclXi)
+          \end{equation}
+      \end{enumerate}
+    \end{enumerate}
+    
+    For part (i), $f(t)$ must be well-bound. The only bindings
+    not covered by the above cases are bindings from
+    $\mathit{New}$ to $\mathit{New}$. Thus:
+    \begin{equation}
+      \Forall{\RefnX \in \mathit{New}}
+      \ExistsUnique{\DeclX \in \mathit{New}}
+      \RefnX \Bound \DeclX \in f(t)
+    \end{equation}
+  
+    This gives four equations that hold iff $f$ is hygienic.
+    Equation (1) corresponds to the first part of the theorem's Property
+    (3). Equations (2) and (3) together correspond to Properties (1) and
+    (2). Finally, equation (4) corresponds to the second part of
+    Property (3).
+  \end{proof}
+
+We can now see that $\Op{inferScope}{}$ is hygienic. Property 1 is
+easily ensured by giving variables fresh names, which is one of our
+assumptions about desugaring. Property 2 follows from our inference
+process: since desugaring preserves scope by \cref{thm:rscope-resugar},
+bindings between variables must not change. Finally, property 3 is
+exactly what $\Op{checkScope}{}$ checks.
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% Future work %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% \section{Future Work} \label{sec:future}
+
+%% We have shown how scope can be resugared in a principled way, modulo
+%% certain assumptions. However, some languages violate these
+%% assumptions. Here, we discuss three important directions for bridging
+%% the gap to these languages.
+
+%% \subsection{Breaking Hygiene} \label{sec:future-hygiene}
+%% Certain language constructs break hygiene by definition. Most
+%% commonly, a construct may \emph{implicitly} declare a variable. For
+%% instance, \Code{this} may be implicitly bound in the body of a
+%% method. We believe that allowing selective hygiene violations
+%% like this should be a mostly straightforward extension of the theory.
+%% As a roadmap:
+%% \begin{itemize}
+%% \item The definition of {\sap} should change, to allow constant
+%%   variable names to be part of the partial order. For instance,
+%%   \Code{method} may have $(\Code{this}, 2) \in \Sigma[\Code{method}]$,
+%%   assuming that $2$ names the method's body.
+%% \item The declarative and algorithmic scope checking rules will need
+%%   to be extended with rules for constant names; this will require a
+%%   large expansion of the proof of \cref{thm:rules}.
+%% \item We believe that scope resugaring will be largely unmodified:
+%%   instead of lifting partial orders over holes, it will lift partial orders over
+%%   holes plus constant names (desugaring rules will need to declare
+%%   whether variables they introduce are meant to be capturing or
+%%   non-capturing, as already happens in some macro systems~\cite{syntax-case}).
+%% \end{itemize}
+
+%% \subsection{Extending Sugar Rules}
+%% In this paper, we assume that desugaring rules are pattern-based and
+%% name-agnostic (\cref{def:name-agnostic}).
+%% While the name-agnosticism assumption is part and
+%% parcel of hygiene, the pattern restriction can potentially be
+%% lifted. A particularly attractive direction is to develop a
+%% binding-safe meta programming language based on {\sap}. The primary
+%% difficulty is that the embedded language's scope partial order must be
+%% expressed in the host language's type system (for instance,
+%% a pair $(a, b)$ where $a$ and $b$ are embedded-language terms
+%% and $b$ is in scope of $a$ must have a \emph{different type} than a
+%% pair of terms $(a, b)$ where neither $a$ nor $b$ are in scope of
+%% the other).
+
+%% We have developed an exploratory prototype of such a system in
+%% Haskell, encoding scope partial orders in Haskell's type
+%% system. It aims to ensure that functions on terms in the embedded
+%% language preserve binding (i.e., given a term as input containing a
+%% bound reference $x$, no function can produce an output where that same
+%% variable $x$ is bound by a different declaration). We will submit it
+%% for artifact evaluation.
+
+%% \subsection{Extending the Binding Language}
+%% While our binding language compares favorably to others
+%% (\refsec{sec:related}), there are still binding constructs
+%% it cannot describe.
+%% \begin{description}
+%% \item[Modules] ``Modules'', as described in Neron et al.s'
+%%   scope graphs~\cite{neron-scope},
+%%   cover not only importing and exporting modules,
+%%   but also other uses of ``explicit name spaces'' such as OO classes.
+%%   While we have found a small extension of our binding language to
+%%   handle modules, it relies on breaking the transitivity of {\sap},
+%%   which is an essential axiom used, e.g., in \cref{thm:rules}.
+%%   Therefore we do not yet know how namespacing constructs can be
+%%   resugared.
+
+%% \item[Visibility Annotations] It is sometimes useful to declare how
+%%   visible a declaration should be, e.g., private to a module or public
+%%   to other modules. This seems closely linked to the above
+%%   ``modules'', since the visibility is usually relative to some
+%%   namespace boundary (such as the body of the module it is declared
+%%   in).
+%% \item[Records] Another useful extension would be handling records and
+%%   dot-lookup. Doing so clearly requires a type system for the surface
+%%   language, which is far beyond the scope of this work. Ideally, the
+%%   type system would be acquired by resugaring the core language type
+%%   system. Such a ``type resugaring'' would be very valuable in other
+%%   settings too.
+%% \end{description}
+
+
+\section{Related Work}
+\label{sec:rscope-related}
+
+
+This work bears some similarity to our previous work on resugaring
+\cite{pombrio-resugar,pombrio-resugar-hygienic}:
+take part of a core
+language and lift or \emph{resugar} it to the surface
+language. However, our previous work
+lifted \emph{evaluation steps} though sugar
+\emph{dynamically}, while we now lift \emph{scoping rules} through sugar
+\emph{statically}.
+
+Below, we discuss work related to two aspects of our approach to
+scope inference. However, none of them infer scope through syntactic
+sugar; we therefore believe that the central contribution of this
+paper is novel.
+
+\subsection{Hygienic Expansion}
+
+The real goal of hygienic expansion is to preserve
+$\alpha$-equivalence: $\alpha$-renaming a program should not change
+its meaning. Typically, however, $\alpha$-equivalence is only
+\emph{defined} for the core language. Thus, traditional approaches to
+hygiene have had to focus on avoiding specific issues like
+variable capture~\cite{hygienic-macros}.
+Recent work by \cite{adams-hygiene} advances the theory by
+giving an algorithm-independent set of issues to
+avoid. However, even this work lacks the ground truth of
+$\alpha$-equivalence preservation to base its claims on.
+
+In contrast, \cite{herman-hygiene}
+advocate that sugar specify the binding structure of the constructs
+they introduce, and build a system that does so.
+\cite{stansifer-romeo} follow with a more powerful system
+called Romeo based on the same approach.
+(We will discuss the binding languages used by these two tools in the
+next subsection.)
+Since we \emph{infer} scope rules for the surface language, we can
+verify that desugaring preserves $\alpha$-equivalence without
+requiring scope annotations on sugars.
+
+\cite{erdweg-hygiene} put forward an interesting alternative approach to hygiene
+with the \emph{name-fix} algorithm.
+\emph{Name-fix} assumes that the scoping for the surface language is
+known. Instead of using this information to \emph{avoid} unwanted
+variable capture in the first place, \emph{name-fix} uses it
+to \emph{detect} variable capture and rename variables as necessary to
+repair it after the fact. Erdweg et al.\ prove that \emph{name-fix}
+preserves $\alpha$-equivalence, but for a \emph{weaker} definition
+of $\alpha$-equivalence than ours that doesn't include
+well-boundedness (thus allowing desugaring to produce unbound variables).
+
+Our work differs from the above work: we assume that scope is defined
+\emph{only} for the core language, and not for the
+surface language (\`a la Erdweg) or for individual rewrite rules (\`a la Herman).
+This assumption is also made by traditional capture-avoiding work on
+hygiene. However, by inferring scoping rules from the core to
+the surface language, we gain two benefits: (i) we can prove that our
+approach is correct with respect to the \emph{ground truth} of
+$\alpha$-equivalence preservation (\cref{thm:rscope-hygiene}), and (ii)
+we can produce a set of standalone scoping rules for the surface
+language. To our knowledge, this approach has not been taken before.
+
+
+\subsection{Scope}
+
+We will divide related work on scoping into two main categories.
+First, ``Modeling Scope'' discusses ways in which the scope of a term
+can be \emph{represented}. Our description of scope as a
+preorder (\cref{sec:rscope-sap}) falls in this category.
+Second, ``Binding Specification Languages'' discusses ways in which scope
+can be \emph{determined} for a given term. Our binding
+language (\cref{sec:rscope-rules}) falls in this category.
+
+\paragraph{Modeling Scope}
+
+Our description of {\sap} is similar to the view
+expressed by \cite{flatt:scope} in ``Binding as Sets of Scopes''.\footnote{
+  These were discovered independently: {\sap} arose from some
+  of the ideas from Romeo~\cite{stansifer-romeo}.
+}
+In fact, Flatt's notion of scope can be expressed as a preorder,
+as we show in \cref{sec:rscope-sos}.
+
+\cite{neron-scope} describe \emph{scope graphs}, which are also based on a
+similar view, but have a more complicated set of definitions.
+Unlike {\sap}, however, scope graphs include mechanisms for handling
+module scope, which gives it the ability to model both modules and
+also other constructs like objects and field lookup.
+Our {\sap} binding language can actually be extended to
+handle modules, but doing so breaks our transitivity
+assumption, which we need to infer scope, so we have left it out of
+this paper and consider this a problem for
+future work.
+
+\paragraph{Binding Specification Languages}
+
+Our preorder-based binding specification language is novel, but
+similar in expressiveness to many others.  It is perhaps most similar
+to \cite{stansifer-romeo}'s Romeo.
+The primary difference between the two is that
+Romeo has slightly more expressive power: given two declarations
+$\DeclX[1]$ and $\DeclX[2]$, it is possible in Romeo for $\DeclX[1]$
+to shadow $\DeclX[2]$ in one part of a term, but $\DeclX[2]$ to shadow
+$\DeclX[1]$ in a different part of a term.\footnote{
+  In Romeo, this would be expressed using the $\rhd$ combinator,
+  as $\beta_1 \rhd \beta_2$ and $\beta_2 \rhd \beta_1$.
+} It is not clear
+if this power has any practical applications, but we choose to avoid
+it both for aesthetic reasons (we do not believe two declarations
+should be allowed to shadow one another), and to simplify scope
+inference (which would otherwise have to manipulate formulas over
+Romeo's combinators, instead of merely preorders).
+
+In a similar vein, \cite{sewell-ott-jfp} present a semantics engineering
+workbench called Ott, which includes a comparable binding
+specification language. Like Romeo, Ott would allow two declarations
+to each shadow one another in different places. Furthermore, it gives
+additional power, by allowing terms to \emph{name} what they provide.
+For instance, a term could export \emph{two} binding lists, one named
+``value-bindings'' and one named ``type-bindings''.
+
+\cite{weirich-scope} present a binding specification language called
+Unbound, which can be expressed using {\sap} (and
+hence is no more expressive than it).
+They implement Unbound in Haskell, and give language-agnostic
+implementations of operations such as constructing and deconstructing
+terms, determining $\alpha$-equivalence, and performing substitution.
+In Unbound, binding is specified via a set of \emph{binding combinators}.
+  These binding combinators can be expressed as a preorder.\footnote{
+  The translation of Unbound to {\sap} is as follows. \Code{Name}
+  constructs a declaration or reference, depending on whether it is a
+  Term or Pattern. Patterns $P$ have scoping rules that state
+  $\SigPExpt{i}$ and $\SigPImpt{i}$ for every $i$. Terms $T$ have
+  scoping rules that state $\SigImpt{T}{i}$ for every $i$. Finally,
+  each of the four binding combinators obey the scoping rule for
+  patterns or for terms, as appropriate, in addition to the following
+  facts:
+  \begin{center}
+  \begin{tabular}{l l @{\quad} l l}
+    Bind $P$ $T$   & $\{\SigBind{\text{Bind}}{2}{1}\}$ &
+    Embed $T$      & $\emptyset$ \\
+    Rebind $P$ $P$ & $\{\SigBind{\text{Rebind}}{2}{1}\}$ &
+    Rec $P$        & $\{\SigBind{\text{Rec}}{1}{1}\}$
+  \end{tabular}
+  \end{center}
+}
+
+There are many more binding specification
+languages~\cite{aczel-church-rosser,pottier-caml,nabl}.
+We have chosen what we believe to be a representative sample for
+comparison. We have shown that our binding specification language
+compares favorably in expressiveness, while simultaneously being
+simple enough to enable scope inference.
+
+\section{Conclusion and Future Work}
+We have presented what we believe is the first algorithm for
+inferring scoping rules through syntactic sugar. It makes use
+of our description of scope as a preorder in
+\cref{sec:rscope-sap}, and our binding language for specifying the
+scope of a programming language in \cref{sec:rscope-rules}. The case studies
+in \cref{sec:rscope-impl} show that all of the aspects of this paper
+are able to deal with many interesting scoping constructs from real
+languages.
+
+We see three clear directions in which to try to extend scope
+inference. First, support for ellipses in sugar definitions would make
+writing sugars easier. Second, allowing named imports and exports---\`a
+la Ott~\cite{sewell-ott-jfp}---would make sugars like \texttt{do}
+inferable.  Third, modules---\`a la Scope Graphs~\cite{neron-scope}---are
+necessary for inferring scope for modules and for classes. These last
+two changes are relatively straightforward extensions to our binding
+language, but research questions when applied to scope inference.
+
+\paragraph{Acknowledgements}.[TODO]
+We thank Paul Stansifer, Sebastian Erdweg, and Matthew Flatt for
+their feedback, and the anonymous reviewers who provided helpful
+feedback on the paper. This work was partially supported by the NSF.
+
+\bibliography{justin}
+
+\newpage
+
+\begin{figure*}[h!]
+  \begin{sideways}
+  \begin{minipage}{18cm}
+    \small
+    \begin{center}\textbf{SA $\to$ SD}\end{center}
+    \begin{Table}&&
+      \inference[SA-Import]
+        {\SaysScopeS{t_i}{a}{\im t_i} \quad
+         \SigPImpt{i}}
+        {\SaysScopeS{\NodeStd}{a}{\im{}\NodeStd}}
+    \\ \\ &$\Longrightarrow$&
+    \inference[SD-Trans]
+      {\inference[S-Lift]
+        {\SaysScopeS{t_i}{a}{\im t_i}}
+        {\SaysScopeS{\NodeStd}{a}{\im t_i}}
+      \quad
+      \inference[SD-Import]
+        {\SigPImpt{i}}
+        {\SaysScopeS{\NodeStd}{\im t_i}{\im \NodeStd}}}
+      {\SaysScopeS{\NodeStd}{a}{\im \NodeStd}}
+    \\ \\ &&
+      \inference[SA-Export]
+        {\SigPExpt{i} \quad
+         \SaysScopeS{t_i}{\ex t_i}{a}}
+        {\SaysScopeS{\NodeStd}{\ex{}\NodeStd}{a}}
+    \\ \\ &$\Longrightarrow$&
+    \inference[SD-Trans]
+      {\inference[SD-Export]
+        {\SigPExpt{i}}
+        {\SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex t_i}}
+      \quad
+      \inference[S-Lift]
+        {\SaysScopeS{t_i}{\ex t_i}{a}}
+        {\SaysScopeS{\NodeStd}{\ex t_i}{a}}\phantom{}}
+      {\SaysScopeS{\NodeStd}{\ex \NodeStd}{a}}
+    \\ \\ &&
+    \inference[SA-Bind]
+        {\SaysScopeS{t_i}{a}{\im t_i} \quad
+         \SigPBind{i}{j} \quad
+         \SaysScopeS{t_j}{\ex t_j}{b}}
+        {\SaysScopeS{\NodeStd}{a}{b}}
+    \\ \\ &$\Longrightarrow$&
+    \inference[SD-Trans$^2$]
+      {\hspace{-3em}
+        \inference[S-Lift]
+        {\SaysScopeS{t_i}{a}{\im t_i}}
+        {\SaysScopeS{\NodeStd}{a}{\im t_i}}
+      \quad
+      \inference[SD-Bind]
+        {\SigPBind{i}{j}}
+        {\SaysScopeS{\NodeStd}{\im t_i}{\ex t_j}}
+      \quad
+      \inference[S-Lift]
+        {\SaysScopeS{t_j}{\ex t_j}{b}}
+        {\SaysScopeS{\NodeStd}{\ex t_j}{b}}\phantom{}}
+      {\SaysScopeS{\NodeStd}{a}{b}}
+      \\ \\
+    \end{Table}
+
+  \end{minipage}
+  \end{sideways}
+  \caption{Proof of \cref{thm:rscope-rules}}
+  \label{fig:rscope-rules-proof-1}
+\end{figure*}
+
+\begin{figure*}[h!]
+  \begin{sideways}
+  \begin{minipage}{18cm}
+    \small
+    
+    \begin{center}\textbf{SD $\to$ SA}\end{center}
+  
+    \begin{Table}&&
+    \inference[SD-Export]{
+      \SigPExpt{i}
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex t_i}
+    }
+    \quad$\Longrightarrow$\quad
+    \inference[SA-Export]{
+      \SigPExpt{i} \quad
+      \inference[S-Refl2]{
+      }{
+        \SaysScopeS{t_i}{\ex t_i}{\ex t_i}
+      }
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex t_i}
+    }
+    \\ \\ &&
+    \inference[SD-Import]{
+      \SigPImpt{i}
+    }{
+      \SaysScopeS{\NodeStd}{\im t_i}{\im \NodeStd}
+    }
+    \quad$\Longrightarrow$\quad
+    \inference[SA-Import]{
+      \SigPImpt{i}
+      \quad
+      \inference[S-Refl1]{
+      }{
+        \SaysScopeS{t_i}{\im t_i}{\im t_i}
+      }
+    }{
+      \SaysScopeS{\NodeStd}{\im t_i}{\im \NodeStd}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[S-Refl1]{}{\SaysScopeS{t}{\im t}{\im t}}
+      \quad
+      \inference{D}{\SaysScopeS{t}{\im t}{a}}\phantom{}
+    }{
+      \SaysScopeS{t}{\im t}{a}
+    }
+    \quad$\Longrightarrow$\quad
+    \inference{D}{\SaysScopeS{t}{\im t}{a}}
+    \qquad \text{(likewise for S-Refl2)}
+    \\ \\ &&
+    \inference[SD-Bind]{
+      \SigPBind{i}{j}
+    }{
+      \SaysScopeS{\NodeStd}{\im t_i}{\ex t_j}
+    }
+    \quad$\Longrightarrow$\quad
+    \inference[SA-Bind]{
+      \inference[S-Refl1]{}{\SaysScopeS{t_i}{\im t_i}{\im t_i}}
+      \quad
+      \SigPBind{i}{j}
+      \quad\phantom{}
+      \inference[S-Refl2]{}{\SaysScopeS{t_j}{\ex t_j}{\ex t_j}}\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{\im t_i}{\ex t_j}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \hspace{-4em}
+      \inference[SA-Bind]{
+        \SaysScopeS{t_i}{a}{\im t_i}
+        \quad
+        \SigPBind{i}{j}
+        \quad
+        \SaysScopeS{t_j}{\ex t_j}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }
+      \quad
+      \inference[SA-Bind]{
+        \SaysScopeS{t_j}{b}{\im t_j}
+        \quad
+        \SigPBind{j}{k}
+        \quad
+        \SaysScopeS{t_k}{\ex t_k}{c}
+      }{
+        \SaysScopeS{\NodeStd}{b}{c}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[SA-Bind]{
+      \SaysScopeS{t_i}{a}{\im t_i}
+      \quad
+      \inference{
+        \SigPBind{i}{j}
+        \quad
+        \SigPBind{j}{k}
+      }{
+        \SigPBind{i}{k}
+      }
+      \quad
+      \SaysScopeS{t_k}{\ex t_k}{c}
+    }{
+      \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[SA-Bind]{
+        \SaysScopeS{t_i}{a}{\im t_i}
+        \quad
+        \SigPBind{i}{j}
+        \quad
+        \SaysScopeS{t_j}{\ex t_j}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }
+      \quad
+      \inference[S-Lift]{
+        \SaysScopeS{t_j}{b}{c}
+      }{
+        \SaysScopeS{\NodeStd}{b}{c}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[SA-Bind]{
+      \SaysScopeS{t_i}{a}{\im t_i}
+      \quad
+      \SigPBind{i}{j}
+      \quad
+      \inference[SD-Trans]{
+        \SaysScopeS{t_j}{\ex t_j}{b}
+        \quad
+        \SaysScopeS{t_j}{b}{c}
+      }{
+        \SaysScopeS{t_j}{\ex t_j}{c}
+      }
+    }{
+      \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \end{Table}
+    
+  \end{minipage}
+  \end{sideways}
+  \caption{Proof of \cref{thm:rscope-rules} (continued)}
+  \label{fig:rscope-rules-proof-2}
+\end{figure*}
+  
+  
+\begin{figure*}[h!]
+  \begin{sideways}
+  \begin{minipage}{18cm}
+    \small
+  
+    \begin{center}\textbf{SD $\to$ SA (cont.)}\end{center}
+
+    \begin{Table}&&
+    \inference[SD-Trans]{
+      \inference[S-Lift]{
+        \SaysScopeS{t_i}{a}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }
+      \quad
+      \inference[SA-Bind]{
+        \SaysScopeS{t_i}{b}{\im t_i}
+        \quad
+        \SigPBind{i}{j}
+        \quad
+        \SaysScopeS{t_j}{\ex t_j}{c}
+      }{
+        \SaysScopeS{\NodeStd}{b}{c}
+      }\phantom{}
+    }{
+     \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[SD-Bind]{
+      \inference[SD-Trans]{
+        \SaysScopeS{t_i}{a}{b}
+        \quad
+        \SaysScopeS{t_i}{b}{\im t_i}
+      }{
+        \SaysScopeS{t_i}{a}{\im t_i}
+      }
+      \quad
+      \SigPBind{i}{j}
+      \quad
+      \SaysScopeS{t_j}{\ex t_j}{c}
+    }{
+      \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[S-Lift]{
+        \SaysScopeS{t_i}{a}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }
+      \quad
+      \inference[S-Lift]{
+        \SaysScopeS{t_i}{b}{c}
+      }{
+        \SaysScopeS{\NodeStd}{b}{c}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[S-Lift]{
+      \inference[SD-Trans]{
+        \SaysScopeS{t_i}{a}{b}
+        \quad
+        \SaysScopeS{t_i}{b}{c}
+      }{
+        \SaysScopeS{t_i}{a}{c}
+      }
+    }{
+      \SaysScopeS{\NodeStd}{a}{c}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[SA-Export]{
+        \SigPExpt{i}
+        \quad
+        \SaysScopeS{t_i}{\ex t_i}{a}
+      }{
+        \SaysScopeS{\NodeStd}{\ex \NodeStd}{a}
+      }
+      \quad
+      \inference[SA-Import]{
+        \SaysScopeS{t_i}{a}{\im t_i}
+        \quad
+        \SigPImpt{i}
+      }{
+        \SaysScopeS{\NodeStd}{a}{\im \NodeStd}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\im \NodeStd}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[S-ReExport]{
+      \inference{
+        \SigPExpt{i}
+        \quad
+        \SigPImpt{i}
+      }{
+        \SigPSelf
+      }
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\im \NodeStd}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[SA-Export]{
+        \SigPExpt{i}
+        \quad
+        \SaysScopeS{t_i}{\ex t_i}{a}
+      }{
+        \SaysScopeS{\NodeStd}{\ex \NodeStd}{a}
+      }
+      \quad
+      \inference[S-Lift]{
+        \SaysScopeS{t_i}{a}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{b}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[SA-Export]{
+      \SigPExpt{i}
+      \quad
+      \inference[SD-Trans]{
+        \SaysScopeS{t_i}{\ex t_i}{a}
+        \quad
+        \SaysScopeS{t_i}{a}{b}
+      }{
+        \SaysScopeS{t_i}{\ex t_i}{b}
+      }
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{b}
+    }
+    \end{Table}
+  \end{minipage}
+  \end{sideways}
+  \caption{Proof of \cref{thm:rscope-rules} (continued)}
+  \label{fig:rscope-rules-proof-3}
+\end{figure*}
+
+\begin{figure*}[h!]
+  \begin{sideways}
+  \begin{minipage}{18cm}
+    \small
+  
+    \begin{center}\textbf{SD $\to$ SA (cont.)}\end{center}
+    
+    \begin{Table}
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[S-Lift]{
+        \SaysScopeS{t_i}{a}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }
+      \quad
+      \inference[SA-Import]{
+        \SaysScopeS{t_i}{b}{\im t_i}
+        \quad
+        \SigPImpt{i}
+      }{
+        \SaysScopeS{\NodeStd}{b}{\im \NodeStd}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{a}{\im \NodeStd}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[SA-Import]{
+      \inference[SD-Trans]{
+        \SaysScopeS{t_i}{a}{b}
+        \quad
+        \SaysScopeS{t_i}{b}{\im t_i}
+      }{
+        \SaysScopeS{t_i}{a}{\im t_i}
+      }
+      \quad
+      \SigPImpt{i}
+    }{
+      \SaysScopeS{\NodeStd}{a}{\im \NodeStd}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[SA-Bind]{
+        \SaysScopeS{t_i}{a}{\im t_i}
+        \quad
+        \SigPBind{i}{j}
+        \quad
+        \SaysScopeS{t_j}{\ex t_j}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }
+      \quad
+      \inference[SA-Import]{
+        \SaysScopeS{t_j}{b}{\im t_j}
+        \quad
+        \SigPImpt{j}
+      }{
+        \SaysScopeS{\NodeStd}{b}{\im \NodeStd}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{a}{\im \NodeStd}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[SA-Import]{
+      \SaysScopeS{t_i}{a}{\im t_i}
+      \quad
+      \inference{
+        \SigPBind{i}{j}
+        \quad
+        \SigPImpt{j}
+      }{
+        \SigPImpt{i}
+      }
+    }{
+      \SaysScopeS{\NodeStd}{a}{\im \NodeStd}
+    }
+    \\ \\ &&
+    \inference[SD-Trans]{
+      \inference[SA-Export]{
+        \SigPExpt{i}
+        \quad
+        \SaysScopeS{t_i}{\ex t_i}{a}
+      }{
+        \SaysScopeS{\NodeStd}{\ex \NodeStd}{a}
+      }
+      \quad
+      \inference[SA-Bind]{
+        \SaysScopeS{t_i}{a}{\im t_i}
+        \quad
+        \SigPBind{i}{j}
+        \quad
+        \SaysScopeS{t_j}{\ex t_j}{b}
+      }{
+        \SaysScopeS{\NodeStd}{a}{b}
+      }\phantom{}
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{b}
+    }
+    \\ \\ &$\Longrightarrow$&
+    \inference[SA-Export]{
+      \inference{
+        \SigPExpt{i}
+        \quad
+        \SigPBind{i}{j}
+      }{
+        \SigPExpt{j}
+      }
+      \quad
+      \SaysScopeS{t_j}{\ex t_j}{b}
+    }{
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{b}
+    }
+    \end{Table}
+  
+  \end{minipage}
+  \end{sideways}
+  \caption{Proof of \cref{thm:rscope-rules} (continued)}
+  \label{fig:rscope-rules-proof-4}
+  \end{figure*}
+
+\end{document}
