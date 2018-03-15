@@ -61,7 +61,7 @@ takes as arguments.
 
 \paragraph{But what \emph{is} it?}
 An astute reader may have noticed that we still haven't actually
-defined syntactic sugar. Here is a reasonable definition:\marginpar{
+defined syntactic sugar. Here is a reasonable definition:\marginpar{%
   Words can be thought of as pointing to clusters in concept-space.
   An extensional definition like this is an attempt to draw a
   neat box around such a cluster, which is always a little dubious
@@ -201,10 +201,10 @@ We call out three such ways that syntactic sugar breaks abstractions:
 \section{How can these downsides be fixed?}
 
 We address these problems with a general approach called
-\emph{resugaring}. Thus my \textbf{thesis statement} is that:\marginpar{
-  While I use ``we'' throughout the rest of document to acknowledge
-  all the others who helped with this work, my thesis statement is for
-  me and me alone to defend. Hence ``my''.
+\emph{resugaring}. Thus my \textbf{thesis statement} is that:\marginpar{%
+While I use ``we'' throughout the rest of document to acknowledge
+all the others who helped with this work, my thesis statement is for
+me and me alone to defend. Hence ``my''.
 }
 \begin{quote}
 Many aspects of programming languages---in particular evaluation
@@ -222,13 +222,17 @@ inadvertently breaks abstractions can the adage
 
 \paragraph{Roadmap}
 
-The rest of this thesis is organized as follows:\marginpar{
+The rest of this thesis is organized as follows:\marginpar{%
   Related work is dicussed individually in chapters
   \cref{chap:resugar-eval,chap:resugar-scope,chap:resugar-types}.
 }
 \begin{description}
 \item[\Cref{chap:taxonomy}] discusses and taxonomizes existing
   desugaring systems (of which there are a wide variety).
+\item[\Cref{chap:formalism}] provides a formalism for desugaring that
+  will serve as groundwork for the rest of the chapters.
+% [TODO] \item[\Cref{chap:well-formedness}] provides an algorithm for
+% checking that desugaring rules preserve syntactic well-formedness.
 \item[\Cref{chap:resugar-eval}] shows how to resugar \emph{evaluation sequences}.
 \item[\Cref{chap:resugar-scope}] shows how to resugar \emph{scope rules}.
 \item[\Cref{chap:resugar-types}] shows how to resugar \emph{type rules}.
