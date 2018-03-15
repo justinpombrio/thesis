@@ -542,7 +542,7 @@ We will write the \textsc{ast} in s-expression form:
 \begin{Table}
 $t$ &$::=$& $\Decl[i]{x}$ & (declaration at position $i$) \\
    &$|$& $\Refn[i]{x}$ & (reference at position $i$) \\
-   &$|$& $\Node{C}{t_1\,...\,t_n}$ & ({\sc ast} node) \\
+   &$|$& $\Node{C}{t_1\,...\,t_n}$ & (\Sc{ast} node) \\
    &&where $P \in \mathcal{T}$ \\
    &&and $\Arity{P} = n$ \\
  &$|$& $\Value$ & (syntactic constant) \\
@@ -1277,7 +1277,6 @@ are equivalent.
   \end{tabular}
   \end{center}
 \end{proof}
-\fi
 
 These scope checking rules say how to find a preorder over all of the
 \emph{ports} in a term.
@@ -3714,5 +3713,3 @@ feedback on the paper. This work was partially supported by the NSF.
   \caption{Proof of \cref{thm:rscope-rules} (continued)}
   \label{fig:rscope-rules-proof-4}
   \end{figure*}
-
-\end{document}
