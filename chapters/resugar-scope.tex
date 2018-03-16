@@ -1,37 +1,32 @@
 \chapter{Resugaring Scope}\label{chap:resugar-scope}
 
+% \(\W\)t\(\W\)  ->  \1e\2
+
+TODO
+\begin{itemize}
+\item ``scope inference'' vs. ``scope resugaring''?
+\item Assimilate 'Implementation and Evaluation' section
+\item Assimilate 'Assumptions about Desugaring' section
+\item Have sk proofread the new hygiene paragraphs (``one may wonder''
+  and next paragraph).
+\end{itemize}
+
 \textbf{TODO: This whole chapter is copy-pasted from the paper.}
 
-\paragraph{Abstract}
-  Many languages use syntactic sugar to define parts of their surface
-  language in terms of a smaller core. Thus some properties of the
-  surface language, like its \emph{scoping rules}, are not immediately
-  evident. Nevertheless, \textsc{ide}s, refactorers, and other tools
-  that traffic in source code depend on these rules to present
-  information to users and to soundly perform their operations.  In
-  this paper, we show how to lift scoping rules defined on a core
-  language to rules on the surface, a process of \emph{scope inference}.
-  In the process we introduce a new representation
-  of binding structure---scope as a preorder---and present a
-  theoretical advance: proving that a desugaring system preserves
-  $\alpha$-equivalence even though scoping rules have been provided
-  \emph{only} for the core language. We have also implemented the
-  system presented in this paper.
+In this chapter, we show how to lift scoping rules defined on a core
+language to rules on the surface, a process of \emph{scope inference}.
+In the process we introduce a new representation of binding
+structure---scope as a preorder---and present a theoretical advance:
+proving that a desugaring system preserves $\alpha$-equivalence even
+though scoping rules have been provided \emph{only} for the core
+language.
 
+This chapter comes from work published in ICFP 2017 under the
+title \emph{Inferring Scope through Syntactic Sugar}~\cite{pombrio-scope}.
 
 \section{Introduction}
 
-Syntactic sugar is pervasive in language technology. Language
-designers use it to shrink the size of a surface language to a small
-core, to make it tractable for processing. In addition, programmers
-use it to define domain-specific languages, and---if their language
-provides macros or other meta-programming capabilities---even to extend
-their language. Thus, syntactic sugar is a valuable weapon in the
-programming arsenal.
-
-Unfortunately, syntactic sugar also obscures the relationship between
-the user's source program and the program that is actually
-type-checked, analyzed, or evaluated. In particular, traditionally,
+Traditionally,
 scoping rules are defined on the core language, not on the
 surface. However, many tools depend on source representations. For
 instance, editors need to know the surface language's scoping in order
@@ -139,8 +134,8 @@ examples of this section.)
 For the first example, consider a simple Let construct that allows
 only a single binding:
 \begin{Table}
-  $t$ &$::=$& $\NodeRm{Let}{\DeclX\;t_1\;t_2}$
-  & ``Let $\DeclX$ equal $t_1$ in $t_2$'' \\
+  $e$ &$::=$& $\NodeRm{Let}{\DeclX\;e_1\;e_2}$
+  & ``Let $\DeclX$ equal $e_1$ in $e_2$'' \\
   &$|$& $\ldots$
 \end{Table}
 (Here the superscript \textbf{\textsc{d}} indicates that this
@@ -220,11 +215,11 @@ references in this region will be bound to the dominating inner declaration.)
 Now we can begin to infer what the scope must look like on the
 \textsc{lhs} (left hand side) of the desugaring rule. We want the rule to
 \emph{preserve} binding, therefore there should be a path from one
-hole to another in the \textsc{lhs} iff there is a similar path in the
+pattern variable to another in the \textsc{lhs} iff there is a similar path in the
 \textsc{rhs}. If there was a path from $\PVarA$ to $\PVarB$ in the
 \textsc{lhs} but not in the \textsc{rhs}, that would mean that a
 variable (in $\PVarA$) that used to be bound (by $\PVarB$) could
-become unbound. Likewise, if there was a path between two holes in the
+become unbound. Likewise, if there was a path between two pattern variables in the
 \textsc{rhs} but not in the \textsc{lhs}, that could result in
 unwanted variable capture.
 
@@ -251,9 +246,9 @@ in scope at the Let's body $\PVarC$, as expected.
 There are still some missing arrows, however: there should be down
 arrows to indicate that any declaration in scope at the Let should
 also be in scope at its children. These can be inferred in a similar
-way: whenever there is a path from the root to a hole on the
+way: whenever there is a path from the root to a pattern variable on the
 \textsc{rhs}, there should be a similar path on the \textsc{lhs}.
-Since on the \textsc{rhs} there are paths to each hole from the root,
+Since on the \textsc{rhs} there are paths to each pattern variable from the root,
 the same should hold true on the \textsc{lhs}:
 \begin{center}
 \sideLabel{\textsc{lhs}}{
@@ -282,11 +277,11 @@ Next, take a more involved example: a multi-armed Let* construct (in
 the style of Lisp/Scheme/Racket).
 It will have the following grammar:
 \begin{Table}
-  $t$ &$::=$& $\NodeRm{Let*}{b\;t}$
-  & ``Let-bind $b$ in $t$'' \\
+  $e$ &$::=$& $\NodeRm{Let*}{b\;e}$
+  & ``Let-bind $b$ in $e$'' \\
   &$|$& $\ldots$ \\
-  $b$ &$::=$& $\NodeRm{Bind}{\DeclX\;t\;b}$
-  & ``Bind $\DeclX$ to $t$, and bind $b$'' \\
+  $b$ &$::=$& $\NodeRm{Bind}{\DeclX\;e\;b}$
+  & ``Bind $\DeclX$ to $e$, and bind $b$'' \\
   &$|$&   $\ConstRm{EndBinds}$
   & ``No more bindings''
 \end{Table}
@@ -530,33 +525,40 @@ more tractable:
     (binding sites) are syntactically distinguished in this
     \textsc{ast}.
   \item Each kind of term has a fixed arity. (Indefinite arity is
-    possible using a list encoding, as in Let* above.)
-  \end{itemize}
+    possible using a list encoding, as in Let* above.) [TODO: remove]
+\end{itemize}
 
-The last two of these assumptions guide our definition of (\textsc{ast}) terms.
-Terms will be parameterized over a set of \emph{term constructors}
-$\mathcal{T}$, each with an
-$\Arity{} : \mathcal{T} \to \mathbb{N}$, and also over a
-set of \emph{syntactic constants} $\mathcal{C}$.
-We will write the \textsc{ast} in s-expression form:
+The last two of these assumptions are already reflected in our
+definition of (\textsc{ast}) terms in \cref{sec:formal-term}.
+For convenience, we repeat that definition here, with one change:
+scope inference will be completely agnostic to the difference between
+\Sc{surf}, \Sc{core}, and \Sc{aux} constructors, so we omit the
+distinction:
+
 \begin{Table}
-$t$ &$::=$& $\Decl[i]{x}$ & (declaration at position $i$) \\
-   &$|$& $\Refn[i]{x}$ & (reference at position $i$) \\
-   &$|$& $\Node{C}{t_1\,...\,t_n}$ & (\Sc{ast} node) \\
-   &&where $P \in \mathcal{T}$ \\
-   &&and $\Arity{P} = n$ \\
- &$|$& $\Value$ & (syntactic constant) \\
-   &&where $\Value \in \mathcal{C}$
+constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
+ast $e$ &$::=$& $\Value$ & primitive value \\
+  &$|$& $\Node{C}[u]{e_1 \dd e_n}$ & \Sc{ast} node \\
+%  &$|$& $\Bitter{C}{e_1 \dd e_n}$ & bitter \Sc{ast} node \\
+  &$|$& $[e_1 \dd e_n]$ & list (unsupported!) \\
+  &$|$& $\Refn[u]{x}$  & variable reference \\
+  &$|$& $\Decl[u]{x}$  & variable declaration \\
+%  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval})
+%value $v$ &$::=$& $e$ & with no sugar invocations \\
 \end{Table}
-References and declarations have both a name \textsc{x} (as written in
-the source), and an \textsc{ast} position $i$ (that uniquely
-distinguishes them).
+To reiterate, references and declarations have both a name \textsc{x}
+(as written in the source), and an \textsc{ast} position $i$
+(that uniquely distinguishes them).
 Occasionally it will be useful to refer to a variable which could be
 either a declaration or a reference: in this case
 we omit the superscript, e.g. $\VarXi$.
 Likewise, we will omit the position subscript $\mathit{\mathbf{i}}$
-when there is no ambiguity. We will also sometimes write $P$ in place
-of $\Node{C}{t_1\,...\,t_n}$ when there is no danger of ambiguity.
+when there is no ambiguity. We will also sometimes write $C$ in place
+of $\Node{C}{e_1\,...\,e_n}$ when there is no danger of ambiguity.
+
+By the last assumption above, we do not support lists
+$[e_1 \dd e_n]$ (which have indefinite arity). Instead we require them
+to be encoded into fixed-arity constructs. [TODO: remove this restriction]
 
 \subsection{Basic Definitions}
 \label{sec:rscope-sap-defs}
@@ -565,11 +567,11 @@ of $\Node{C}{t_1\,...\,t_n}$ when there is no danger of ambiguity.
   A \emph{preorder} ($\<$) is a reflexive and transitive relation. It
   need not be anti-symmetric, however, so it is possible that $a \< b$
   and $b \< a$ for distinct $a$ and $b$.
-We capture scope as a preorder on a term $t$ as follows:
+We capture scope as a preorder on a term $e$ as follows:
 
 \begin{definition}[Scope]\label{def:rscope-scope}
-  A \emph{scope preorder} on a term $t$ is a preorder ($\<$) on the references
-  and declarations in $t$ such that references are least in this
+  A \emph{scope preorder} on a term $e$ is a preorder ($\<$) on the references
+  and declarations in $e$ such that references are least in this
   preorder (i.e., nothing is ever smaller than a reference).
 \end{definition}
 \begin{definition}
@@ -688,11 +690,11 @@ called \emph{\sas}.
 In {\sas}, instead of there being a preorder over variables, each
 declaration has a \emph{scope}, which is the part of the program in
 which it can be referenced. For example, the scope of a function's
-parameter is that function's body. The axioms for a term $t$ are then:
+parameter is that function's body. The axioms for a term $e$ are then:
 
 \begin{description}
 \item[Scope]
-  Each declaration in $t$ has a \emph{scope}---written
+  Each declaration in $e$ has a \emph{scope}---written
   $\Scope{\DeclX}$---given by the parts of the program in which it can
   be referenced.
   We will say that:
@@ -858,7 +860,7 @@ This concludes the demonstration that {\sap} is simply a normalized
 version of {\sas}, and can effectively be used in its place. The
 axioms of {\sas} are basic enough that they ought to apply in
 basically any lexically-scoped setting; thus {\sap} should too.
-We use {\Sap} in the paper, however, because it is more canonical (per
+We use {\Sap} in this thesis, however, because it is more canonical (per
 normalization) and because it more closely aligns with the binding
 language described next.
 
@@ -991,9 +993,9 @@ and \emph{exports} $\DeclX[1]$ and $\DeclX[2]$ (with $\DeclX[2]$
 shadowing $\DeclX[1]$). We will call imports and exports \emph{ports}.
 
 The scoping rules can now be re-interpreted with this in mind. Given a
-term $t$, they will determine a preorder not over the subterms of $t$
+term $e$, they will determine a preorder not over the subterms of $e$
 (like we have presented it so far), but instead over the \emph{ports}
-of the subterms of $t$. With this in mind, we offer four kinds of bindings:\footnote{
+of the subterms of $e$. With this in mind, we offer four kinds of bindings:\footnote{
   There is a close analogy between ports and attributes in attribute
   grammars~\cite{knuth-attribute-grammar}:
   namely, imports are analogous to inherited
@@ -1093,22 +1095,22 @@ Each port will have one of two \emph{signs} (import or export):
 $d$ &$::=$& $\ImSymb$ & (import) \\
    &$\mid$& $\ExSymb$ & (export)
 \end{Table}
-A \emph{port}, then, pairs a term $t$ with a sign:
+A \emph{port}, then, pairs a term $e$ with a sign:
 \begin{Table}
-$a,b,c$ &$::=$& $\im{}t \;|\; \ex{}t$ &(port)
+$a,b,c$ &$::=$& $\im{}e \;|\; \ex{}e$ &(port)
 \end{Table}
 
 A set of \emph{scope rules} $\Sigma$ gives a relation
-for each term constructor $P$ that describes the scoping relationships
-between a term constructed with $P$ and its subterms:
+for each term constructor $C$ that describes the scoping relationships
+between a term constructed with $C$ and its subterms:
 \begin{definition} \label{def:rscope-scope-rules}
   A set of \emph{scope rules} $\Sigma$ is a partial map from term
-  constructors $P$ of arity $n$ to binary relations over
+  constructors $C$ of arity $n$ to binary relations over
   $\{1,\,...,\,n,\Exp,\Imp\}$, such that:
   \begin{itemize}
   \item The relation is transitive.
-  \item $\Exp$ is a least element ($\NotExists{a} (a,\,\Exp) \in \Sigma[P]$)
-  \item $\Imp$ is a greatest element ($\NotExists{a} (\Imp,\,a) \in \Sigma[P]$)
+  \item $\Exp$ is a least element ($\NotExists{a} (a,\,\Exp) \in \Sigma[C]$)
+  \item $\Imp$ is a greatest element ($\NotExists{a} (\Imp,\,a) \in \Sigma[C]$)
   \end{itemize}
 \end{definition}
 Here $i$ represents the $i$th child term,
@@ -1119,9 +1121,9 @@ and will equate them with their description in our binding
 language (so that $(1,\,\Imp) = \SpecImpt{1}$).
 The sign on the port on $i$ can be determined knowing that the fact it is part of must be
 one of the four kinds of bindings described in \cref{sec:rscope-the-solution}.
-We will write $s \Subterm t$ to mean that $s$ is a subterm of $t$,
-and write $a \Subterm t$ to mean
-$\Exists{s} (a=\im{s} \text{ or } a=\ex{s}) \text{ and } s \Subterm t$.
+We will write $e' \Subterm e$ to mean that $e'$ is a subterm of $e$,
+and write $a \Subterm e$ to mean
+$\Exists{e'} (a=\im{e'} \text{ or } a=\ex{e'}) \text{ and } e' \Subterm e$.
 
 As an example of scope rules, the rules for Lambda are:
 \[
@@ -1133,19 +1135,19 @@ The scoping of a \emph{full} term is found by applying the scoping rules
 locally at each subterm, then taking the reflexive transitive closure
 of this global relation:
 \begin{definition}
-The \emph{scoping} of a full term $t$ under scoping rules $\Sigma$
-is the set of judgements of the form $\SaysScope{t}{a}{b}$
+The \emph{scoping} of a full term $e$ under scoping rules $\Sigma$
+is the set of judgements of the form $\SaysScope{e}{a}{b}$
 defined by the ``Declarative Rules'' and ``Shared Rules'' of 
 \cref{fig:rscope-SD}.
 \end{definition}
 
 The judgments in the figure have the form
-$\SaysScope{t}{a}{b}$, which means that
-``$a \< b$ in term $t$ using scoping rules $\Sigma$''.
-A judgment is \emph{well formed} when $a, b \Subterm t$.
-(Later, we will also use judgments of the form $\SaysScope{C}{a}{b}$; these
-are governed by identical rules, allowing each term $t$ to instead be
-a context $C$.)
+$\SaysScope{e}{a}{b}$, which means that
+``$a \< b$ in term $e$ using scoping rules $\Sigma$''.
+A judgment is \emph{well formed} when $a, b \Subterm e$.
+(Later, we will also use judgments of the form $\SaysScope{p}{a}{b}$; these
+are governed by identical rules, allowing each term $e$ to instead be
+a pattern $p$.)
 
 Rules SD-Import, SD-Export, SD-Bind, and S-ReExport capture the
 direct meaning of the scoping rules.
@@ -1157,46 +1159,46 @@ the whole term.
 
 \begin{figure}[ht]
   \begin{flushleft}
-    \hspace{5em}\TypeLabel{\SaysScope{t}{a}{b}}
+    \hspace{5em}\TypeLabel{\SaysScope{e}{a}{b}}
   \end{flushleft}
   \[ \textbf{Declarative Rules} \]
   \[
   \inference[SD-Trans]
-      {\SaysScope{t}{a}{b} \quad \SaysScope{t}{b}{c}}
-      {\SaysScope{t}{a}{c}}
+      {\SaysScope{e}{a}{b} \quad \SaysScope{e}{b}{c}}
+      {\SaysScope{e}{a}{c}}
   \]
 
   \[
   \inference[SD-Import]
       {\SigPImpt{i}}
-      {\SaysScope{\NodeStd}{\im t_i}{\im \NodeStd}}
+      {\SaysScope{\NodeStd}{\im e_i}{\im \NodeStd}}
   \]
 
   \[
   \inference[SD-Export]
       {\SigPExpt{i}}
-      {\SaysScope{\NodeStd}{\ex{}\NodeStd}{\ex t_i}}
+      {\SaysScope{\NodeStd}{\ex{}\NodeStd}{\ex e_i}}
   \]
   \[
   \inference[SD-Bind]
       {\SigPBind{i}{j}}
-      {\SaysScope{\NodeStd}{\im t_i}{\ex t_j}}
+      {\SaysScope{\NodeStd}{\im e_i}{\ex e_j}}
   \]
 
   \[ \textbf{Shared Rules (Declarative \& Algorithmic)} \]
   \[
   \inference[S-Refl1]
       {}
-      {\SaysScope{t}{\im t}{\im t}}
+      {\SaysScope{e}{\im e}{\im e}}
   \qquad
   \inference[S-Refl2]
       {}
-      {\SaysScope{t}{\ex t}{\ex t}}
+      {\SaysScope{e}{\ex e}{\ex e}}
   \]
 
   \[    
   \inference[S-Lift]
-      {\SaysScope{t_i}{a}{b}}
+      {\SaysScope{e_i}{a}{b}}
       {\SaysScope{\NodeStd}{a}{b}}
   \]
 
@@ -1214,22 +1216,22 @@ the whole term.
   \[ \textbf{Algorithmic Rules} \]
   \[
   \inference[SA-Import]
-      {\SaysScope{t_i}{a}{\im t_i} \quad
+      {\SaysScope{e_i}{a}{\im e_i} \quad
        \SigPImpt{i}}
       {\SaysScope{\NodeStd}{a}{\im{}\NodeStd}}
   \]
   \[
   \inference[SA-Export]
       {\SigPExpt{i} \quad
-       \SaysScope{t_i}{\ex t_i}{a}}
+       \SaysScope{e_i}{\ex e_i}{a}}
       {\SaysScope{\NodeStd}{\ex{}\NodeStd}{a}}
   \]
 
   \[
   \inference[SA-Bind]
-      {\SaysScope{t_i}{a}{\im t_i} \quad
+      {\SaysScope{e_i}{a}{\im e_i} \quad
        \SigPBind{i}{j} \quad
-       \SaysScope{t_j}{\ex t_j}{b}}
+       \SaysScope{e_j}{\ex e_j}{b}}
       {\SaysScope{\NodeStd}{a}{b}}
   \]
 
@@ -1288,35 +1290,35 @@ However, \cref{sec:rscope-sap} is based on preorders over the
 This is obtained as the restriction of
 the entire preorder to variables, as captured by the following rule:
 \[
-  \TypeLabel{\SaysScope{t}{\VarX}{\VarY}}
+  \TypeLabel{\SaysScope{e}{\VarX}{\VarY}}
   \hspace{3em}
   \inference[S-Var]
-     {\SaysScope{t}{\im{}\VarXi}{\im{}\VarYj}}
-     {\SaysScope{t}{\VarXi}{\VarYj}}
+     {\SaysScope{e}{\im{}\VarXi}{\im{}\VarYj}}
+     {\SaysScope{e}{\VarXi}{\VarYj}}
   \hspace{6em}
 \]
 
   The definitions for binding and shadowing
   (\cref{def:rscope-bound,def:rscope-shadow}) can then be expressed as inference rules:
   \[
-    \TypeLabel{\SaysScopeBound{t}{\VarX}{\VarY}}
+    \TypeLabel{\SaysScopeBound{e}{\VarX}{\VarY}}
     \hspace{3em}
     \inference[S-Bound]
         {\DeclX \in \min
-          \St{\DeclXi}{\SaysScope{t}{\RefnX}{\DeclXi}}}
-        {\SaysScopeBound{t}{\RefnX}{\DeclX}}
+          \St{\DeclXi}{\SaysScope{e}{\RefnX}{\DeclXi}}}
+        {\SaysScopeBound{e}{\RefnX}{\DeclX}}
     \hspace{5em}
   \]
   \[
     \hspace{5em}
     \inference[S-Shadow]
-        {\DeclX[j] \in \min \St{\DeclX[k]}{i \neq k \text{ and } \SaysScope{t}{\DeclX[i]}{\DeclX[k]}}}
-        {\SaysScopeBound{t}{\DeclX[i]}{\DeclX[j]}}
+        {\DeclX[j] \in \min \St{\DeclX[k]}{i \neq k \text{ and } \SaysScope{e}{\DeclX[i]}{\DeclX[k]}}}
+        {\SaysScopeBound{e}{\DeclX[i]}{\DeclX[j]}}
   \]
   These definitions form a scope preorder:
 \begin{lemma}
-  For any set of scoping rules $\Sigma$ and term $t$, the relation
-  $\St{(\VarXi, \VarXj)}{\SaysScope{t}{\VarXi}{\VarXj}}$ is a scope
+  For any set of scoping rules $\Sigma$ and term $e$, the relation
+  $\St{(\VarXi, \VarXj)}{\SaysScope{e}{\VarXi}{\VarXj}}$ is a scope
   preorder satisfying the requirements of \cref{def:rscope-scope}.
 \end{lemma}
   \begin{proof}[Proof sketch]
@@ -1337,16 +1339,16 @@ they are identical ignoring their variable names); and (iii) for every
 binding $\RefnX \Bound \DeclX$ in one term, an analogous binding
 exists in the same location in the other term. To formalize what
 ``same location'' means, we will use a \emph{join} operator
-($s \bowtie t$) that checks that $s$ and $t$ have the same shape and
+($e \bowtie e'$) that checks that $e$ and $e'$ have the same shape and
 finds a bijection between their variable occurrences as a witness to
 this fact:
 \begin{LongTable}
   $\DeclXi$ &$\bowtie$& $\DeclYj$ &$=$& $\{\DeclXi \leftrightarrow \DeclYj\}$ \\
   $\RefnXi$ &$\bowtie$& $\RefnYj$ &$=$& $\{\RefnXi \leftrightarrow \RefnYj\}$ \\
   $\mathit{const}$ &$\bowtie$& $\mathit{const}$ &$=$& $\emptyset$ \\
-  $\Node{P}{\Seqn[1]{s}[n]}$ &$\bowtie$& $\Node{P}{\Seqn[1]{t}[n]}$
-  &$=$& $\bigcup_{i \in 1..n} s_i \bowtie t_i$ \\
-  $s$ &$\bowtie$& $t$           &$=$& \textsc{undefined} &otherwise
+  $\Node{C}{\Seqn[1]{e}[n]}$ &$\bowtie$& $\Node{C}{\Seqn[1]{e'}[n]}$
+  &$=$& $\bigcup_{i \in 1..n} e_i \bowtie e_i'$ \\
+  $e$ &$\bowtie$& $e'$           &$=$& \textsc{undefined} &otherwise
 \end{LongTable}
 
 Likewise, to formalize ``well-bound'', we will use the rules to
@@ -1357,29 +1359,29 @@ We will consider terms with conflicting declarations to be ill-bound.
 \begin{definition}[Conflicting Declarations]
   \label{def:rscope-conflict}
   Two variable declarations $\DeclXi$ and $\DeclXj$ \emph{conflict} in
-  a term $t$ when:
+  a term $e$ when:
   \[
   \inference[S-Conflict]
-    { \SaysScope{t}{a}{\DeclXi}
-      \quad \SaysScope{t}{a}{\DeclXj} \\
-      \min_{\Sigma,t} \{ \DeclXi, \DeclXj \} = \{ \DeclXi, \DeclXj \}}
-    { \SaysScopeConflict{t}{\DeclXi}{\DeclXj} }
+    { \SaysScope{e}{a}{\DeclXi}
+      \quad \SaysScope{e}{a}{\DeclXj} \\
+      \min_{\Sigma,e} \{ \DeclXi, \DeclXj \} = \{ \DeclXi, \DeclXj \}}
+    { \SaysScopeConflict{e}{\DeclXi}{\DeclXj} }
   \]
 \end{definition} \noindent
 (If a variable reference is \emph{ambiguously bound}
 (\cref{def:rscope-ambig}), then its bindings declarations must be in conflict.)
 
-A term $t$ is \emph{well-bound} with respect to scoping rules $\Sigma$
+A term $e$ is \emph{well-bound} with respect to scoping rules $\Sigma$
 when every
 reference is bound by exactly one declaration, and there are no
 conflicting declarations:
 \[
 \inference[S-WB]
-          { \Forall{\RefnX \!\in\! t} \ExistsUnique{\DeclX \!\in\! t}
-            \SaysScopeBound{t}{\RefnX}{\DeclX} \\
-            \NotExists{\DeclX[i],\DeclX[j] \!\in\! t}
-            \SaysScopeConflict{t}{\DeclX[i]}{\DeclX[j]}}
-          { \SaysScopeWB{t} }
+          { \Forall{\RefnX \!\in\! e} \ExistsUnique{\DeclX \!\in\! e}
+            \SaysScopeBound{e}{\RefnX}{\DeclX} \\
+            \NotExists{\DeclX[i],\DeclX[j] \!\in\! e}
+            \SaysScopeConflict{e}{\DeclX[i]}{\DeclX[j]}}
+          { \SaysScopeWB{e} }
 \]
 
 The definition of $\alpha$-equivalence with respect to the scoping rules
@@ -1388,10 +1390,10 @@ $\Sigma$ is then:
   \label{def:rscope-eqa}
 \[
   \inference[S-$\alpha$-Eqv]
-      { \SaysScopeWB{s} \quad \SaysScopeWB{t} \quad s \bowtie t = \psi \\
-        \Forall{\RefnX,\DeclX}{\SaysScopeBound{s}{\RefnX}{\DeclX} \text{ iff }
-        \SaysScopeBound{t}{\psi(\RefnX)}{\psi(\DeclX)}}}
-      {\SaysScopeEqa{s}{t}}
+      { \SaysScopeWB{e} \quad \SaysScopeWB{e'} \quad e \bowtie e' = \psi \\
+        \Forall{\RefnX,\DeclX}{\SaysScopeBound{e}{\RefnX}{\DeclX} \text{ iff }
+        \SaysScopeBound{e'}{\psi(\RefnX)}{\psi(\DeclX)}}}
+      {\SaysScopeEqa{e}{e'}}
 \]
 (We will also talk about $\alpha$-equivalence and well-boundedness of
 patterns. The definitions are identical.)
@@ -1403,17 +1405,17 @@ that can be expressed in our binding language.
 %% % Interpretation
 %% % (An intermediate formulation that simplifies the above)
 %% \begin{Table}
-%% $\interpSign[d]{0}{\Node{n}{\Seqn[1]{t}[k]}}$
+%% $\interpSign[d]{0}{\Node{n}{\Seqn[1]{e}[k]}}$
 %%   &$=$& $\port{n}{\negport{d}}$ \\
-%% $\interpSign[d]{i}{\Node{n}{\Seqn[1]{t}[k]}}$
-%%   &$=$& $\port{t_i}{d}$
+%% $\interpSign[d]{i}{\Node{n}{\Seqn[1]{e}[k]}}$
+%%   &$=$& $\port{e_i}{d}$
 %%   &when $i > 0$
 %% \end{Table}
 %% \begin{Table}
 %% ... \\
-%% $\interpSign[\im]{j}{s, \seq{t_i}}$
-%%   &$\<$& $\interpSign[\ex]{k}{s, \seq{t_i}}$
-%%   &for each $s = \Node{n}{\seq{t_i}} \in t$ \\
+%% $\interpSign[\im]{j}{s, \seq{e_i}}$
+%%   &$\<$& $\interpSign[\ex]{k}{s, \seq{e_i}}$
+%%   &for each $s = \Node{n}{\seq{e_i}} \in e$ \\
 %% &&&and $[j] \<: [k] \in \sign{n}$ \\
 %% ...
 %% \end{Table}
@@ -1436,14 +1438,14 @@ type inference finds the most general type annotations such that a
 program type-checks; scope inference will find the smallest set of
 surface scoping rules under which desugaring preserves $\alpha$-equivalence.
 More precisely, given a core language with scoping rules $\SigmaCore$,
-and a desugaring $f$, our algorithm finds scoping rules $\SigmaSurf$
+and a desugaring $\Desugar{}$, our algorithm finds scoping rules $\SigmaSurf$
 that preserves $\alpha$-equivalence (\cref{thm:rscope-hygiene}), so that:
-\[ \SaysScopeEqa[\SigmaSurf]{s}{t} \text{\quad implies\quad }
-   \SaysScopeEqa[\SigmaCore]{f(s)}{f(t)}
+\[ \SaysScopeEqa[\SigmaSurf]{e}{e'} \text{\quad implies\quad }
+   \SaysScopeEqa[\SigmaCore]{\Desugar{e})}{\Desugar{e'})}
 \]
 Furthermore, $\SigmaSurf$ will be least, so that if
 $\SigmaSurf'$ also has this property, then
-$\Forall{P} \SigmaSurf[P] \subseteq \SigmaSurf'[P]$.
+$\Forall{C} \SigmaSurf[C] \subseteq \SigmaSurf'[C]$.
 
 The general algorithm for scope inference is given in
 \cref{fig:rscope-resugar}. The next three subsections explain our assumptions
@@ -1451,30 +1453,30 @@ about desugaring, and then the algorithm.
 
 \begin{figure*}
 \begin{LongTable}
-  $\displaystyle \Op{inferScope}{\Sigma,\,\{C_i \To C_i'\}_{i \in 1..n}}$
+  $\displaystyle \Op{inferScope}{\Sigma,\,\{p_i \To p_i'\}_{i \in 1..n}}$
   &$\Defeq$&
   Let $\SigmaSurf = \displaystyle \Op{solve}{\Sigma,\,
-    \bigcup_{i \in 1..n} \Op{genConstrs}{C_i \To C_i'}}$ \\
-  && $\Op{checkScope}{\SigmaSurf,\,\{C_i \To C_i'\}_{i \in 1..n}}$ \\
+    \bigcup_{i \in 1..n} \Op{genConstrs}{p_i \To p_i'}}$ \\
+  && $\Op{checkScope}{\SigmaSurf,\,\{p_i \To p_i'\}_{i \in 1..n}}$ \\
   && Return $\SigmaSurf$
   \vspace{0.9em} \\
-  $\displaystyle \Op{genConstrs}{C \To C'}$
+  $\displaystyle \Op{genConstrs}{p \To p'}$
   &$\Defeq$&
   $\displaystyle \left\{
-  \Op{genConstr}{a \< b,\;C \To C'} \right\}_{a,b \in H}$ \\
-  &&where $H = \PVars{C} \cup \PVars{C'} \cup \{\Root\}$
+  \Op{genConstr}{a \< b,\;p \To p'} \right\}_{a,b \in H}$ \\
+  &&where $H = \PVars{p} \cup \PVars{p'} \cup \{\Root\}$
   \vspace{0.9em} \\
-  $\Op{genConstr}{a \< b,\; C \To C'}$
+  $\Op{genConstr}{a \< b,\; p \To p'}$
   &$\Defeq$&
-  $\left(\Op{genConj}{a \< b,\; C}, \Op{genConj}{a \< b,\; C'}\right)$ \\
+  $\left(\Op{genConj}{a \< b,\; p}, \Op{genConj}{a \< b,\; p'}\right)$ \\
   &&where $(p, q)$ means a constraint ``$p$ iff $q$''
   \vspace{0.9em} \\
-  $\Op{genConj}{a \< b,\; C}$
+  $\Op{genConj}{a \< b,\; p}$
   &$\Defeq$&
-  Smallest $\SigmaSurf$ such that $\SaysScope{C}{a}{b}$. \\
+  Smallest $\SigmaSurf$ such that $\SaysScope{p}{a}{b}$. \\
   && (To compute this, take the premises of
      the (unique) \\
-  && derivation of $\SaysScope{C}{a}{b}$ using the \\
+  && derivation of $\SaysScope{p}{a}{b}$ using the \\
   && Algorithmic Scope Checking rules (\cref{fig:rscope-SD}).)
   \vspace{0.9em} \\
   $\displaystyle \Op{solve}{\SigmaCore,\,constraints}$
@@ -1483,8 +1485,8 @@ about desugaring, and then the algorithm.
     Initialize $\SigmaSurf$ = $\SigmaCore$ \\
     Until fixpoint:
     \begin{itemize}
-    \item If a fact $f$ in a constraint is in $\SigmaSurf$: \\
-      \Indent Delete $f$ from the constraint
+    \item If a fact $F$ in a constraint is in $\SigmaSurf$: \\
+      \Indent Delete $F$ from the constraint
     \item If one side of a constraint is empty: \\
       \Indent Delete the constraint \\
       \Indent Add the other side to $\SigmaSurf$ \\
@@ -1495,14 +1497,14 @@ about desugaring, and then the algorithm.
     Return $\SigmaSurf$
     }
   \vspace{0.9em} \\
-  $\displaystyle \Op{checkScope}{\Sigma,\,\{C_i \To C_i'\}_{i \in 1..n}}$
+  $\displaystyle \Op{checkScope}{\Sigma,\,\{p_i \To p_i'\}_{i \in 1..n}}$
   &$\Defeq$&
-  For each rule $C \To C'$: \\
-  &&\quad Assert that if $\SaysScope{C}{a}{b}$
-          and $a \in C'$ then $b \in C'$ \\
+  For each rule $p \To p'$: \\
+  &&\quad Assert that if $\SaysScope{p}{a}{b}$
+          and $a \in p'$ then $b \in p'$ \\
           && \Indent (otherwise ERROR) \\
-  &&\quad Assert that each reference $\RefnX \in C'$ is bound by a \\
-          && \Indent unique declaration $\DeclX \in C'$
+  &&\quad Assert that each reference $\RefnX \in p'$ is bound by a \\
+          && \Indent unique declaration $\DeclX \in p'$
 \end{LongTable}
 \caption{Scope Inference Algorithm}
 \label{fig:rscope-resugar}
@@ -1512,29 +1514,29 @@ about desugaring, and then the algorithm.
 
 We will assume that desugaring is given (externally to the language)
 by a set of rewrite rules of
-the form $C \To C'$, where $C$ and $C'$ are contexts (terms with
-\emph{holes} $\PVar_i$ in them, \emph{not} evaluation contexts).\footnote{
+the form $p \To p'$, where $p$ and $p'$ are patterns (terms with
+\emph{pattern variables} $\PVar_i$ in them).\footnote{
   Formally, this is a term rewriting system (TRS)~\cite{trs}. We are
-  calling the TRS's variables \emph{holes} to avoid confusing them
+  calling the TRS's variables \emph{pattern variables} to avoid confusing them
   with references and declarations, which are constants from the
   perspective of the TRS.}~\footnote{
   For now, we will admit \emph{unhygienic} sugars; hygiene will be
   addressed in \cref{sec:rscope-hygiene}.
 }
 \begin{Table}
-  $C$ &$::=$& ... & (as in term $t$) \\
-      &$\mid$& $\PVar_i$ & (hole)
+  $p$ &$::=$& ... & (as in term $e$) \\
+      &$\mid$& $\PVar_i$ & (pattern variable)
 \end{Table}
-Furthermore, we assume that for every rule $C \To C'$:
+Furthermore, we assume that for every rule $p \To p'$:
 \begin{enumerate}
-\item Every hole in $C'$ also appears in $C$.
-\item No hole in $C$ or $C'$ appears more than once.
-\item $C$ contains no references or declarations. (Rather, these
-  should be contained in its holes during expansion.)
-\item References and declarations in $C'$ are given fresh names during
+\item Every pattern variable in $p'$ also appears in $p$.
+\item No pattern variable in $p$ or $p'$ appears more than once.
+\item $p$ contains no references or declarations. (Rather, these
+  should be contained in its pattern variables during expansion.)
+\item References and declarations in $p'$ are given fresh names during
   expansion to ensure hygiene. (Our implementation also supports
   \emph{global} references---e.g., calling \Code{print}---but we leave
-  this out of the paper for simplicity.)
+  this out for simplicity.)
 \end{enumerate}
 
 When desugaring, there may be more than one rewrite rule that applies
@@ -1544,16 +1546,16 @@ is to apply rules in outside-in order, as is done by Scheme-style
 \Code{syntax-rules} macros~\cite{scheme5}.
 
 In general, a rewrite will look like:
-\[ E[C[t_1,...,t_n]] \To E[C'[t_1,...,t_n]] \]
-where $E$ and $C$ are contexts, and $C[t_1,...,t_n]$ denotes
-replacing the $n$ holes of context $C$ with
-terms $t_1,...,t_n$. (In \cref{sec:rscope-example}, $C$ was
-called the \textsc{lhs}, and $C'$ the \textsc{rhs}.)
-The outer context $E$ is important
+\[ p_0[p[e_1,...,e_n]] \To p_0[p'[e_1,...,e_n]] \]
+where $p_0$ and $p$ are patterns, and $p[e_1,...,e_n]$ denotes
+replacing the $n$ pattern variables of pattern $p$ with
+terms $e_1,...,e_n$. (In \cref{sec:rscope-example}, $p$ was
+called the \textsc{lhs}, and $p'$ the \textsc{rhs}.)
+The outer pattern $p_0$ is important
 because when a piece of sugar expands, while its \emph{expansion}
 doesn't typically depend on its surrounding context, its binding
-structure might. For example, $E$ might be $\NodeRm{Lambda}{\DeclX\;\PVar}$,
-and $\RefnX$ inside the hole may be unbound without it.
+structure might. For example, $p_0$ might be $\NodeRm{Lambda}{\DeclX\;\PVar}$,
+and $\RefnX$ inside the pattern variable may be unbound without it.
 
 
 \subsection{Constraint Generation}
@@ -1562,52 +1564,52 @@ and $\RefnX$ inside the hole may be unbound without it.
 The first step to scope inference is generating a set of constraints
 for each desugaring rule that, if satisfied, ensure that it will
 preserve binding structure. 
-Specifically, fix a rewrite rule $C \To C'$.
+Specifically, fix a rewrite rule $p \To p'$.
 It is important that this rewrite does not change the binding of any
-variable \emph{outside} of $C$. To achieve this, it will suffice that
-the preorder on the \emph{boundary} of $C$ is the same as the
-preorder among the boundary of $C'$. The boundary, here, is the set of
-holes in $C$, together with the root (i.e., the whole term).
-For example, in $E[C[t_1,...,t_n]]$, $\PVar_i$ bounds $t_i$, and $C$ (the root)
-bounds $E$. In general, we will call this property
+variable \emph{outside} of $p$. To achieve this, it will suffice that
+the preorder on the \emph{boundary} of $p$ is the same as the
+preorder among the boundary of $p'$. The boundary, here, is the set of
+pattern variables in $p$, together with the root (i.e., the whole term).
+For example, in $p_0[p[e_1,...,e_n]]$, $\PVar_i$ bounds $e_i$, and $p$ (the root)
+bounds $p_0$. In general, we will call this property
 \emph{scope-equivalence}:
-\begin{definition}[Scope-equivalence of contexts]
-  $\SaysScopeEqv{C}{C'}$ means that
+\begin{definition}[Scope-equivalence of patterns]
+  $\SaysScopeEqv{p}{p'}$ means that
   $\Forall{a, b \in \{\PVar_1,...,\PVar_n,\Root\}}$
-  \[ \SaysScope{C}{a}{b} \text{ iff } \SaysScope{C'}{a}{b} \]
-  where $\Root$ (``root'') stands in for $C$ or $C'$, as appropriate,
+  \[ \SaysScope{p}{a}{b} \text{ iff } \SaysScope{p'}{a}{b} \]
+  where $\Root$ (``root'') stands in for $p$ or $p'$, as appropriate,
   and omitted port signs are determined by what our binding language allows:
   \begin{Table}
-    $\SaysScope{C}{\PVar_i}{\PVar_j}$ &$\Defeq$&
-    $\SaysScope{C}{\im{}\PVar_i}{\ex{}\PVar_j}$
+    $\SaysScope{p}{\PVar_i}{\PVar_j}$ &$\Defeq$&
+    $\SaysScope{p}{\im{}\PVar_i}{\ex{}\PVar_j}$
     \\
-    $\SaysScope{C}{\PVar_i}{\Root}$ &$\Defeq$&
-    $\SaysScope{C}{\im{}\PVar_i}{\im{}C}$
+    $\SaysScope{p}{\PVar_i}{\Root}$ &$\Defeq$&
+    $\SaysScope{p}{\im{}\PVar_i}{\im{}p}$
     \\
-    $\SaysScope{C}{\Root}{\PVar_j}$ &$\Defeq$&
-    $\SaysScope{C}{\ex{}C}{\ex{}\PVar_j}$
+    $\SaysScope{p}{\Root}{\PVar_j}$ &$\Defeq$&
+    $\SaysScope{p}{\ex{}p}{\ex{}\PVar_j}$
     \\
-    $\SaysScope{C}{\Root}{\Root}$ &$\Defeq$&
-    $\SaysScope{C}{\ex{}C}{\im{}C}$
+    $\SaysScope{p}{\Root}{\Root}$ &$\Defeq$&
+    $\SaysScope{p}{\ex{}p}{\im{}p}$
   \end{Table}
 \end{definition}
 
-When two contexts are scope-equivalent, rewriting one to the other
+When two patterns are scope-equivalent, rewriting one to the other
 within a term does not change the scope of the rest of the term:
 \begin{definition}[Scope-preservation]
   A rewrite
-  \[ E[C[t_1,...,t_n]] \To E[C'[t_1,...,t_n]] \]
+  \[ p_0[p[e_1,...,e_n]] \To p_0[p'[e_1,...,e_n]] \]
   \emph{preserves scope} relative to a set of scoping rules $\Sigma$
-  if $\forall\,a,b \Subterm E,t_1,...,t_n$ (i.e.,
-  each of $a$ and $b$ lies in one of $E,t_1,...,t_n$):
-  \[ \SaysScope{E[C[t_1,...,t_n]]}{a}{b} \text{ iff }
-     \SaysScope{E[C'[t_1,...,t_n]]}{a}{b} \]
+  if $\forall\,a,b \Subterm p_0,e_1,...,e_n$ (i.e.,
+  each of $a$ and $b$ lies in one of $p_0,e_1,...,e_n$):
+  \[ \SaysScope{p_0[p[e_1,...,e_n]]}{a}{b} \text{ iff }
+     \SaysScope{p_0[p'[e_1,...,e_n]]}{a}{b} \]
 \end{definition}
 
-\begin{lemma}[Scope-equivalent contexts preserve scope]
+\begin{lemma}[Scope-equivalent patterns preserve scope]
   \label{lemma:scope-rscope-preservation}
-  If $\SaysScopeEqv{C}{C'}$, then any rewrite
-  $E[C[t_1,...,t_n]] \To E[C'[t_1,...,t_n]]$
+  If $\SaysScopeEqv{p}{p'}$, then any rewrite
+  $p_0[p[e_1,...,e_n]] \To p_0[p'[e_1,...,e_n]]$
   preserves scope.
 \end{lemma}
   \begin{proof}
@@ -1615,26 +1617,26 @@ within a term does not change the scope of the rest of the term:
     scope-preservation; the reverse is symmetric.
     View the ($\<$) preorder as a directed graph.
     Our given is that there is a path from $a$ to $b$ in
-    $E[C[t_1,...,t_n]]$, where neither $a$ nor $b$ lies in $C$.
-    Some subpaths of this path may traverse $C$; these subpaths are
+    $p_0[p[e_1,...,e_n]]$, where neither $a$ nor $b$ lies in $p$.
+    Some subpaths of this path may traverse $p$; these subpaths are
     bounded by
-    $\im{}t_1,\ex{}t_1,...,\im{}t_n,\ex{}t_n,\im{}C,\ex{}C$.
-    The fact that $\SaysScopeEqv{C}{C'}$ means that these subpaths can be
-    converted to subpaths in $C'$, bounded instead by
-    $\im{}t_1,\ex{}t_1,...,\im{}t_n,\ex{}t_n,\im{}C',\ex{}C'$.
+    $\im{}e_1,\ex{}e_1,...,\im{}e_n,\ex{}e_n,\im{}p,\ex{}p$.
+    The fact that $\SaysScopeEqv{p}{p'}$ means that these subpaths can be
+    converted to subpaths in $p'$, bounded instead by
+    $\im{}e_1,\ex{}e_1,...,\im{}e_n,\ex{}e_n,\im{}p',\ex{}p'$.
     Replace these subpaths. Now the whole path goes from $a$ to $b$ in
-    $E[C'[t_1,...,t_n]]$.
+    $p_0[p'[e_1,...,e_n]]$.
   \end{proof}
 
-We can use scope-equivalence to turn a rewrite rule $C \To C'$ into a
+We can use scope-equivalence to turn a rewrite rule $p \To p'$ into a
 set of constraints that hold iff the rewrite rule preserves
 scope. There will be one constraint for every pair $(a, b)$ from the
 boundary. Each constraint will have the form:
-\[F_1 \wedge F_2 \wedge ... F_n \texttt{ iff } F_1' \wedge F_2' \wedge ... F_m' \]
-where each $F_i$ is a fact (e.g. $\SigBind{Let}{1}{2}$). This constraint is
+\[f_1 \wedge f_2 \wedge ... f_n \texttt{ iff } f_1' \wedge f_2' \wedge ... f_m' \]
+where each $f_i$ is a fact (e.g. $\SigBind{Let}{1}{2}$). This constraint is
 found by stating that the premises of the derivation of
-$\SaysScope{C}{a}{b}$ hold iff the premises of the derivation
-$\SaysScope{C'}{a}{b}$ hold. These derivations are guaranteed to be unique,
+$\SaysScope{p}{a}{b}$ hold iff the premises of the derivation
+$\SaysScope{p'}{a}{b}$ hold. These derivations are guaranteed to be unique,
 and can found efficiently, because the algorithmic scope-checking
 rules (\cref{fig:rscope-SD}) are syntax-directed.
 
@@ -1778,12 +1780,12 @@ be bound. For instance, a sugar could not simply expand to $\RefnX$,
 because that would be unbound.
 
 \item
-A sugar cannot delete a hole that might contain a bound
+A sugar cannot delete a pattern variable that might contain a bound
 declaration. For instance, it could not rewrite
 $\NodeRm{lambda}{\PVarA\,\PVarB}$ to $\PVarB$, because $\PVarB$ might
 contain a reference bound by a declaration in $\PVarA$. In general,
-if a sugar deletes any hole, then it must also delete all smaller
-holes (those that are less in the preorder).
+if a sugar deletes any pattern variable, then it must also delete all smaller
+pattern variables (those that are less in the preorder).
 
 \end{itemize}
 These two checks ensure that sugars cannot cause unbound identifier
@@ -1805,9 +1807,9 @@ equality~\cite{adams-hygiene}.
 However, there is a simpler goal we can aim for that gets at the heart
 of the problem, and subsumes all of these specific properties.
 The goal is that if two programs are $\alpha$-equivalent, then they
-will still be $\alpha$-equivalent after a desugaring $f$:
-\[ \SaysScopeEqa[\SigmaSurf]{s}{t} \text{ \,implies\, }
-   \SaysScopeEqa[\SigmaCore]{f(s)}{f(t)}
+will still be $\alpha$-equivalent after a desugaring $\Desugar{}$:
+\[ \SaysScopeEqa[\SigmaSurf]{e}{e'} \text{ \,implies\, }
+   \SaysScopeEqa[\SigmaCore]{\Desugar{e}}{\Desugar{e'}}
 \]
 (Recall from \cref{def:rscope-eqa} that $\alpha$-equivalence is parameterized
 by $\Sigma$. Therefore, in the above antecedent and consequent,
@@ -1833,6 +1835,21 @@ and can then ask whether these inferred rules preserve
 $\alpha$-equivalence. In \cref{sec:rscope-hygiene} we will show that they do,
 so long as inference was successful and $\Op{scopeCheck}{}$ passed.
 
+One may wonder how useful of a property this is. What good does it for
+desugaring to preserve $\alpha$-equivalence, when $\alpha$-equivalence
+for the surface language was \emph{made up}?  In fact, there is a
+situation in which preserving $\alpha$-equivalence is completely
+useless: define $e_1 =_\alpha e_2$ in the surface language to mean
+that $\Desugar{e_1} =_\alpha \Desugar{e_2}$ in the core language,
+where $\Desugar{}$ is a naive, completely unhygienic desugaring. Then
+desugaring will preserve $\alpha$-equivalence, despite not being
+hygienic in any way!
+
+It is therefore crucial that our binding language cannot express this
+(rather insane) notion of surface-language $\alpha$-equivalence. It
+is the \emph{weakness} (i.e., sanity) of our binding language that
+leads to the \emph{strength} of our hygiene property.
+
 This covers the $\Op{solve}{}$ algorithm in \cref{fig:rscope-resugar}, and
 completes our description of scope inference: (i) find constraints for
 every desugaring rule; (ii) find their least fixpoint, starting
@@ -1847,37 +1864,37 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
 \begin{theorem}[Rewrites preserve scope]\label{thm:rscope-resugar}
   \whitePhantom{.}\\%Newline
   Let $\SigmaSurf =
-  \Op{inferScope}{\SigmaCore,\,\{C_i \To C_i'\}_{i \in 1..n}}$.
+  \Op{inferScope}{\SigmaCore,\,\{p_i \To p_i'\}_{i \in 1..n}}$.
   Then any rewrite of the form
-  $E[C_i[t_1,...,t_n]] \To E[C_i'[t_1,...,t_n]]$
+  $p_0[p_i[e_1,...,e_n]] \To p_0[p_i'[e_1,...,e_n]]$
   will preserve scope.
   Furthermore, $\SigmaSurf$ is least (it is contained in every other
   set of scoping rules that would be preserved).
 \end{theorem}
   \begin{proof}
     By construction, the constraints generated by $\Op{inferScope}{}$
-    ensure that $\SaysScopeEqv[\SigmaSurf]{C_i}{C_i'}$ for each $i$.
+    ensure that $\SaysScopeEqv[\SigmaSurf]{p_i}{p_i'}$ for each $i$.
     By \cref{lemma:rscope-scope-preservation},
     this implies that any rewrite
-    $E[C_i[t_1,...,t_n]] \To E[C_i'[t_1,...,t_n]]$ will preserve scope.
+    $p_0[p_i[e_1,...,e_n]] \To p_0[p_i'[e_1,...,e_n]]$ will preserve scope.
     Thus it suffices to show that $\Op{solve}{}$ does, in fact, find the
     least solution to the constraints given $\SigmaCore$.
   
     $\Op{solve}{}$ works with scope signatures $\SigmaCore$ and
     $\SigmaSurf$, and a set of constraints $\mathbb{C}$:
     \begin{Table}
-      $f_{11}' \wedge  f_{12}' \wedge ...$ &iff&
-      $f_{11}'' \wedge f_{12}'' \wedge ...$ \\
-      $f_{21}' \wedge  f_{22}' \wedge ...$ &iff&
-      $f_{21}'' \wedge f_{22}'' \wedge ...$ \\
+      $F_{11}' \wedge  F_{12}' \wedge ...$ &iff&
+      $F_{11}'' \wedge F_{12}'' \wedge ...$ \\
+      $F_{21}' \wedge  F_{22}' \wedge ...$ &iff&
+      $F_{21}'' \wedge F_{22}'' \wedge ...$ \\
       &...&
     \end{Table}
     At any point during the evaluation of $\Op{solve}{}$, let the
     \emph{meaning} $\phi$ of $\SigmaCore$, $\SigmaSurf$, and $Cs$ be:
-    \[ \bigwedge_{f \in \SigmaSurf}\hspace{-0.5em}f \wedge
-       \bigwedge_{f \in \SigmaCore}\hspace{-0.5em}f \wedge
-       \bigwedge_{f \in \overline \SigmaCore}\hspace{-0.5em}\neg f \wedge
-       \bigwedge_i \left(\bigwedge_j f_{ij}' \text{ iff } \bigwedge_k f_{ik}''\right)
+    \[ \bigwedge_{F \in \SigmaSurf}\hspace{-0.5em}F \wedge
+       \bigwedge_{F \in \SigmaCore}\hspace{-0.5em}F \wedge
+       \bigwedge_{F \in \overline \SigmaCore}\hspace{-0.5em}\neg F \wedge
+       \bigwedge_i \left(\bigwedge_j F_{ij}' \text{ iff } \bigwedge_k F_{ik}''\right)
     \]
     That is,
     \begin{enumerate}
@@ -1894,24 +1911,24 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
     maintains $\phi$. There are three kinds of steps to consider, and
     each follows from a logical equivalence:
     \begin{itemize}
-    \item ``If a fact $f$ in a constraint is in $\SigmaSurf$:
-      Delete $f$ from the constraint.''
-      \[ f \wedge (f \wedge f_2 \wedge ...
-         \text{ iff } f_1' \wedge f_2' \wedge ...)
+    \item ``If a fact $F$ in a constraint is in $\SigmaSurf$:
+      Delete $F$ from the constraint.''
+      \[ F \wedge (F \wedge F_2 \wedge ...
+         \text{ iff } F_1' \wedge F_2' \wedge ...)
          \equiv
-         f \wedge (f_2 \wedge ...
-         \text{ iff } f_1' \wedge f_2' \wedge ...)
+         F \wedge (F_2 \wedge ...
+         \text{ iff } F_1' \wedge F_2' \wedge ...)
       \]
     \item ``If one side of a constraint is empty:
       Delete the constraint;
       Add the other side to $\SigmaSurf$ (maintaining trans. closure).''
-      \[ (\mathit{true} \text{ iff } f_1 \wedge ... \wedge f_n)
+      \[ (\mathit{true} \text{ iff } F_1 \wedge ... \wedge F_n)
          \equiv
-         f_1 \wedge ... \wedge f_n
+         F_1 \wedge ... \wedge F_n
       \]
-    \item ``If any fact $f$ in $\SigmaSurf$ is in the complement of
+    \item ``If any fact $F$ in $\SigmaSurf$ is in the complement of
       $\SigmaCore$: ERROR''
-      \[ f \wedge \neg f \equiv \mathit{false} \]
+      \[ F \wedge \neg F \equiv \mathit{false} \]
     \end{itemize}
   
     Finally, when $\Op{solve}{}$ halts, it is because the facts in $\mathbb{C}$
@@ -1921,13 +1938,13 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
     fact in $\overline\SigmaSurf$ to $\mathit{false}$; doing so will
     satisfy $\mathbb{C}$ by making both sides of every remaining constraint
     false. Thus we have shown that the final $\SigmaSurf$:
-    \[ \bigwedge_{f \in \SigmaSurf}\hspace{-0.5em}f \wedge
-       \bigwedge_{f \in \overline \SigmaSurf}\hspace{-0.5em}\neg f
+    \[ \bigwedge_{F \in \SigmaSurf}\hspace{-0.5em}F \wedge
+       \bigwedge_{F \in \overline \SigmaSurf}\hspace{-0.5em}\neg F
     \]
     is a minimal solution to the initial $\SigmaCore$ and $\mathbb{C}$:
-    \[ \bigwedge_{f \in \SigmaCore}\hspace{-0.5em}f \wedge
-       \bigwedge_{f \in \overline \SigmaCore}\hspace{-0.5em}\neg f \wedge
-       \bigwedge_i \left(\bigwedge_j f_{ij}' \text{ iff } \bigwedge_k f_{ik}''\right)
+    \[ \bigwedge_{F \in \SigmaCore}\hspace{-0.5em}F \wedge
+       \bigwedge_{F \in \overline \SigmaCore}\hspace{-0.5em}\neg F \wedge
+       \bigwedge_i \left(\bigwedge_j F_{ij}' \text{ iff } \bigwedge_k F_{ik}''\right)
     \]
     Thus the surface language scoping rules $\SigmaSurf$ found by
     $\Op{solve}{}$ are valid and minimal, given the core language scoping rules
@@ -1937,8 +1954,8 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
   \begin{corollary}[Desugaring preserves scope]
     \whitePhantom{.}\\%Newline
     Let $\SigmaSurf =
-    \Op{inferScope}{\SigmaCore,\,\{C_i \To C_i'\}_{i \in 1..n}}$.
-    Then desugaring with the rules $\{C_i \To C_i'\}_{i \in 1..n}$
+    \Op{inferScope}{\SigmaCore,\,\{p_i \To p_i'\}_{i \in 1..n}}$.
+    Then desugaring with the rules $\{p_i \To p_i'\}_{i \in 1..n}$
     will preserve scope.
   \end{corollary}
   \begin{proof}
@@ -1946,11 +1963,11 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
   \end{proof}
 
   Furthermore, scope inference runs in time
-  $O(\Sigma_{P \in \mathit{surf}} \Arity{P}^3)$:
+  $O(\Sigma_{C \in \mathit{surf}} \Arity{C}^3)$:
 
   \begin{lemma}
     $\Op{inferScope}{\Sigma,\,\mathbb{C}}$ runs in time
-    $O(\Op{size}{\mathbb{C}} + \Sigma_{P \in \mathit{surf}} \Arity{P}^3)$.
+    $O(\Op{size}{\mathbb{C}} + \Sigma_{C \in \mathit{surf}} \Arity{C}^3)$.
   \end{lemma}
 
   \begin{proof}
@@ -1960,18 +1977,18 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
     Iterating over the facts in $\mathbb{C}$ takes time $\Op{size}{\mathbb{C}}$, where
     $\Op{size}{\mathbb{C}}$ is the total number of facts in $\mathbb{C}$.  Each fact
     added to $\SigmaSurf$ requires maintaining the transitive closure of
-    $\SigmaSurf$, for the node type $P$ of the fact. This can be done
-    with an amortized cost of $O(\Arity{P})$ per $P$-fact added.  (To
+    $\SigmaSurf$, for the constructor $C$ of the fact. This can be done
+    with an amortized cost of $O(\Arity{C})$ per $C$-fact added.  (To
     add a fact $\FactP{a}{b}$ that does not appear in $\SigmaSurf$,
     insert it and then recursively add $\FactP{a}{c}$ for every fact
     $\FactP{b}{c}$, and add $\FactP{c}{b}$ for every fact $\FactP{c}{a}$.)
-    Since there are $O(\Arity{P}^2)$ possible $P$-facts to add, this
-    adds an additional $O(\Sigma_{P \in \mathit{surf}} \Arity{P}^3)$
+    Since there are $O(\Arity{C}^2)$ possible $C$-facts to add, this
+    adds an additional $O(\Sigma_{C \in \mathit{surf}} \Arity{C}^3)$
     running time.
   \end{proof}
 
 The cubic parameter is concerning, but not a problem in practice for a
-number of reasons. First, $\Arity{P}$ tends to be small.
+number of reasons. First, $\Arity{C}$ tends to be small.
 Second, this algorithm is run off-line, and once per language.
 Finally, as we discuss in \cref{sec:rscope-impl}, in practice the running
 time is extremely small.
@@ -1981,14 +1998,14 @@ time is extremely small.
 \label{sec:rscope-impl}
 
 We have implemented the scope inference algorithm. Beyond what is
-shown in the paper, the implementation also allows (i) marking
+shown in this chapter, the implementation also allows (i) marking
 variables as \emph{global references} that should refer to globally
 available identifiers in the expanded program, such as \Code{print},
-and (ii) a select form of copying a hole, where the hole contains a
+and (ii) a select form of copying a pattern variable, where the pattern variable contains a
 declaration and the copy is meant to be a reference of the same name.
 The implementation is available at \url{https://github.com/brownplt/scope-graph}.
 
-Besides the examples shown earlier in the paper, we have tested this
+Besides the examples shown earlier, we have tested this
 implementation on sugars from three languages:
 \begin{itemize}
   \item All of the sugars that bind values in the Pyret language
@@ -2004,7 +2021,7 @@ implementation on sugars from three languages:
 
 Some of the desugarings use ellipses in their definition, and thus had
 to be translated to match our fixed-arity assumption. (To do so, we
-introduced auxiliary \textsc{ast} node types and used those to express the
+introduced auxiliary \textsc{ast} constructors and used those to express the
 equivalent looping.) \texttt{letrec}
 required one further adjustment to successfully infer scope.\footnote{
   The change was to have the desugaring distinguish between the letrec
@@ -2025,7 +2042,7 @@ time. Therefore, the speed is even fast enough for scope inference to
 be used as part of a language developer's rapid prototyping workflow.
 
 \subsection{Case Study: Pyret \texttt{for} Expressions}
-\label{sec:for-rscope-example}
+\label{sec:rscope-for-example}
 Consider the ``for expressions'' of the Pyret language:
 \begin{verbatim}
 for fold(p from 1, n from range(1, 6)):
@@ -2305,13 +2322,13 @@ Named-let desugars by the rule:\footnote{
 
 We will represent the \textsc{ast} for named-let expressions with the grammar:
 \begin{Table}
-  $t$ &$::=$&
-    $\NodeRm{Let}{\DeclX\;b\;t}$
-      & ``Named-let: bind initial values $b$ and recursive function $\DeclX$ in $t$'' \\
+  $e$ &$::=$&
+    $\NodeRm{Let}{\DeclX\;b\;e}$
+      & ``Named-let: bind initial values $b$ and recursive function $\DeclX$ in $e$'' \\
     &$|$& $\ldots$ \\
   $b$ &$::=$&
-    $\NodeRm{Bind}{\DeclX\;t\;b}$
-      & ``Bind $\DeclX$ to $t$, and bind $b$'' \\
+    $\NodeRm{Bind}{\DeclX\;e\;b}$
+      & ``Bind $\DeclX$ to $e$, and bind $b$'' \\
     &$|$&   $\ConstRm{EndBinds}$
       & ``No more bindings''
 \end{Table}
@@ -2338,6 +2355,7 @@ infers the binding structure:
   \end{tikzEdges}
 \end{tikzScopeDiagram}
 \end{center}
+\hspace{2em} % push
 \begin{ScopeRules}
   \RuleImpt{Let}{proc-id} \\
   \RuleImpt{Let}{bindings} \\
@@ -2367,6 +2385,7 @@ infers the binding structure:
   \end{tikzEdges}
 \end{tikzScopeDiagram}
 \end{center}
+\hspace{2em} % shove
 \begin{ScopeRules}
   \RuleImpt{Bind}{arg-id} \\
   \RuleImpt{Bind}{init-expr} \\
@@ -2446,7 +2465,7 @@ fails on it. Its correct scope is:\\%Newline (strangely necessary)
   \end{tikzEdges}
 \end{tikzScopeDiagram}
 \end{center}
-\hspace{3em}%Not sure why these overlap by default.
+\hspace{3.7em}%Not sure why these overlap by default.
 \begin{ScopeRules}
   \RuleImpt{DoBind}{var} \\
   \RuleImpt{DoBind}{init} \\
@@ -2757,10 +2776,10 @@ This raises questions that we leave for future work.\footnote{
 
 We will show that our scope inference algorithm (when successful)
 always produces surface scoping rules such that desugaring is
-hygienic. Again, we say that a desugaring $f$ is hygienic when it
+hygienic. Again, we say that a desugaring $\Desugar{}$ is hygienic when it
 preserves $\alpha$-equivalence:
-\[ \SaysScopeEqa[\SigmaSurf]{s}{t} \text{\quad implies\quad }
-   \SaysScopeEqa[\SigmaCore]{f(s)}{f(t)}
+\[ \SaysScopeEqa[\SigmaSurf]{e}{e'} \text{\quad implies\quad }
+   \SaysScopeEqa[\SigmaCore]{\Desugar{e}}{\Desugar{e'}}
 \]
 We will show this by way of a theorem that provides a necessary and
 sufficient condition for hygiene,
@@ -2772,41 +2791,41 @@ its input is).
 
 To discuss the properties required for this theorem,
 we will divide variables into categories:
-variables in $f(t)$ are either New (fresh) or Copied from $t$,
-and variables in $t$ are either Used (if they were copied) or Unused
+variables in $\Desugar{e}$ are either New (fresh) or Copied from $e$,
+and variables in $e$ are either Used (if they were copied) or Unused
 otherwise. Formally,
-let $\phi$ be the mapping from \emph{copied} variables in $f(t)$ to
-their sources in $t$, and:
+let $\phi$ be the mapping from \emph{copied} variables in $\Desugar{e}$ to
+their sources in $e$, and:
 \begin{Table}
   $\mathit{Used}$   &$\Defeq$& $\Range{\phi}$ \\
-  $\mathit{Unused}$ &$\Defeq$& $\Op{vars}{t} - \Range{\phi}$ \\
+  $\mathit{Unused}$ &$\Defeq$& $\Op{vars}{e} - \Range{\phi}$ \\
   $\mathit{Copied}$ &$\Defeq$& $\Domain{\phi}$ \\
-  $\mathit{New}$    &$\Defeq$& $\Op{vars}{f(t)} - \Domain{\phi}$
+  $\mathit{New}$    &$\Defeq$& $\Op{vars}{\Desugar{e}} - \Domain{\phi}$
 \end{Table}
-(where $\Op{vars}{t}$ is the set of \emph{all} variables in $t$).
+(where $\Op{vars}{e}$ is the set of \emph{all} variables in $e$).
 
 We now turn to the properties required for hygiene.
 We will first list some clearly necessary properties, and then show
 that they are also sufficient.
 
-First, $f$ must avoid variable capture; thus $f(t)$ cannot contain
-bindings between new variables (introduced by $f$) and copied
-variables (taken from $t$):
+First, $\Desugar{}$ must avoid variable capture; thus $\Desugar{e}$ cannot contain
+bindings between new variables (introduced by $\Desugar{}$) and copied
+variables (taken from $e$):
 
 \begin{property} \label{rscope-prop1}
   \whitePhantom{.}
 \begin{LongTable}
   $\forall{\RefnX \!\in\! \mathit{Copied}}.$
   && $\forall{\DeclX \!\in\! \mathit{New}}.$
-  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+  && $\SaysScopeNotBound{\Desugar{e}}{\RefnX}{\DeclX}$ \\
 
   $\forall{\RefnX \!\in\! \mathit{New}}.$
   && $\forall{\DeclX \!\in\! \mathit{Copied}}.$
-  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+  && $\SaysScopeNotBound{\Desugar{e}}{\RefnX}{\DeclX}$ \\
 \end{LongTable}
 \end{property}
 
-Second, $f$ must preserve binding structure among the variables
+Second, $\Desugar{}$ must preserve binding structure among the variables
 it copies:\footnote{
   This property does not appear in prior work on hygiene because such
   work typically assumes that the binding structure of a surface term
@@ -2818,12 +2837,12 @@ it copies:\footnote{
   \whitePhantom{.}
 \begin{LongTable}
   $\forall{\RefnX,\DeclX \!\in\! \mathit{Copied}}.$ \\
-     $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$ iff 
-     $\SaysScopeBound{t}{\phi(\RefnX)}{\phi(\DeclX)}$
+     $\SaysScopeBound{\Desugar{e}}{\RefnX}{\DeclX}$ iff 
+     $\SaysScopeBound{e}{\phi(\RefnX)}{\phi(\DeclX)}$
 \end{LongTable}
 \end{property}
 
-Finally, $f$ must preserve well-boundedness. Thus, it must not cause a
+Finally, $\Desugar{}$ must preserve well-boundedness. Thus, it must not cause a
 reference to become unbound or introduce a new unbound reference:
 
 \begin{property} \label{rscope-prop3}
@@ -2831,11 +2850,11 @@ reference to become unbound or introduce a new unbound reference:
 \begin{LongTable}
   $\forall{\RefnX \!\in\! \mathit{Used}}.$
   && $\forall{\DeclX \!\in\! \mathit{Unused}}.$
-  && $\SaysScopeNotBound{t}{\RefnX}{\DeclX}$ \\
+  && $\SaysScopeNotBound{e}{\RefnX}{\DeclX}$ \\
 
   $\forall{\RefnX \!\in\! \mathit{New}}.$
   && $\exists!{\DeclX \!\in\! \mathit{New}}.$
-  && $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$ \\
+  && $\SaysScopeBound{\Desugar{e}}{\RefnX}{\DeclX}$ \\
 \end{LongTable}
 \end{property}
 
@@ -2843,78 +2862,78 @@ While these three properties are clearly necessary, it is by no means
 clear that they are sufficient to guarantee $\alpha$-equivalence
 preservation. However, the following theorem shows that they
 are both necessary and sufficient to ensure that
-$f$ preserves $\alpha$-equivalence:
+$\Desugar{}$ preserves $\alpha$-equivalence:
 
 \begin{theorem}[Fundamental Hygiene Theorem] \label{thm:rscope-hygiene}
-Let $f$ be a desugaring function over terms with respect to
+Let $\Desugar{}$ be a desugaring function over terms with respect to
 scoping rules $\Sigma$ that obeys the assumptions of \cref{sec:rscope-des-assumptions}.
-Then $f$ respects $\alpha$-equivalence iff
-for every (well-bound) input term $t$ (numbering by property number):
+Then $\Desugar{}$ respects $\alpha$-equivalence iff
+for every (well-bound) input term $e$ (numbering by property number):
 \begin{LongTable}
   1. $\forall{\RefnX \!\in\! \mathit{Copied}}.$
   && $\forall{\DeclX \!\in\! \mathit{New}}.$
-  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+  && $\SaysScopeNotBound{\Desugar{e}}{\RefnX}{\DeclX}$ \\
 
   1. $\forall{\RefnX \!\in\! \mathit{New}}.$
   && $\forall{\DeclX \!\in\! \mathit{Copied}}.$
-  && $\SaysScopeNotBound{f(t)}{\RefnX}{\DeclX}$ \\
+  && $\SaysScopeNotBound{\Desugar{e}}{\RefnX}{\DeclX}$ \\
 
   2. $\forall{\RefnX \!\in\! \mathit{Copied}}.$
   && $\forall{\DeclX \!\in\! \mathit{Copied}}.$
-  && $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$ \\
-  &&&& iff\; $\SaysScopeBound{t}{\phi(\RefnX)}{\phi(\DeclX)}$ \\
+  && $\SaysScopeBound{\Desugar{e}}{\RefnX}{\DeclX}$ \\
+  &&&& iff\; $\SaysScopeBound{e}{\phi(\RefnX)}{\phi(\DeclX)}$ \\
 
   3. $\forall{\RefnX \!\in\! \mathit{Used}}.$
   && $\forall{\DeclX \!\in\! \mathit{Unused}}.$
-  && $\SaysScopeNotBound{t}{\RefnX}{\DeclX}$ \\
+  && $\SaysScopeNotBound{e}{\RefnX}{\DeclX}$ \\
 
   3. $\forall{\RefnX \!\in\! \mathit{New}}.$
   && $\exists!{\DeclX \!\in\! \mathit{New}}.$
-  && $\SaysScopeBound{f(t)}{\RefnX}{\DeclX}$
+  && $\SaysScopeBound{\Desugar{e}}{\RefnX}{\DeclX}$
 \end{LongTable}
-where $\phi$ is the mapping from \emph{copied} variables in $f(t)$ to
-their sources in $t$.
+where $\phi$ is the mapping from \emph{copied} variables in $\Desugar{e}$ to
+their sources in $e$.
 \end{theorem}
 
   \begin{proof}\label{proof:rscope-hygiene}
-    $f$ respects $\alpha$-equivalence iff (i) $f$ maps well-bound terms
+    $\Desugar{}$ respects $\alpha$-equivalence iff (i) $\Desugar{}$ maps well-bound terms
     to well-bound terms, and (ii) $\alpha$-renaming any declaration
-    $\DeclX$ in any well-bound term $t$ does not change the binding
-    structure of $f(t)$.
+    $\DeclX$ in any well-bound term $e$ does not change the binding
+    structure of $\Desugar{e}$.
   
     Address parts (i) and (ii) in reverse order.
   
     For part (ii), do a case analysis on $\DeclX$. In both cases, let
-    $t$ be the input term.
+    $e$ be the input term.
     \begin{enumerate}
     \item ($\DeclX \in \mathit{Unused}$) $\alpha$-varying $\DeclX$ renames
       both $\DeclX$ and also $\RefnX$ for every $\RefnX \Bound \DeclX$
-      in $t$.
+      in $e$.
       Renaming $\DeclX$ itself is fine: since it doesn't appear in
-      $f(t)$, it cannot change the binding structure of $f(t)$.
+      $\Desugar{e}$, it cannot change the binding structure of $\Desugar{e}$.
       Now do case analysis on every such $\RefnX$:
       \begin{enumerate}
         \item ($\RefnX \in \mathit{Unused}$) Similarly, this case is OK
-          because $\RefnX$ does not appear in $f(t)$.
+          because $\RefnX$ does not appear in $\Desugar{e}$.
         \item ($\RefnX \in \mathit{Used}$) This case is problematic:
-          renaming $\RefnX$ in $t$ will rename $\Image{\RefnX}$ in $f(t)$,
+          renaming $\RefnX$ in $e$ will rename $\Image{\RefnX}$ in $\Desugar{e}$,
           which will cause its binding to change. Thus:
           \begin{equation}
             \Forall{\RefnX \in \mathit{Used}}
             \Forall{\DeclX \in \mathit{Unused}}
-            \SaysScopeNotBound{t}{\RefnX}{\DeclX}
+            \SaysScopeNotBound{e}{\RefnX}{\DeclX}
           \end{equation}
       \end{enumerate}
     \item ($\DeclX \in \mathit{Used}$) $\alpha$-varying $\DeclX$
       renames both $\DeclX$ and $\RefnX$ for every $\RefnX \Bound \DeclX$
-      in $t$. Renaming $\DeclX$ is problematic iff
-      $\Exists{\RefnXi}$ s.t. $\SaysScopeBound{f(t)}{\RefnXi}{\DeclXi}$
+      in $e$. Renaming $\DeclX$ is problematic iff
+      $\Exists{\RefnXi}$ s.t. $\SaysScopeBound{\Desugar{e}}{\RefnXi}{\DeclXi}$
       where $\DeclXi \in \Image{\DeclX}$ but $\RefnXi \not\in
       \Image{\RefnX}$ for some $\RefnX \Bound \DeclX$
       (hence $\RefnXi$'s binding will change when $\DeclX$ is renamed).
       Thus:
       \begin{equation}
-        \text{If } \SaysScopeBound{f(t)}{\RefnXi}{\DeclXi}
+        \text{If } \SaysScopeBound{\Desugar{e}}{\RefnXi}{\DeclXi}
         \text{ and } \phi(\DeclXi) \text{ exists},
         \text{ then } \phi(\RefnXi) \text{ exists and }
         \phi(\RefnXi) \Bound \phi(\DeclXi)
@@ -2922,18 +2941,18 @@ their sources in $t$.
   
       That dealt with the direct effects of renaming $\DeclX$.
       Now consider the effects of renaming $\RefnX$ for some
-      $\SaysScopeBound{t}{\RefnX}{\DeclX}$. Do case analysis on every such $\RefnX$:
+      $\SaysScopeBound{e}{\RefnX}{\DeclX}$. Do case analysis on every such $\RefnX$:
       \begin{enumerate}
-        \item ($\RefnX \in \mathit{Unused}$) Renaming $\RefnX$ in $t$ is
-          OK since it does not appear in $f(t)$.
+        \item ($\RefnX \in \mathit{Unused}$) Renaming $\RefnX$ in $e$ is
+          OK since it does not appear in $\Desugar{e}$.
         \item ($\RefnX \in \mathit{Used}$) Consider some
           $\RefnXi \in \Image{\RefnX}$.
-          Let $\RefnXi \Bound \DeclXi \in f(t)$ (it must be bound, since
-          $f(t)$ is well-bound).
+          Let $\RefnXi \Bound \DeclXi \in \Desugar{e}$ (it must be bound, since
+          $\Desugar{e}$ is well-bound).
           For the binding of $\RefnXi$ to not change when $\DeclX$ (and $\RefnX$) is
           renamed, $\DeclXi$ must be in $\Image{\DeclX}$. Thus:
           \begin{equation}
-            \text{If } \SaysScopeBound{f(t)}{\RefnXi}{\DeclXi}
+            \text{If } \SaysScopeBound{\Desugar{e}}{\RefnXi}{\DeclXi}
             \text{ and } \phi(\RefnXi) \text{ exists },
             \text{ then } \phi(\DeclXi) \text{ exists, and }
             \phi(\RefnXi) \Bound \phi(\DeclXi)
@@ -2941,16 +2960,16 @@ their sources in $t$.
       \end{enumerate}
     \end{enumerate}
     
-    For part (i), $f(t)$ must be well-bound. The only bindings
+    For part (i), $\Desugar{e}$ must be well-bound. The only bindings
     not covered by the above cases are bindings from
     $\mathit{New}$ to $\mathit{New}$. Thus:
     \begin{equation}
       \Forall{\RefnX \in \mathit{New}}
       \ExistsUnique{\DeclX \in \mathit{New}}
-      \RefnX \Bound \DeclX \in f(t)
+      \RefnX \Bound \DeclX \in \Desugar{e}
     \end{equation}
   
-    This gives four equations that hold iff $f$ is hygienic.
+    This gives four equations that hold iff $\Desugar{}$ is hygienic.
     Equation (1) corresponds to the first part of the theorem's Property
     (3). Equations (2) and (3) together correspond to Properties (1) and
     (2). Finally, equation (4) corresponds to the second part of
@@ -2963,6 +2982,7 @@ assumptions about desugaring. Property 2 follows from our inference
 process: since desugaring preserves scope by \cref{thm:rscope-resugar},
 bindings between variables must not change. Finally, property 3 is
 exactly what $\Op{checkScope}{}$ checks.
+
 
 
 
@@ -3066,7 +3086,7 @@ lifted \emph{evaluation steps} though sugar
 Below, we discuss work related to two aspects of our approach to
 scope inference. However, none of them infer scope through syntactic
 sugar; we therefore believe that the central contribution of this
-paper is novel.
+chapter is novel.
 
 \subsection{Hygienic Expansion}
 
@@ -3143,7 +3163,7 @@ also other constructs like objects and field lookup.
 Our {\sap} binding language can actually be extended to
 handle modules, but doing so breaks our transitivity
 assumption, which we need to infer scope, so we have left it out of
-this paper and consider this a problem for
+this chapter and consider this a problem for
 future work.
 
 \paragraph{Binding Specification Languages}
@@ -3212,7 +3232,7 @@ inferring scoping rules through syntactic sugar. It makes use
 of our description of scope as a preorder in
 \cref{sec:rscope-sap}, and our binding language for specifying the
 scope of a programming language in \cref{sec:rscope-rules}. The case studies
-in \cref{sec:rscope-impl} show that all of the aspects of this paper
+in \cref{sec:rscope-impl} show that all of the aspects of this work
 are able to deal with many interesting scoping constructs from real
 languages.
 
@@ -3225,11 +3245,6 @@ necessary for inferring scope for modules and for classes. These last
 two changes are relatively straightforward extensions to our binding
 language, but research questions when applied to scope inference.
 
-\paragraph{Acknowledgements}.[TODO]
-We thank Paul Stansifer, Sebastian Erdweg, and Matthew Flatt for
-their feedback, and the anonymous reviewers who provided helpful
-feedback on the paper. This work was partially supported by the NSF.
-
 \bibliography{justin}
 
 \newpage
@@ -3241,54 +3256,54 @@ feedback on the paper. This work was partially supported by the NSF.
     \begin{center}\textbf{SA $\to$ SD}\end{center}
     \begin{Table}&&
       \inference[SA-Import]
-        {\SaysScopeS{t_i}{a}{\im t_i} \quad
+        {\SaysScopeS{e_i}{a}{\im e_i} \quad
          \SigPImpt{i}}
         {\SaysScopeS{\NodeStd}{a}{\im{}\NodeStd}}
     \\ \\ &$\Longrightarrow$&
     \inference[SD-Trans]
       {\inference[S-Lift]
-        {\SaysScopeS{t_i}{a}{\im t_i}}
-        {\SaysScopeS{\NodeStd}{a}{\im t_i}}
+        {\SaysScopeS{e_i}{a}{\im e_i}}
+        {\SaysScopeS{\NodeStd}{a}{\im e_i}}
       \quad
       \inference[SD-Import]
         {\SigPImpt{i}}
-        {\SaysScopeS{\NodeStd}{\im t_i}{\im \NodeStd}}}
+        {\SaysScopeS{\NodeStd}{\im e_i}{\im \NodeStd}}}
       {\SaysScopeS{\NodeStd}{a}{\im \NodeStd}}
     \\ \\ &&
       \inference[SA-Export]
         {\SigPExpt{i} \quad
-         \SaysScopeS{t_i}{\ex t_i}{a}}
+         \SaysScopeS{e_i}{\ex e_i}{a}}
         {\SaysScopeS{\NodeStd}{\ex{}\NodeStd}{a}}
     \\ \\ &$\Longrightarrow$&
     \inference[SD-Trans]
       {\inference[SD-Export]
         {\SigPExpt{i}}
-        {\SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex t_i}}
+        {\SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex e_i}}
       \quad
       \inference[S-Lift]
-        {\SaysScopeS{t_i}{\ex t_i}{a}}
-        {\SaysScopeS{\NodeStd}{\ex t_i}{a}}\phantom{}}
+        {\SaysScopeS{e_i}{\ex e_i}{a}}
+        {\SaysScopeS{\NodeStd}{\ex e_i}{a}}\phantom{}}
       {\SaysScopeS{\NodeStd}{\ex \NodeStd}{a}}
     \\ \\ &&
     \inference[SA-Bind]
-        {\SaysScopeS{t_i}{a}{\im t_i} \quad
+        {\SaysScopeS{e_i}{a}{\im e_i} \quad
          \SigPBind{i}{j} \quad
-         \SaysScopeS{t_j}{\ex t_j}{b}}
+         \SaysScopeS{e_j}{\ex e_j}{b}}
         {\SaysScopeS{\NodeStd}{a}{b}}
     \\ \\ &$\Longrightarrow$&
     \inference[SD-Trans$^2$]
       {\hspace{-3em}
         \inference[S-Lift]
-        {\SaysScopeS{t_i}{a}{\im t_i}}
-        {\SaysScopeS{\NodeStd}{a}{\im t_i}}
+        {\SaysScopeS{e_i}{a}{\im e_i}}
+        {\SaysScopeS{\NodeStd}{a}{\im e_i}}
       \quad
       \inference[SD-Bind]
         {\SigPBind{i}{j}}
-        {\SaysScopeS{\NodeStd}{\im t_i}{\ex t_j}}
+        {\SaysScopeS{\NodeStd}{\im e_i}{\ex e_j}}
       \quad
       \inference[S-Lift]
-        {\SaysScopeS{t_j}{\ex t_j}{b}}
-        {\SaysScopeS{\NodeStd}{\ex t_j}{b}}\phantom{}}
+        {\SaysScopeS{e_j}{\ex e_j}{b}}
+        {\SaysScopeS{\NodeStd}{\ex e_j}{b}}\phantom{}}
       {\SaysScopeS{\NodeStd}{a}{b}}
       \\ \\
     \end{Table}
@@ -3310,23 +3325,23 @@ feedback on the paper. This work was partially supported by the NSF.
     \inference[SD-Export]{
       \SigPExpt{i}
     }{
-      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex t_i}
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex e_i}
     }
     \quad$\Longrightarrow$\quad
     \inference[SA-Export]{
       \SigPExpt{i} \quad
       \inference[S-Refl2]{
       }{
-        \SaysScopeS{t_i}{\ex t_i}{\ex t_i}
+        \SaysScopeS{e_i}{\ex e_i}{\ex e_i}
       }
     }{
-      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex t_i}
+      \SaysScopeS{\NodeStd}{\ex \NodeStd}{\ex e_i}
     }
     \\ \\ &&
     \inference[SD-Import]{
       \SigPImpt{i}
     }{
-      \SaysScopeS{\NodeStd}{\im t_i}{\im \NodeStd}
+      \SaysScopeS{\NodeStd}{\im e_i}{\im \NodeStd}
     }
     \quad$\Longrightarrow$\quad
     \inference[SA-Import]{
@@ -3334,57 +3349,57 @@ feedback on the paper. This work was partially supported by the NSF.
       \quad
       \inference[S-Refl1]{
       }{
-        \SaysScopeS{t_i}{\im t_i}{\im t_i}
+        \SaysScopeS{e_i}{\im e_i}{\im e_i}
       }
     }{
-      \SaysScopeS{\NodeStd}{\im t_i}{\im \NodeStd}
+      \SaysScopeS{\NodeStd}{\im e_i}{\im \NodeStd}
     }
     \\ \\ &&
     \inference[SD-Trans]{
-      \inference[S-Refl1]{}{\SaysScopeS{t}{\im t}{\im t}}
+      \inference[S-Refl1]{}{\SaysScopeS{e}{\im e}{\im e}}
       \quad
-      \inference{D}{\SaysScopeS{t}{\im t}{a}}\phantom{}
+      \inference{D}{\SaysScopeS{e}{\im e}{a}}\phantom{}
     }{
-      \SaysScopeS{t}{\im t}{a}
+      \SaysScopeS{e}{\im e}{a}
     }
     \quad$\Longrightarrow$\quad
-    \inference{D}{\SaysScopeS{t}{\im t}{a}}
+    \inference{D}{\SaysScopeS{e}{\im e}{a}}
     \qquad \text{(likewise for S-Refl2)}
     \\ \\ &&
     \inference[SD-Bind]{
       \SigPBind{i}{j}
     }{
-      \SaysScopeS{\NodeStd}{\im t_i}{\ex t_j}
+      \SaysScopeS{\NodeStd}{\im e_i}{\ex e_j}
     }
     \quad$\Longrightarrow$\quad
     \inference[SA-Bind]{
-      \inference[S-Refl1]{}{\SaysScopeS{t_i}{\im t_i}{\im t_i}}
+      \inference[S-Refl1]{}{\SaysScopeS{e_i}{\im e_i}{\im e_i}}
       \quad
       \SigPBind{i}{j}
       \quad\phantom{}
-      \inference[S-Refl2]{}{\SaysScopeS{t_j}{\ex t_j}{\ex t_j}}\phantom{}
+      \inference[S-Refl2]{}{\SaysScopeS{e_j}{\ex e_j}{\ex e_j}}\phantom{}
     }{
-      \SaysScopeS{\NodeStd}{\im t_i}{\ex t_j}
+      \SaysScopeS{\NodeStd}{\im e_i}{\ex e_j}
     }
     \\ \\ &&
     \inference[SD-Trans]{
       \hspace{-4em}
       \inference[SA-Bind]{
-        \SaysScopeS{t_i}{a}{\im t_i}
+        \SaysScopeS{e_i}{a}{\im e_i}
         \quad
         \SigPBind{i}{j}
         \quad
-        \SaysScopeS{t_j}{\ex t_j}{b}
+        \SaysScopeS{e_j}{\ex e_j}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }
       \quad
       \inference[SA-Bind]{
-        \SaysScopeS{t_j}{b}{\im t_j}
+        \SaysScopeS{e_j}{b}{\im e_j}
         \quad
         \SigPBind{j}{k}
         \quad
-        \SaysScopeS{t_k}{\ex t_k}{c}
+        \SaysScopeS{e_k}{\ex e_k}{c}
       }{
         \SaysScopeS{\NodeStd}{b}{c}
       }\phantom{}
@@ -3393,7 +3408,7 @@ feedback on the paper. This work was partially supported by the NSF.
     }
     \\ \\ &$\Longrightarrow$&
     \inference[SA-Bind]{
-      \SaysScopeS{t_i}{a}{\im t_i}
+      \SaysScopeS{e_i}{a}{\im e_i}
       \quad
       \inference{
         \SigPBind{i}{j}
@@ -3403,24 +3418,24 @@ feedback on the paper. This work was partially supported by the NSF.
         \SigPBind{i}{k}
       }
       \quad
-      \SaysScopeS{t_k}{\ex t_k}{c}
+      \SaysScopeS{e_k}{\ex e_k}{c}
     }{
       \SaysScopeS{\NodeStd}{a}{c}
     }
     \\ \\ &&
     \inference[SD-Trans]{
       \inference[SA-Bind]{
-        \SaysScopeS{t_i}{a}{\im t_i}
+        \SaysScopeS{e_i}{a}{\im e_i}
         \quad
         \SigPBind{i}{j}
         \quad
-        \SaysScopeS{t_j}{\ex t_j}{b}
+        \SaysScopeS{e_j}{\ex e_j}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }
       \quad
       \inference[S-Lift]{
-        \SaysScopeS{t_j}{b}{c}
+        \SaysScopeS{e_j}{b}{c}
       }{
         \SaysScopeS{\NodeStd}{b}{c}
       }\phantom{}
@@ -3429,16 +3444,16 @@ feedback on the paper. This work was partially supported by the NSF.
     }
     \\ \\ &$\Longrightarrow$&
     \inference[SA-Bind]{
-      \SaysScopeS{t_i}{a}{\im t_i}
+      \SaysScopeS{e_i}{a}{\im e_i}
       \quad
       \SigPBind{i}{j}
       \quad
       \inference[SD-Trans]{
-        \SaysScopeS{t_j}{\ex t_j}{b}
+        \SaysScopeS{e_j}{\ex e_j}{b}
         \quad
-        \SaysScopeS{t_j}{b}{c}
+        \SaysScopeS{e_j}{b}{c}
       }{
-        \SaysScopeS{t_j}{\ex t_j}{c}
+        \SaysScopeS{e_j}{\ex e_j}{c}
       }
     }{
       \SaysScopeS{\NodeStd}{a}{c}
@@ -3462,17 +3477,17 @@ feedback on the paper. This work was partially supported by the NSF.
     \begin{Table}&&
     \inference[SD-Trans]{
       \inference[S-Lift]{
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }
       \quad
       \inference[SA-Bind]{
-        \SaysScopeS{t_i}{b}{\im t_i}
+        \SaysScopeS{e_i}{b}{\im e_i}
         \quad
         \SigPBind{i}{j}
         \quad
-        \SaysScopeS{t_j}{\ex t_j}{c}
+        \SaysScopeS{e_j}{\ex e_j}{c}
       }{
         \SaysScopeS{\NodeStd}{b}{c}
       }\phantom{}
@@ -3482,29 +3497,29 @@ feedback on the paper. This work was partially supported by the NSF.
     \\ \\ &$\Longrightarrow$&
     \inference[SD-Bind]{
       \inference[SD-Trans]{
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
         \quad
-        \SaysScopeS{t_i}{b}{\im t_i}
+        \SaysScopeS{e_i}{b}{\im e_i}
       }{
-        \SaysScopeS{t_i}{a}{\im t_i}
+        \SaysScopeS{e_i}{a}{\im e_i}
       }
       \quad
       \SigPBind{i}{j}
       \quad
-      \SaysScopeS{t_j}{\ex t_j}{c}
+      \SaysScopeS{e_j}{\ex e_j}{c}
     }{
       \SaysScopeS{\NodeStd}{a}{c}
     }
     \\ \\ &&
     \inference[SD-Trans]{
       \inference[S-Lift]{
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }
       \quad
       \inference[S-Lift]{
-        \SaysScopeS{t_i}{b}{c}
+        \SaysScopeS{e_i}{b}{c}
       }{
         \SaysScopeS{\NodeStd}{b}{c}
       }\phantom{}
@@ -3514,11 +3529,11 @@ feedback on the paper. This work was partially supported by the NSF.
     \\ \\ &$\Longrightarrow$&
     \inference[S-Lift]{
       \inference[SD-Trans]{
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
         \quad
-        \SaysScopeS{t_i}{b}{c}
+        \SaysScopeS{e_i}{b}{c}
       }{
-        \SaysScopeS{t_i}{a}{c}
+        \SaysScopeS{e_i}{a}{c}
       }
     }{
       \SaysScopeS{\NodeStd}{a}{c}
@@ -3528,13 +3543,13 @@ feedback on the paper. This work was partially supported by the NSF.
       \inference[SA-Export]{
         \SigPExpt{i}
         \quad
-        \SaysScopeS{t_i}{\ex t_i}{a}
+        \SaysScopeS{e_i}{\ex e_i}{a}
       }{
         \SaysScopeS{\NodeStd}{\ex \NodeStd}{a}
       }
       \quad
       \inference[SA-Import]{
-        \SaysScopeS{t_i}{a}{\im t_i}
+        \SaysScopeS{e_i}{a}{\im e_i}
         \quad
         \SigPImpt{i}
       }{
@@ -3560,13 +3575,13 @@ feedback on the paper. This work was partially supported by the NSF.
       \inference[SA-Export]{
         \SigPExpt{i}
         \quad
-        \SaysScopeS{t_i}{\ex t_i}{a}
+        \SaysScopeS{e_i}{\ex e_i}{a}
       }{
         \SaysScopeS{\NodeStd}{\ex \NodeStd}{a}
       }
       \quad
       \inference[S-Lift]{
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }\phantom{}
@@ -3578,11 +3593,11 @@ feedback on the paper. This work was partially supported by the NSF.
       \SigPExpt{i}
       \quad
       \inference[SD-Trans]{
-        \SaysScopeS{t_i}{\ex t_i}{a}
+        \SaysScopeS{e_i}{\ex e_i}{a}
         \quad
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
       }{
-        \SaysScopeS{t_i}{\ex t_i}{b}
+        \SaysScopeS{e_i}{\ex e_i}{b}
       }
     }{
       \SaysScopeS{\NodeStd}{\ex \NodeStd}{b}
@@ -3605,13 +3620,13 @@ feedback on the paper. This work was partially supported by the NSF.
     \\ \\ &&
     \inference[SD-Trans]{
       \inference[S-Lift]{
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }
       \quad
       \inference[SA-Import]{
-        \SaysScopeS{t_i}{b}{\im t_i}
+        \SaysScopeS{e_i}{b}{\im e_i}
         \quad
         \SigPImpt{i}
       }{
@@ -3623,11 +3638,11 @@ feedback on the paper. This work was partially supported by the NSF.
     \\ \\ &$\Longrightarrow$&
     \inference[SA-Import]{
       \inference[SD-Trans]{
-        \SaysScopeS{t_i}{a}{b}
+        \SaysScopeS{e_i}{a}{b}
         \quad
-        \SaysScopeS{t_i}{b}{\im t_i}
+        \SaysScopeS{e_i}{b}{\im e_i}
       }{
-        \SaysScopeS{t_i}{a}{\im t_i}
+        \SaysScopeS{e_i}{a}{\im e_i}
       }
       \quad
       \SigPImpt{i}
@@ -3637,17 +3652,17 @@ feedback on the paper. This work was partially supported by the NSF.
     \\ \\ &&
     \inference[SD-Trans]{
       \inference[SA-Bind]{
-        \SaysScopeS{t_i}{a}{\im t_i}
+        \SaysScopeS{e_i}{a}{\im e_i}
         \quad
         \SigPBind{i}{j}
         \quad
-        \SaysScopeS{t_j}{\ex t_j}{b}
+        \SaysScopeS{e_j}{\ex e_j}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }
       \quad
       \inference[SA-Import]{
-        \SaysScopeS{t_j}{b}{\im t_j}
+        \SaysScopeS{e_j}{b}{\im e_j}
         \quad
         \SigPImpt{j}
       }{
@@ -3658,7 +3673,7 @@ feedback on the paper. This work was partially supported by the NSF.
     }
     \\ \\ &$\Longrightarrow$&
     \inference[SA-Import]{
-      \SaysScopeS{t_i}{a}{\im t_i}
+      \SaysScopeS{e_i}{a}{\im e_i}
       \quad
       \inference{
         \SigPBind{i}{j}
@@ -3675,17 +3690,17 @@ feedback on the paper. This work was partially supported by the NSF.
       \inference[SA-Export]{
         \SigPExpt{i}
         \quad
-        \SaysScopeS{t_i}{\ex t_i}{a}
+        \SaysScopeS{e_i}{\ex e_i}{a}
       }{
         \SaysScopeS{\NodeStd}{\ex \NodeStd}{a}
       }
       \quad
       \inference[SA-Bind]{
-        \SaysScopeS{t_i}{a}{\im t_i}
+        \SaysScopeS{e_i}{a}{\im e_i}
         \quad
         \SigPBind{i}{j}
         \quad
-        \SaysScopeS{t_j}{\ex t_j}{b}
+        \SaysScopeS{e_j}{\ex e_j}{b}
       }{
         \SaysScopeS{\NodeStd}{a}{b}
       }\phantom{}
@@ -3702,7 +3717,7 @@ feedback on the paper. This work was partially supported by the NSF.
         \SigPExpt{j}
       }
       \quad
-      \SaysScopeS{t_j}{\ex t_j}{b}
+      \SaysScopeS{e_j}{\ex e_j}{b}
     }{
       \SaysScopeS{\NodeStd}{\ex \NodeStd}{b}
     }

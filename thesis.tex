@@ -194,11 +194,11 @@
 \newcommand{\Bound}{\mapsto}
 
 % Expressions
-\newcommand{\Node}[2]{(#1\;#2)}
 \newcommand{\ConstRm}[1]{\texttt{#1}}
 \newcommand{\NodeRm}[2]{\Node{\texttt{#1}}{#2}}
 \newcommand{\NodeStd}{\Node{C}{\Seqn[1]{t}[n]}}
 \newcommand{\ASTNode}[4]{(\Variable{#3}{}{#2}{#1}\;#4)}
+\newcommandx*{\Node}[3][2=\empty]{({#1}_\textrm{\textsc{#2}}\;#3)}
 \newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
 \newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
 \newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
@@ -470,6 +470,7 @@
 \newcommand{\ConstrTt}[2]{\Constr{\texttt{#1}}{#2}}
 \newcommand{\ConstrIt}[2]{\Constr{\textit{#1}}{#2}}
 \newcommand{\ConstrCal}[2]{\Constr{\mathcal{#1}}{#2}}
+\newcommand{\ConstrBb}[2]{\Constr{\mathbb{#1}}{#2}}
 
 \newcommand{\ConstrSub}[3]{\ifthenelse{\isempty{#2}}{#1}{#1_{#2}(#3)}}
 \newcommand{\ConstrSubTt}[3]{\ConstrSub{\texttt{#1}}{#2}{#3}}
@@ -485,6 +486,8 @@
 
 % Resugaring Terminology
 \newcommand{\Tool}{\textit{Resugarer}\xspace}
+\newcommand{\Desugar}[1]{\ConstrBb{D}{#1}}
+\newcommand{\Resugar}[1]{\ConstrBb{R}{#1}}
 
 % Scope Terminology
 \newcommand{\Scopeset}[1]{\ConstrIt{scope\mbox{-}set}{#1}}
@@ -521,16 +524,46 @@
 %   Core vs. Surface
 %   Declaration vs. Reference
 
+\section{Abstract}
+  Thesis statment:
+\begin{quote}
+Many aspects of programming languages---in particular evaluation
+steps, scope rules, and type rules---can be non-trivially
+\emph{resugared} from core to surface language, restoring the
+abstraction provided by syntactic sugar.
+\end{quote}
+
+[FILL]
+
+
+\paragraph{Acknowledgements}. [TODO]
+
+Some of the papers that led to this thesis were rough around the edges
+when we initially submitted them. I would like to give many thanks to
+the many reviewers who gave \emph{very thorough} feedback on these
+intial versions. This thesis owes much of its quality to these
+anonymous individuals.
+
+I would like to thank Paul Stansifer, Sebastian Erdweg, and Matthew
+Flatt for their feedback on scope inference
+(\cref{chap:resugar-scope}).
+
+I would like to thank Sorawee ``Oak'' Porncharoenwase for helping to
+generalize this work and integrate it with Pyret, as part of his
+Honors thesis (\cref{chap:implementation}).
+
+Finally, I would like to thank the NSF, which partly funded all of this work.
+
 \part{Syntactic Sugar}
-\include{chapters/intro}
-\include{chapters/taxonomy}
+%\include{chapters/intro}
+%\include{chapters/taxonomy}
 \part{Desugaring}
-\include{chapters/formalism}
-\include{chapters/well-formedness}
+%\include{chapters/formalism}
+%\include{chapters/well-formedness}
 \part{Resugaring}
-\include{chapters/resugar-eval}
+%\include{chapters/resugar-eval}
 \include{chapters/resugar-scope}
-\include{chapters/resugar-types}
+%\include{chapters/resugar-types}
 % Chapter: Implementation
 % Chapter: Conclusion/future work
 
