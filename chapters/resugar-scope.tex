@@ -11,6 +11,8 @@
   {\{\Decl{x}\}}
   {\{\Refn{x}\mapsto\Decl{x}\}}}
 
+[TODO: need 4 args, or just the three?]
+
 \Inference[scope-e-decl]{}{
   \SaysScope{\Sigma}{\Decl{x}}{\{\Decl{x}\}}{\{\}}{\{\Decl{x}\}}{\{\}}
 }
@@ -51,7 +53,7 @@
     \Decl[a]{x} \not\in \Domain{S}
   }
 }{
-  \SaysScope{\Sigma}{\Core{C}{e_1 ... e_n}}{P}{R}{B}
+  \SaysScope{\Sigma}{\Core{C}{e_1 ... e_n}}{P}{R}{B \cup B_1 \cup \ddd \cup B_n}
 }
 
 
@@ -90,7 +92,7 @@
     a \not\in \Domain{S}
   }
 }{
-  \SaysScope{\Sigma}{\Core{C}{p_1 ... p_n}}{P}{R}{B}
+  \SaysScope{\Sigma}{\Core{C}{p_1 ... p_n}}{P}{R}{B \cup B_1 \cup \ddd \cup B_n}
 }
 
 Two checks to make: fresh vars don't bind to non-fresh vars, and named
