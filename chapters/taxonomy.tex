@@ -1,4 +1,4 @@
-\chapter{Desugaring in the Wild}
+\chapter{Desugaring in the Wild}\label{chap:taxonomy}
 
 TODO
 \begin{itemize}
@@ -273,7 +273,7 @@ Last---but certainly not least---we will consider four different
     hygiene [CITE] is not about the error behavior of the desugaring
     system.  Instead, it is about how desugaring treats variables. As
     an example, consider this simple \Code{or} sugar (using Racket
-    syntax):\marginpar{ Why not just write \Code{(if a a b)}? That
+    syntax):\marginpar{Why not just write \Code{(if a a b)}? That
       wouldn't work well if \Code{a} had side effects.}
 \begin{Codes}
 (define-syntax-rule
@@ -290,7 +290,7 @@ Last---but certainly not least---we will consider four different
 \begin{Codes}
 (let ((temp "70 degrees"))
   (let ((temp false)) (if temp temp temp)))
-\end{Codes}\marginpar{
+\end{Codes}\marginpar{%
   Some of the examples here were inspired by Clinger and Rees CITE.
 }%[CITE]
     which would then evaluate to \Code{false}, which is wrong. The

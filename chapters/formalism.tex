@@ -10,7 +10,7 @@ resugaring scope rules [REF] work on the kind of desugaring rules
 given here, but no more. The chapter on resugaring type systems [REF]
 will further restrict the allowed desuarging rules.
 
-\section{ASTs}
+\section{ASTs}\label{sec:formal-term}
 
 For the purposes of resugaring, we place two requirements on
 \textsc{ast}s. First, the \Sc{ast} must distinguish between variable
@@ -21,6 +21,7 @@ distinguishes it from other occurrences of the same variable or node.
 (Exactly why these requirements are necessary will become clear in
 [REF] and [REF].)
 [TODO: distinguish core, aux, surf]
+[TODO: define 'term']
 With this taken into account, the definition of \textsc{ast}s is
 straightforward:
 \marginpar{
@@ -42,7 +43,6 @@ ast $e$ &$::=$& $\Value$ & primitive value \\
 %  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval})
 %value $v$ &$::=$& $e$ & with no sugar invocations \\
 \end{Table}
-
 
 \section{Patterns}
 
@@ -319,6 +319,57 @@ algorithms are given in \cref{fig:subs}, while bindings are defined in
 See \cref{fig:expansion}.
 [TODO: Replace step with something that looks like desugaring.]
 [TODO: Replace $v$ with something that looks like core terms.]
+
+\subsection{Restrictions on Desugaring}
+
+Not every syntactically valid desugaring rule is semantically
+sensible, and not every semantically sensible desugaring rule is
+feasible to resugar. Here we give (i) a set of well-formedness
+criteria on desugaring rules, without which they don't make semantic
+sense, and (ii) a set of restrictions on desugaring rules that we need
+to effectively resugar them. The resugaring techniques described in
+[REF] will rely on these restrictions.
+
+\paragraph{Well-formedness Criteria for Desugaring Rules}
+\begin{enumerate}
+\item \emph{Each pattern variable in the \Sc{rhs} also appears in the
+  \Sc{lhs}.} Otherwise the pattern variable would be unbound during
+  expansion.
+\item \emph{An ellipsis of depth $n$ must contain at least one pattern
+  variable that appears at depth $n$ on the other side of the rule.}
+  Otherwise it is impossible to know how many times to repeat its
+  pattern during substitution. (The \emph{depth} of an ellipsis
+  measures how deeply nested it is within other ellipses; a top-level
+  ellipsis has depth 1, an ellipsis within an ellipsis depth 2, and so
+  forth.)
+\end{enumerate}
+
+\paragraph{Restrictions on Desugaring Rules}
+\begin{enumerate}
+\item \emph{Each patern variable appears exactly once in the \Sc{lhs}
+  and exactly once in the \Sc{rhs}.}
+  Allowing duplicate pattern variables complicates matching,
+  unification, and proofs of correctness. It also copies code and, in
+  the worst case, can exponentially blow up programs.  We therefore
+  disallow duplication, with the sole exception of pattern variables
+  bound to atomic terms. [TODO: impl]
+  
+  Likewise, dropping pattern variables complicates running desugaring
+  rules in reverse, which we will need to do in [REF]. (Naively, when
+  running a desugaring rule in reverse, a pattern variable that
+  appeared on the \Sc{lhs} but not on the \Sc{rhs} would be unbound.)
+\item \emph{Each transformation's \Sc{lhs} must have the form
+  $\Surf{C}{e_1,\,...,\,e_n}$.} We will rely on this fact when showing that
+  unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
+\end{enumerate}
+
+In addition, we have one extra restriction for scope resugaring, and
+one for type resugaring.
+When resugaring \emph{scope rules} [REF], desugaring rules may not
+contain ellipses. [TODO: lift this restriction!]
+When resugaring \emph{type rules} [REF], we will also
+require that for each desugaring rule, its cases be disjoint.
+
 
 \begin{figure}
   NOTES: Core terms are terms without Surf or Aux nodes. Desugaring
