@@ -46,6 +46,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{pifont} % for x-mark
+\usepackage{newunicodechar}
 % More commands
 \usepackage{xargs}
 \usepackage{xspace}
@@ -94,6 +95,16 @@
 \newtheorem{assumption}{Assumption}
 \newtheorem{corollary}{Corollary}
 \newtheorem{property}{Property}
+
+% Unicode "support"
+\newunicodechar{λ}{$\lambda$}
+\newunicodechar{Γ}{$\Gamma$}
+\newunicodechar{ϵ}{$\epsilon$}
+\newunicodechar{⊢}{$\vdash$}
+\newunicodechar{ρ}{$\rho$}
+\newunicodechar{α}{$\alpha$}
+\newunicodechar{β}{$\beta$}
+\newunicodechar{γ}{$\gamma$}
 
 
 
@@ -488,6 +499,7 @@
 \newcommand{\Tool}{\textit{Resugarer}\xspace}
 \newcommand{\Desugar}[1]{\ConstrBb{D}{#1}}
 \newcommand{\Resugar}[1]{\ConstrBb{R}{#1}}
+\newcommand{\Resugarer}{\Sc{Confection}}
 
 % Scope Terminology
 \newcommand{\Scopeset}[1]{\ConstrIt{scope\mbox{-}set}{#1}}
@@ -559,11 +571,11 @@ Finally, I would like to thank the NSF, which partly funded all of this work.
 %\include{chapters/intro}
 %\include{chapters/taxonomy}
 \part{Desugaring}
-%\include{chapters/formalism}
+\include{chapters/formalism}
 %\include{chapters/well-formedness}
 \part{Resugaring}
-%\include{chapters/resugar-eval}
-\include{chapters/resugar-scope}
+\include{chapters/resugar-eval}
+%\include{chapters/resugar-scope}
 %\include{chapters/resugar-types}
 % Chapter: Implementation
 % Chapter: Conclusion/future work
