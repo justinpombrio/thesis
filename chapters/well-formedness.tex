@@ -20,6 +20,14 @@ These well-formedness conditions can (largely) be captured by giving
 each syntactic construct a \emph{syntax type}:
 
 \begin{Table}
+  type env. $\Gamma$ &$::=$&
+$\begin{cases}
+  \PVarA:t, ... \\
+  l \mapsto [\Gamma], ...
+\end{cases}$
+& \begin{tabular}{@{} l @{}}
+    regular binding \\ ellipsis binding
+  \end{tabular} \\
 \Sc{ast} defn. $G$ &$::=$& $A \mapsto \{t_1, ... t_n\}$
   & (where each $t$ is a syn. con.) \\
 syntactic category $A$ \hspace{-1em} &$::=$& \textit{name} \\
@@ -205,3 +213,257 @@ that do \emph{not} match a shape can be expressed as a union of shapes.
 
 \caption{Well-Formedness Checking: Patterns}
 \end{figure}
+
+
+\section{Proof of Soundness}
+
+\subsection{Type Soundness}
+
+We prove soundness by way of progress + preservation:
+\begin{theorem}[Soundness]
+  If $\SaysExpr{L}{e}{t}$, then
+  $\SaysDss{L}{e}{v}$ where $\SaysExpr{L}{v}{t}$, or $e$ runs forever.
+\end{theorem}
+\begin{proof}
+\Cref{thm:formal-progress} (progress) and \cref{thm:formal-preservation}
+(preservation) together imply that either:
+(i) $e$ is a value, or (ii) $\SaysDs{L}{e}{e'}$ and $\SaysExpr{L}{e'}{t}$.
+Apply this repeatedly. Either $e$ eventually steps to a value $v$, and
+has remained the same type $t$ throughout the evaluation, or $e$ never
+halts.
+\end{proof}
+
+\begin{lemma}[Progress] \label{thm:formal-progress}
+  If $\SaysExpr{L}{e}{t}$, then
+  $\SaysDs{L}{e}{e'}$, or $e$ is a value.
+\end{lemma}
+\begin{proof}
+  First, verify that our evaluation contexts include every case that
+  isn't a value. Thus either $e$ is a value and we are done, or $e$
+  contains a redex: $e=E[\Surf{m}{e_1 ... e_n}]$.
+  In the latter case, we will show that $e$ can take a step because
+  the ds-sugar rule applies. There are two premises that need to be
+  satisfied:
+  \begin{itemize}
+    \item First, we must show that $m$ is bound in $L$. Since $e$
+      type-checked, it must be: the only rule which can type-check a
+      sugar invocation is p-sugar; this in turn must use rule
+      g-sugar; finally g-sugar requires that $m \in L$.
+    \item Second, we must show that the pattern match of $e_1,...,e_n$
+      succeeds on any case ${\DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p'}}$
+      of the desugaring
+      rule. By \cref{thm:formal-exhaustion}, it does.
+  \end{itemize}
+\end{proof}
+
+\begin{assumption}[Exhaustion] \label{thm:formal-exhaustion}
+  If the set of cases in a desugaring rule are exhaustive over
+  $t_1,...,t_n$ according to our exhaustion checking algorithm, then
+  for every possible argument list $e_1,...,e_n$ that matches the
+  given types (i.e., $\SaysExpr{L}{e_1}{t_1},...,\SaysExpr{L}{e_n}{t_n}$),
+  there is a case $k_i$ such that $e_1,...,e_n$ successfully matches
+  against $k_i$. [TODO: prove]
+\end{assumption}
+\begin{proof}
+  \emph{Not given}. We have not stated our exhaustion checking
+  algorithm here, and so cannot prove it correct. We believe it is
+  straightforward (if tedious).
+\end{proof}
+
+\begin{lemma}[Preservation] \label{thm:formal-preservation}
+  If $\SaysExpr{L}{e}{t}$ and $\SaysDs{L}{e}{e'}$, then $\SaysExpr{L}{e'}{t}$.
+\end{lemma}
+\begin{proof}
+  Since $e$ can take an expansion step, it must have a redex (via
+  ds-ctx): $e = E[\Surf{m}{e_1 ... e_n}]$. And furthermore (by ds-sugar) $m$
+  must be bound in $L$, and there must be a first case of $m$ that
+  matches $e$.  Call it $k_i = (p_1,...,p_n);\Gamma \To p'$. Then:
+  \begin{ProofTable}
+  By ds-case: & $\SaysMatch{L}{e_i}{p_i}{\gamma_i}$
+    for some $\gamma_i$ for each $i$ & (1) \\
+  and & $\SaysSubs{F}{\gamma_i \cup ...
+    \cup \gamma_n}{p'}{e'}$ & (2) \\
+  and & $\SaysDs{L}{E[e]}{E[e']}$ \\
+  By e-sugar: & $\SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}$ \\
+  and & $\SaysRule{L}{m}{t_1 ... t_n}{t}$ \\
+  and & $\SaysExpr{L}{e_i}{t_i}$ for each $i$ & (3) \\
+  By g-sugar: & $\SaysPatt{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (4) \\
+  and & $\SaysPatt{L}{\Gamma}{p'}{t}$ & (5)
+  \end{ProofTable}
+  By \cref{thm:formal-match} with (1), (3), and (4),
+  $\SaysEnv{\gamma_i}{\Gamma}$ for each $i$. By \cref{thm:formal-union},
+  $\SaysEnv{\gamma_1 \cup ... \gamma_n}{\Gamma}$.
+  Finally, by \cref{thm:formal-substitute} with that last fact together
+  with (2) and (5), $\SaysExpr{L}{e'}{t}$.
+\end{proof}
+
+\begin{lemma}[Union of Substitutions] \label{thm:formal-union}
+  If $\SaysEnv{L}{\gamma_1}{\Gamma}$ and $\SaysEnv{L}{\gamma_2}{\Gamma}$,
+  then $\SaysEnv{L}{\gamma_1 \cup \gamma_2}{\Gamma}$.
+\end{lemma}
+\begin{proof}
+  [TODO]
+\end{proof}
+
+\begin{lemma}[Matching] \label{thm:formal-match}
+  If $\SaysPatt{L}{\Gamma}{p}{t}$
+  and $\SaysExpr{L}{e}{t}$
+  and $\SaysMatch{F}{e}{p}{\gamma}$,
+  then $\SaysEnv{L}{\gamma}{\Gamma}$
+\end{lemma}
+\begin{proof}
+  Induction on $p$.
+  \begin{description}
+  \item[$p = string$]
+    \begin{ProofTable}
+      By p-str: & $\SaysPatt{L}{\Gamma}{string}{\TString}$ & fixes $t$ \\
+      By m-str: & $\SaysMatch{F}{string}{\TString}{\EmptySubs}$
+        & fixes $\gamma$
+    \end{ProofTable}
+    Finally, by $\gamma$-env, $\SaysEnv{F}{\EmptySubs}{\Gamma}$
+    (this applies for any $\Gamma$).
+  \item[$p = x \not\in F$] (Analogous.)
+  \item[$p = x \in F$] By p-refn or p-decl, 
+    $\Gamma = \{\}$ and $t$ is {\TRefn} or {\TDecl}.
+    By m-fresh, $e = y$ for some fresh name $y$, and $\gamma = \{\}$.
+    And the conclusion follows: $\SaysEnv{L}{\{\}}{\{\}}$. [TODO]
+  \item[$p = \PVarA$]
+    \begin{ProofTable}
+      By p-pvar: & $\SaysPatt{L}{\Gamma}{\PVarA}{t}$ & fixes $t$ \\
+      and & $\PVarA: t \in \Gamma$ & (1) \\
+      By m-pvar: & $\SaysMatch{F}{e}{\alpha}{\{\PVarA \mapsto e\}}$
+        & fixes $\gamma$
+    \end{ProofTable}
+    Finally, using $\gamma$-env on the premise $\SaysExpr{L}{e}{t}$
+    gives that $\SaysEnv{L}{\gamma}{\{\PVarA: t\}},\Gamma'$ for any
+    $\Gamma'$. By (1), this is the form of $\Gamma$, so we can set
+    $\Gamma'$ such that $\Gamma = {\{\PVarA: t\}},\Gamma'$, and we are done.
+  \item[$p = \Core{C}{p_1 ... p_n}$]
+    \begin{ProofTable}
+      By p-core: & $\SaysPatt{L}{\Gamma}{\Core{C}{p_1 ... p_n}}{A}$ & fixes $t$ \\
+      and & $A \mapsto \Core{C}{t_1 ... t_n} \in L$ \\
+      and & $\SaysPatt{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (1) \\
+      By m-core: &
+        $\SaysMatch{F}{\Core{C}{e_1 ... e_n}}{\Core{C}{p_1 ... p_n}}{\gamma}$
+        & fixes $e$ \\
+      and & $\SaysMatch{F}{e_i}{p_i}{\gamma_i}$ for each $i$ & (2) \\
+      and & $\gamma = \gamma_1 \cup ... \cup \gamma_n$ \\
+      By e-core: & $\SaysExpr{L}{\Core{C}{e_1 ... e_n}}{A}$ \\
+      and & $\SaysExpr{L}{e_i}{t_i}$ for each $i$ & (3) \\
+    \end{ProofTable}
+    Applying the I.H. to (1), (2), and (3) yeilds that
+    $\SaysEnv{L}{\gamma_i}{\Gamma}$.
+    By \cref{thm:formal-union}, $\SaysEnv{L}{\gamma}{\Gamma}$.
+  \item[$p = \Surf{m}{p_1 ... p_n}$] [FILL]
+  \item[$p = [\epsilon{]}$] [TODO] By m-empty, $\gamma = \{\}$.
+    By p-empty, $\Gamma = \{\}$. The goal follows: $\SaysEnv{L}{\{\}}{\{\}}$.
+  \item[$p = [p,ps{]}$] [FILL]
+  \item[$p = [\Rep{p}{l'}{]}$]
+    \begin{ProofTable}
+      By p-ellipsis: & $\SaysPatt{L}{\Gamma}{\Rep{p}{l'}}{[t]}$ & fixes $t$ \\
+      and & $l' \mapsto [\Gamma'] \in \Gamma$ & (1) \\
+      and & $\SaysPatt{L}{\Gamma'}{p}{t}$ & (2) \\
+      By m-ellipsis: & $\SaysMatch{F}{[e_1 ... e_n]}{[\Rep{p}{l}]}
+        {\{l' \mapsto [\gamma_1 \cup ... \gamma_n]\}}$
+        & fixes $e$, $\gamma$ \\
+      and & $\SaysMatch{F}{e_i}{p}{\gamma_i}$ for each $i$ & (3) \\
+      By e-list: & $\SaysExpr{L}{[e_1 ... e_n]}{[t]}$ \\
+      and & $\SaysExpr{L}{e_i}{t_i}$ & (4)
+    \end{ProofTable}
+    By the I.H. together with (2), (3), and (4),
+    $\SaysEnv{L}{\gamma_i}{\Gamma'}$ for each $i$.
+    By \cref{thm:formal-union},
+    $\SaysEnv{L}{\gamma_1 \cup ... \gamma_n}{\Gamma'}$.
+    Finally, by $\gamma$-env,
+    $\SaysEnv{L}{\{l' \mapsto [\gamma_1 \cup ... \gamma_n]\}}
+      {\{l' \mapsto [\Gamma']\}}$, which is compatible with the
+      specification of $\Gamma$ in (1).
+  \end{description}
+\end{proof}
+
+\begin{lemma}[Substitition] \label{thm:formal-substite}
+  If $\SaysEnv{L}{\gamma}{\Gamma}$
+  and $\SaysPatt{L}{\Gamma}{p}{t}$,
+  and $\SaysSubs{F}{\gamma}{p}{e}$,
+  then $\SaysExpr{L}{e}{t}$.
+\end{lemma}
+\begin{proof}
+  .[TODO]: update proof (freshness)
+  Induction on $p$.
+  \begin{description}
+  \item[$p = string$]
+  \item[$p = string$] By s-str, $\SaysSubs{F}{\gamma}{p}{string}$, so $e=string$.
+    By p-str, $\SaysPatt{L}{\Gamma}{p}{\TString}$, so $t=\TString$.
+    Finally, by e-str, $\SaysExpr{L}{e}{\TString}$ as desired.
+  \item[$p = x \not\in F$] (Analogous.)
+  \item[$p = x \in F$] By s-fresh, $e = y$ for some fresh name $y$.
+    By p-refn or p-decl, $t$ is either {\TRefn} or {\TDecl}.
+    Our goal $\SaysExpr{L}{y}{t}$ follows by either e-refn or e-decl,
+    respectively.
+  \item[$p = \PVarA$] By rule s-pvar, $\PVarA \mapsto e \in \gamma$.
+    By $\gamma$-env, $\alpha \mapsto t \in \Gamma$ and $\SaysExpr{L}{e}{t}$.
+    Which is our goal; we are done.
+    (Note that by $\gamma$-env, $\Gamma$ may have many \emph{other},
+    unnecessary, bindings to pattern variables, but it must \emph{at least}
+    contain a correct binding for $\alpha$.)
+  \item[$p = \Core{C}{p_1 ... p_n}$]
+    \begin{ProofTable}
+      By p-core: & $\SaysPatt{L}{\Gamma}{\Core{C}{p_1 ... p_n}}{A}$ & fixes $t$ \\
+      and & $A \mapsto \Core{C}{t_1 ... t_n} \in L$ & (1) \\
+      and & $\SaysPatt{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (2) \\
+      By s-core: & $\SaysSubs{F}{\gamma}{\Core{C}{p_1 ... p_n}}{\Core{C}{e_1 ... e_n}}$
+        & fixes $e$ \\
+      and & $\SaysSubs{F}{\gamma}{p_i}{e_i}$ for each $i$ & (3)
+    \end{ProofTable}
+    Using the I.H. with (2) and (3) gives that
+    $\SaysExpr{L}{e_i}{t_i}$ for each $i$.
+    Using e-core on that fact together with (1) gives that
+    $\SaysExpr{L}{\Core{C}{e_1 ... e_n}}{A}$, so we are done.
+  \item[$p = \Surf{m}{p_1 ... p_n}$]
+    \begin{ProofTable}
+      By s-sugar: & $\SaysSubs{F}{\gamma}{\Surf{m}{p_1 ... p_n}}{\Surf{m}{e_1 ... e_n}}$
+        & fixes $e$ \\
+      and & $\SaysSubs{F}{\gamma}{p_i}{e_i}$ for each $i$ & (1) \\
+      By p-sugar: & $\SaysPatt{L}{\Gamma}{\Surf{m}{p_1 ... p_n}}{t}$
+        & fixes $t$ \\
+      and & $\SaysPatt{L}{\Gamma}{p_i}{t_i}$ for each $i$ & (2) \\
+      and & $\SaysRule{L}{m}{t_1,...,t_n}{t}$ & (3)
+    \end{ProofTable}
+    Using the I.H. with (1) and (2) gives that
+    $\SaysExpr{L}{e_i}{t_i}$ for each $i$.
+    Finally, using e-sugar on that fact together with (3) gives that
+    $\SaysExpr{L}{\Surf{m}{e_1 ... e_n}}{t}$.
+  \item[$p = [\epsilon{]}$]
+    By s-empty, $\SaysSubs{F}{\gamma}{p}{[]}$, so $e=[]$.
+    By p-empty, $\SaysPatt{L}{\EmptyEnv}{[\epsilon]}{[t]}$ (for some $t$).
+    Finally, by e-list, $\SaysExpr{L}{[]}{[t]}$.
+  \item[$p = [p,ps{]}$]
+    \begin{ProofTable}
+      By s-cons: & $\SaysSubs{F}{\gamma}{p}{e_1}$ & (1) \\
+      and & $\SaysSubs{F}{\gamma}{[ps]}{[e_2 ... e_n]}$ & (2) \\
+      and & $\SaysSubs{F}{\gamma}{[p, ps]}{[e_1 e_2 ... e_n]}$ & fixes $e$ \\
+      By p-cons: & $\SaysPatt{L}{\Gamma}{p}{t}$ & (3) \\
+      and & $\SaysPatt{L}{\Gamma}{[ps]}{[t]}$ & (4) \\
+      and & $\SaysPatt{L}{\Gamma}{[p, ps]}{[t]}$ & fixes $t$
+    \end{ProofTable}
+    We can apply the I.H. using (1) and (3) and the assumption
+    $\SaysEnv{L}{\gamma}{\Gamma}$ to get that $\SaysExpr{L}{e_1}{t}$.
+    Likewise, the I.H. with (2) and (4) gives
+    $\SaysExpr{L}{[e_2 ... e_n]}{[t]}$.
+    By e-list (in reverse), $\SaysExpr{L}{e_2}{t} \cdots \SaysExpr{L}{e_n}{t}$.
+    Finally, by e-list (forward), $\SaysExpr{L}{[e_1 e_2 ... e_n]}{[t]}$.
+  \item[$p = [\Rep{p}{l}{]}$]
+    \begin{ProofTable}
+      By s-ellipsis: & $\SaysSubs{F}{\gamma}{[\Rep{p}{l}]}{[e_1 ... e_n]}$ & fixes $e$ \\
+      and & $l \mapsto \EList{\gamma_1 ... \gamma_n} \in \gamma$ \\
+      and & $\SaysSubs{F}{\gamma_i}{p}{e_i}$ for each $i$ & (1) \\
+      By $\gamma$-env: & $l \mapsto \EList{\Gamma'} \in \Gamma$ \\
+      and & $\SaysEnv{L}{\gamma_i}{\Gamma'}$ for each $i$ & (2) \\
+      By p-ellipsis: & $\SaysPatt{L}{\Gamma}{[\Rep{p}{l}]}{[t]}$ & fixes $t$ \\
+      and & $\SaysPatt{L}{\Gamma'}{p}{t}$ & (3)
+    \end{ProofTable}
+    Using the I.H. with (1), (2), and (3) proves that
+    $\SaysExpr{L}{e_i}{t}$.
+    Then, by e-list, $\SaysExpr{L}{[e_1 ... e_n]}{[t]}$ as desired.
+  \end{description}
+\end{proof}
