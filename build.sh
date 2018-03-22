@@ -25,4 +25,4 @@ function uctex # (upgraded astronomy)
 
 uctex thesis.tex
 $PDF_VIEWER thesis.pdf &> /dev/null &
-while inotifywait -e close_write thesis.tex chapters/*.tex; do uctex thesis.tex; done
+while inotifywait -e close_write thesis.tex justin.bib chapters/*.tex; do uctex thesis.tex; done
