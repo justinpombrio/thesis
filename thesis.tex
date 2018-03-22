@@ -125,6 +125,22 @@
     {l @{\;} c @{\;} l @{\;} c @{\;} l @{\;} c @{\;} l @{\quad} l}}
   {\end{tabular}\end{center}}
 \newcommand{\Indent}{\-\quad\quad}
+%http://ftp.math.purdue.edu/mirrors/ctan.org/info/epslatex/english/epslatex.pdf
+\newenvironment{Wide}{
+  \begin{list}{}{
+      \setlength{\topsep}{0pt}
+      \ifthenelse{\isodd{\thepage}}{
+        \setlength{\leftmargin}{-9em}
+        \setlength{\rightmargin}{0em}
+      }{
+        \setlength{\leftmargin}{0em}
+        \setlength{\rightmargin}{-9em}
+      }
+      \setlength{\listparindent}{\parindent}
+      \setlength{\itemindent}{\parindent}
+      \setlength{\parsep}{\parskip}}
+  \item[]}{\end{list}}
+
 
 % Math Notation
 \newcommand{\ddd}{\;\dots\;}
@@ -205,19 +221,19 @@
 \newcommand{\Bound}{\mapsto}
 
 % Expressions
+\newcommand{\Variable}[4]{
+  {\textit{#3}}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommand{\ConstRm}[1]{\texttt{#1}}
 \newcommand{\NodeRm}[2]{\Node{\texttt{#1}}{#2}}
 \newcommand{\NodeStd}{\Node{C}{\Seqn[1]{t}[n]}}
 \newcommand{\ASTNode}[4]{(\Variable{#3}{}{#2}{#1}\;#4)}
-\newcommandx*{\Node}[3][2=\empty]{({#1}_\textrm{\textsc{#2}}\;#3)}
+\newcommandx*{\Node}[3][2=\empty]{({#1}_{#2}\;#3)}
 \newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
 \newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
 \newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
 \newcommand{\CoreLabel}{\Variable{Core}{}{}{C}}
 \newcommand{\AuxLabel}{\Variable{Aux}{}{}{C}}
 \newcommand{\SurfLabel}{\Variable{Surf}{}{}{C}}
-\newcommand{\Variable}[4]{
-  {\textit{#3}}\textrm{\textsc{$#2$}}_\mathit{#1}^\textsc{#4}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
 \newcommand{\Value}{value}
@@ -277,7 +293,7 @@
 \newcommand{\EmptySubs}{\{\}}
 
 % Hacks
-\newcommand{\whitePhantom}[1]{{\color{white}#1}}
+\newcommand{\WhitePhantom}[1]{{\color{white}#1}}
 \newcommand{\tall}{\phantom{Q}\!\!\!\!}
 
 
@@ -568,14 +584,14 @@ Honors thesis (\cref{chap:implementation}).
 Finally, I would like to thank the NSF, which partly funded all of this work.
 
 \part{Syntactic Sugar}
-%\include{chapters/intro}
-%\include{chapters/taxonomy}
+\include{chapters/intro}
+\include{chapters/taxonomy}
 \part{Desugaring}
 \include{chapters/formalism}
-%\include{chapters/well-formedness}
+\include{chapters/well-formedness}
 \part{Resugaring}
 \include{chapters/resugar-eval}
-%\include{chapters/resugar-scope}
+\include{chapters/resugar-scope}
 %\include{chapters/resugar-types}
 % Chapter: Implementation
 % Chapter: Conclusion/future work

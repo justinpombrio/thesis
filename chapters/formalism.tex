@@ -1,5 +1,11 @@
 \chapter{Desugaring, Formally}\label{chap:formalism}
 
+TODO
+\begin{itemize}
+\item ``We make no assumption that the core language is a subset of the
+  surface language, so our results can be applied to, e.g., EDSLs.''
+\end{itemize}
+
 In this chapter, we give formal definitions for \Sc{ast}s and
 desugaring that will be used throughout the rest of the thesis.  Most
 relevantly, we assume that desugaring is given as a set of
@@ -16,7 +22,7 @@ For the purposes of resugaring, we require \Sc{ast}s to make three
 distinctions explicit.  First, the \Sc{ast} must distinguish between
 variable \emph{declarations} $\Decl{x}$ (i.e., binding sites), and
 variable \emph{references} $\Refn{x}$ (i.e., uses).  Second, each
-variable and node in the \Sc{ast} must have a unique identity $u$ that
+variable and node in the \Sc{ast} must have a unique identity $i$ that
 distinguishes it from other occurrences of the same variable or node.
 Finally, the \Sc{ast} should distinguish between \emph{core} terms,
 \emph{surface} terms, and \emph{auxiliary} terms (which we will
@@ -32,12 +38,12 @@ With that said, terms can be inductively defined as:
 \begin{Table}
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 term $e$ &$::=$& $\Value$ & primitive value \\
-  &$|$& $\Core{C}[u]{e_1 \dd e_n}$ & core \Sc{ast} node \\
-  &$|$& $\Surf{C}[u]{e_1 \dd e_n}$ & surface \Sc{ast} node \\
-  &$|$& $\Aux{C}[u]{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
+  &$|$& $\Core{C}[i]{e_1 \dd e_n}$ & core \Sc{ast} node \\
+  &$|$& $\Surf{C}[i]{e_1 \dd e_n}$ & surface \Sc{ast} node \\
+  &$|$& $\Aux{C}[i]{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
   &$|$& $[e_1 \dd e_n]$ & list \\
-  &$|$& $\Refn[u]{x}$  & variable reference \\
-  &$|$& $\Decl[u]{x}$  & variable declaration \\
+  &$|$& $\Refn[i]{x}$  & variable reference \\
+  &$|$& $\Decl[i]{x}$  & variable declaration \\
 %  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval})
 \end{Table}
 Nodes must have fixed arity, so lists are used when a node needs to
@@ -104,6 +110,8 @@ cases where they cannot be sensibly derived.
 \section{Matching and Substitution}
 
 [TODO: discuss ellipses lists]
+[TODO: make sure not to use $\bowtie$ for match2, as it's used in
+  scope resugaring for another purpose.]
 
 Our desugaring transformations are implemented with simpler operations
 on patterns: matching and substitution.
@@ -321,7 +329,7 @@ desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
 \end{Table}
 [TODO: note that gamma described later.]
 
-\subsection{Restrictions on Desugaring}
+\subsection{Restrictions on Desugaring}\label{sec:formal-reqs}
 
 Not every syntactically valid desugaring rule is semantically
 sensible, and not every semantically sensible desugaring rule is

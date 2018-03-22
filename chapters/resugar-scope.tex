@@ -11,8 +11,6 @@ TODO
   and next paragraph).
 \end{itemize}
 
-\textbf{TODO: This whole chapter is copy-pasted from the paper.}
-
 In this chapter, we show how to lift scoping rules defined on a core
 language to rules on the surface, a process of \emph{scope inference}.
 In the process we introduce a new representation of binding
@@ -54,11 +52,7 @@ providing the editor precisely what it needs: scoping rules for the
 surface language.
 
 We therefore present a static inference process that, given a
-specification of syntactic sugar\footnote{
-  We make no assumption that the core language is a subset of the
-  surface language, so our results can be applied to, e.g., EDSLs.
-}\,%
-and scoping rules on a core language,
+specification of syntactic sugar and scoping rules on a core language,
 \emph{automatically constructs} scoping rules for the surface
 language. The inferred rules are guaranteed to give the same binding
 structure to a surface program as that program would have in the core language
@@ -138,7 +132,7 @@ only a single binding:
   & ``Let $\DeclX$ equal $e_1$ in $e_2$'' \\
   &$|$& $\ldots$
 \end{Table}
-(Here the superscript \textbf{\textsc{d}} indicates that this
+(Here the superscript \textsc{d} indicates that this
 occurrence of the variable $\VarX$ is a declaration of $\VarX$.
 In general, we
 will distinguish \emph{declarations}, i.e., binding sites, from
@@ -176,7 +170,6 @@ Pictorially, we might draw:
     \tikzEdgeL{C}{D};
   \end{tikzEdges}
 \end{tikzScopeDiagram}
->>>>>>> 1271ffa77bb945b76bd2c6a32db8118d56d826b0
 }
 \end{center}
 where the dotted lines show the tree structure of the \textsc{ast}, and
@@ -287,19 +280,19 @@ It will have the following grammar:
   & ``No more bindings''
 \end{Table}
 This grammar separates out the Let's bindings into nested
-subterms.\footnote{
-  We call the bindings just ``Bind'', even though they are specific
+subterms.\marginpar{%
+We call the bindings just ``Bind'', even though they are specific
   to Let. If a language has other forms of binding as well, ``Bind'' may need a more
   specific name such as ``LetBind''.
-} %
+}
 It is
 necessary to do this if more complex binding patterns are allowed,
 such as arbitrarily deep pattern-matching.
 
 Let* can then be implemented with two desugaring rules:
 \begin{LongTable}
-$\NodeRm{Let*}{\NodeRm{Bind}{\PVarA\;\PVarB\;\PVarC}\;\PVarD}$\\
-\quad $\To$
+$\NodeRm{Let*}{\NodeRm{Bind}{\PVarA\;\PVarB\;\PVarC}\;\PVarD}$
+$\To$
 $\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\NodeRm{Let*}{\PVarC\;\PVarD}}\;\PVarB}$
 \\ \\
 $\NodeRm{Let*}{\ConstRm{EndBinds}\;\PVarA}$
@@ -310,8 +303,7 @@ These rules would, for example, make the following transformation:
 \begin{Table}
 $\NodeRm{Let*}{\NodeRm{Bind}{\DeclX\;1\;\NodeRm{Bind}{\DeclY\;2\;\ConstRm{EndBinds}}}\;\NodeRm{Plus}{\RefnX\;\RefnY}}$ \\
 \quad $\To$
-$\NodeRm{Apply}{\NodeRm{Lambda}{\DeclX\;$ \\
-$\hspace{2em}\NodeRm{Apply}{\NodeRm{Lambda}{\DeclY\;\NodeRm{Plus}{\RefnX\;\RefnY}}\;2}}\;1}$
+$\NodeRm{Apply}{\NodeRm{Lambda}{\DeclX\;\NodeRm{Apply}{\NodeRm{Lambda}{\DeclY\;\NodeRm{Plus}{\RefnX\;\RefnY}}\;2}}\;1}$
 \end{Table}
 
 Given that we know the scoping rules of Apply, Lambda, and Begin,
@@ -345,7 +337,7 @@ scope on the \textsc{rhs}:
 \end{center}
 Unlike in the previous example, this diagram is not (necessarily)
 complete, since we don't yet know the scoping rule for
-Let*.\footnote{This will happen when desugaring rules use recursion.}
+Let*. (This will happen when desugaring rules use recursion.)
 We have drawn two upward arrows on Let*, despite the fact that we
 don't yet know its scoping rule: technically, these arrows should
 (and can) be inferred, but we start with them to simplify this example.
@@ -456,8 +448,8 @@ diagrammatically with arrows. When reasoning about scope, it will be
 helpful to be able to \emph{transcribe} these diagrams into a
 textual form.
 
-To do so, recall the (approximate) meaning of the arrows:\footnote{
-  We make their meaning precise in \cref{sec:rsugar-sap-defs}.
+To do so, recall the (approximate) meaning of the arrows:\marginpar{%
+We make the meaning of arrows precise in \cref{sec:rscope-sap-defs}.
 }
 a declaration is in scope at every part of the program which has a
 (directed) path to it, and is shadowed by declarations of the same name
@@ -514,7 +506,7 @@ more tractable:
   \item We only deal with scoping that is \emph{static} and \emph{lexical}.
   \item Scoping rules will be as local as possible, only relating a
     term to its \emph{immediate} children. Longer relationships will
-    be achieved by transitivity.\footnote{
+    be achieved by transitivity.\marginpar{%
       If we allowed non-local arrows, then in the previous example,
       inference would produce a single arrow from $\PVarD$
       to $\PVarA$ instead of arrows ``a'' and ``b''. Then the orange/dashed arrow
@@ -522,8 +514,9 @@ more tractable:
       of arrow ``a'', and the inference process would fail at its task.
       }
   \item We work on an \textsc{ast}, instead of directly on the surface
-    syntax.  Variable references (use sites) and declarations
-    (binding sites) are syntactically distinguished in this
+    syntax. As mentioned in \cref{sec:formal-reqs},
+    variable references (use sites) and declarations
+    (binding sites) must be syntactically distinguished in this
     \textsc{ast}.
   \item Each kind of term has a fixed arity. (Indefinite arity is
     possible using a list encoding, as in Let* above.) [TODO: remove]
@@ -532,20 +525,17 @@ more tractable:
 The last two of these assumptions are already reflected in our
 definition of (\textsc{ast}) terms in \cref{sec:formal-term}.
 For convenience, we repeat that definition here, with one change:
-scope inference will be completely agnostic to the difference between
+scope inference will be agnostic to the difference between
 \Sc{surf}, \Sc{core}, and \Sc{aux} constructors, so we omit the
 distinction:
 
 \begin{Table}
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
-ast $e$ &$::=$& $\Value$ & primitive value \\
-  &$|$& $\Node{C}[u]{e_1 \dd e_n}$ & \Sc{ast} node \\
-%  &$|$& $\Bitter{C}{e_1 \dd e_n}$ & bitter \Sc{ast} node \\
-  &$|$& $[e_1 \dd e_n]$ & list (unsupported!) \\
-  &$|$& $\Refn[u]{x}$  & variable reference \\
-  &$|$& $\Decl[u]{x}$  & variable declaration \\
-%  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval})
-%value $v$ &$::=$& $e$ & with no sugar invocations \\
+term $e$ &$::=$& $\Value$ & primitive value \\
+  &$|$& $\Node{C}{e_1 \dd e_n}$ & \Sc{ast} node \\
+  &$|$& $[e_1 \dd e_n]$ & list [TODO!] \\
+  &$|$& $\Refn[i]{x}$  & variable reference \\
+  &$|$& $\Decl[i]{x}$  & variable declaration \\
 \end{Table}
 To reiterate, references and declarations have both a name \textsc{x}
 (as written in the source), and an \textsc{ast} position $i$
@@ -553,7 +543,7 @@ To reiterate, references and declarations have both a name \textsc{x}
 Occasionally it will be useful to refer to a variable which could be
 either a declaration or a reference: in this case
 we omit the superscript, e.g. $\VarXi$.
-Likewise, we will omit the position subscript $\mathit{\mathbf{i}}$
+Likewise, we will omit the position subscript $i$
 when there is no ambiguity. We will also sometimes write $C$ in place
 of $\Node{C}{e_1\,...\,e_n}$ when there is no danger of ambiguity.
 
@@ -621,14 +611,15 @@ declaration hides a less specific declaration:
 
 \begin{definition}[Shadowing]
   \label{def:rscope-shadow}
+  \marginpar{%
+We use the same notation $\square \Bound \square$ for both binding
+and shadowing because the definitions are analogous.}
   A declaration \emph{shadows} the most specific declarations that it
   has the same name as and is more specific than. Formally, $\DeclXi$
   shadows $\DeclXj$ when:
   \[ \DeclXi \Bound \DeclXj \Defeq
   \DeclXj \in \min \St{\DeclXk}{i \neq k \text{ and } \DeclXi \< \DeclXk}
   \]
-(We use the same notation $\square \Bound \square$ for both binding
-and shadowing because the definitions are analogous.)
 \end{definition}
 
 \subsection{Validating the Definitions}
@@ -659,7 +650,7 @@ a normalization.
   cannot be bound by $\DeclXi$.
 \end{proof}
 
-ubsection{Relationship to ``Binding as Sets of Scopes''}
+\subsection{Relationship to ``Binding as Sets of Scopes''}
 \label{sec:rscope-sos}
 {\Sap} aligns with the notion of scope expressed by \cite{flatt:scope}.
 In his formulation,
@@ -683,7 +674,7 @@ Then our definition of a reference's binding agrees with Flatt's, and
 our definition of an ``ambiguously bound'' reference agrees with his
 definition of an ``ambiguous'' reference.
 
-\subsection{Axiomatizing Scope as Sets (Supplement Only)}
+\subsection{Axiomatizing Scope as Sets}
 \label{sec:rscope-sas}
 
 In this section, we describe an alternative axiomatization of scope,
@@ -782,7 +773,7 @@ conversions are exact inverses whenever this normal form is used.
 
 We first show that the conversions are inverses in one direction:
 \begin{lemma}[Inverses1] \label{lemma:rscope-inverses}
-  For every scope preorder ($\<$), \\
+  For every scope preorder ($\<$),
   $\ConvB{\ConvA{\<}} = (\<)$
 \end{lemma}
 \begin{proof}
@@ -810,7 +801,7 @@ And they're inverses in the other direction when $\Scope{}$ is in a
 \end{Table}
 
 \begin{lemma}[Inverses2]
-  For any {\sas} function $\Scope{}$ in normal form,
+  For any {\sas} function $\Scope{}$ in normal form,\\ %NEWLINE
   $\ConvA{\ConvB{\Scope{}}} = \Scope{}$.
 \end{lemma}
 \begin{proof}
@@ -880,7 +871,7 @@ that, given a term, determine a preorder over its variables.
 
 The basic idea behind our binding language is that the binding structure of
 a term should be determined piecewise by its subterms. Thus every term
-constructor (e.g., $\lambda$ or $+$) should specify a \emph{scoping rule}
+constructor (e.g., Lambda or Bind) should specify a \emph{scoping rule}
 that gives a preorder amongst itself and its children. A term's {\sap}
 can then be found by taking the transitive closure of these local
 preorders across the whole term.
@@ -1009,19 +1000,19 @@ of the subterms of $e$. With this in mind, we offer four kinds of bindings:\foot
   grammars disallow cycles, however, while our preorders allow them.
 }
 \begin{enumerate}
-\item[A.] \textbf{\SpecBind{j}{i}:} A term may make its $i$'th child's bindings
+\item[A.] \SpecBind{j}{i}: A term may make its $i$'th child's bindings
   available in its $j$'th child. If so, any declarations
   \emph{exported} by child $i$ will be \emph{imported} by child $j$.
-\item[B.] \textbf{\SpecImpt{i}:} A term's $i$'th child may import its
+\item[B.] \SpecImpt{i}: A term's $i$'th child may import its
   parent's declarations. If so, it \emph{imports} the declarations \emph{imported}
   by its parent. (This is almost universal:
   declarations in scope at a node in an \textsc{ast} should
   also be in scope at its children. However, we do allow a term to
   hide all bindings from its child, if it so desires.)
-\item[C.] \textbf{\SpecExpt{i}:} A term's $i$'th child may export its
+\item[C.] \SpecExpt{i}: A term's $i$'th child may export its
   declarations to its parent. If so, the term \emph{exports} child $j$'s
   \emph{exports}.
-\item[D.] \textbf{\SpecSelf:} A term may take the declarations it
+\item[D.] \SpecSelf: A term may take the declarations it
   \emph{imported}, and \emph{export} them. (This is not terribly useful
   in practice, but we offer it for completion.)
 \end{enumerate}
@@ -1283,11 +1274,11 @@ are equivalent.
 
 These scope checking rules say how to find a preorder over all of the
 \emph{ports} in a term.
-However, \cref{sec:rscope-sap} is based on preorders over the
-\emph{variables} in a term.\footnote{
-  In fact, {\sap} could be used with a \emph{different} binding
-  language, so long as it can be used to extract a preorder.
-}
+However, \cref{sec:rscope-sap} is based only on preorders over the
+\emph{variables} in a term. In fact, {\sap} could be used with a
+\emph{different} binding language, so long as it can be used to
+extract a preorder.
+
 This is obtained as the restriction of
 the entire preorder to variables, as captured by the following rule:
 \[
@@ -1513,6 +1504,8 @@ about desugaring, and then the algorithm.
 
 \subsection{Assumptions about Desugaring} \label{sec:rscope-des-assumptions}
 
+[TODO: rewrite this subsection]
+
 We will assume that desugaring is given (externally to the language)
 by a set of rewrite rules of
 the form $p \To p'$, where $p$ and $p'$ are patterns (terms with
@@ -1520,10 +1513,9 @@ the form $p \To p'$, where $p$ and $p'$ are patterns (terms with
   Formally, this is a term rewriting system (TRS)~\cite{trs}. We are
   calling the TRS's variables \emph{pattern variables} to avoid confusing them
   with references and declarations, which are constants from the
-  perspective of the TRS.}~\footnote{
-  For now, we will admit \emph{unhygienic} sugars; hygiene will be
-  addressed in \cref{sec:rscope-hygiene}.
-}
+  perspective of the TRS. [TODO: if support ellipses, remove]}
+\marginpar{For now, we will admit \emph{unhygienic} sugars; hygiene will be
+  addressed in \cref{sec:rscope-hygiene}.}
 \begin{Table}
   $p$ &$::=$& ... & (as in term $e$) \\
       &$\mid$& $\PVar_i$ & (pattern variable)
@@ -1574,7 +1566,7 @@ pattern variables in $p$, together with the root (i.e., the whole term).
 For example, in $p_0[p[e_1,...,e_n]]$, $\PVar_i$ bounds $e_i$, and $p$ (the root)
 bounds $p_0$. In general, we will call this property
 \emph{scope-equivalence}:
-\begin{definition}[Scope-equivalence of patterns]
+\begin{definition}[Scope-equivalence of patterns] \WhitePhantom{.}\\ %NEWLINE
   $\SaysScopeEqv{p}{p'}$ means that
   $\Forall{a, b \in \{\PVar_1,...,\PVar_n,\Root\}}$
   \[ \SaysScope{p}{a}{b} \text{ iff } \SaysScope{p'}{a}{b} \]
@@ -1608,7 +1600,7 @@ within a term does not change the scope of the rest of the term:
 \end{definition}
 
 \begin{lemma}[Scope-equivalent patterns preserve scope]
-  \label{lemma:scope-rscope-preservation}
+  \label{lemma:rscope-scope-preservation}
   If $\SaysScopeEqv{p}{p'}$, then any rewrite
   $p_0[p[e_1,...,e_n]] \To p_0[p'[e_1,...,e_n]]$
   preserves scope.
@@ -1836,16 +1828,16 @@ and can then ask whether these inferred rules preserve
 $\alpha$-equivalence. In \cref{sec:rscope-hygiene} we will show that they do,
 so long as inference was successful and $\Op{scopeCheck}{}$ passed.
 
-One may wonder how useful of a property this is. What good does it for
+One may wonder how useful of a property this is. To put it bluntly:
+what good does it for
 desugaring to preserve $\alpha$-equivalence, when $\alpha$-equivalence
 for the surface language was \emph{made up}?  In fact, there is a
 situation in which preserving $\alpha$-equivalence is completely
 useless: define $e_1 =_\alpha e_2$ in the surface language to mean
 that $\Desugar{e_1} =_\alpha \Desugar{e_2}$ in the core language,
-where $\Desugar{}$ is a naive, completely unhygienic desugaring. Then
+where $\Desugar{}$ is a naive, scope-unaware desugaring. Then
 desugaring will preserve $\alpha$-equivalence, despite not being
 hygienic in any way!
-
 It is therefore crucial that our binding language cannot express this
 (rather insane) notion of surface-language $\alpha$-equivalence. It
 is the \emph{weakness} (i.e., sanity) of our binding language that
@@ -1863,7 +1855,7 @@ that none of the sugars can produce unbound identifiers.
 The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
 
 \begin{theorem}[Rewrites preserve scope]\label{thm:rscope-resugar}
-  \whitePhantom{.}\\%Newline
+  \WhitePhantom{.}\\%Newline
   Let $\SigmaSurf =
   \Op{inferScope}{\SigmaCore,\,\{p_i \To p_i'\}_{i \in 1..n}}$.
   Then any rewrite of the form
@@ -1953,7 +1945,7 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
   \end{proof}
   
   \begin{corollary}[Desugaring preserves scope]
-    \whitePhantom{.}\\%Newline
+    \WhitePhantom{.}\\%Newline
     Let $\SigmaSurf =
     \Op{inferScope}{\SigmaCore,\,\{p_i \To p_i'\}_{i \in 1..n}}$.
     Then desugaring with the rules $\{p_i \To p_i'\}_{i \in 1..n}$
@@ -1997,7 +1989,7 @@ time is extremely small.
 
 \section{Implementation and Evaluation}
 \label{sec:rscope-impl}
-
+ 
 We have implemented the scope inference algorithm. Beyond what is
 shown in this chapter, the implementation also allows (i) marking
 variables as \emph{global references} that should refer to globally
@@ -2021,7 +2013,8 @@ implementation on sugars from three languages:
 \end{itemize}
 
 Some of the desugarings use ellipses in their definition, and thus had
-to be translated to match our fixed-arity assumption. (To do so, we
+to be translated to match our fixed-arity assumption.
+[TODO: remove assumption] (To do so, we
 introduced auxiliary \textsc{ast} constructors and used those to express the
 equivalent looping.) \texttt{letrec}
 required one further adjustment to successfully infer scope.\footnote{
@@ -2062,9 +2055,9 @@ fold(lam(p, n): p * n end, 1, range(1, 6))
   \textsc{rhs} of each \Code{from}.
 
   Our system produces the following scoping rules for \Code{for},
-  shown both textually and pictorially:\footnote{
-    In the textual representation of the scoping rules, we give names
-    to a node's children. Formally, these should be indices.
+  shown both textually and pictorially:\marginpar{%
+In the textual representation of the scoping rules, we give names
+to a node's children. Formally, these should be indices.
 }
 
 \begin{scopeDescription}
@@ -2306,8 +2299,8 @@ computations, such as reversing a list:
              (cons (car unreversed) reversed)))))
 \end{lstlisting}
 
-Named-let desugars by the rule:\footnote{
-  We describe Racket's desugaring because it is slightly more clear
+Named-let desugars by the rule:\marginpar{%
+We describe Racket's desugaring because it is slightly more clear
   (using better variable names, and putting the application inside of
   the \texttt{letrec}). These differences have no effect on scope
   inference.
@@ -2551,8 +2544,10 @@ This raises questions that we leave for future work.\footnote{
     recursive bindings.
   
   \end{itemize}
-  
+
   \begin{figure*}
+  \begin{Wide}
+
     \begin{center}
     \begin{tabular}{p{8em} c @{\hspace{-1em}} c @{\hspace{-1em}} c}
   
@@ -2765,11 +2760,11 @@ This raises questions that we leave for future work.\footnote{
     \end{tabular}
     \end{center}
       
+  \end{Wide}
   \caption{Catalog of Scoping Rules %\\ Newline here would be nice, but breaks the build
     (Arrows that follow from transitivity omitted)}
   \label{fig:rscope-catalog}
   \end{figure*}
-
 
 
 \section{Proof of Hygiene}
@@ -2814,7 +2809,7 @@ bindings between new variables (introduced by $\Desugar{}$) and copied
 variables (taken from $e$):
 
 \begin{property} \label{rscope-prop1}
-  \whitePhantom{.}
+  \WhitePhantom{.}
 \begin{LongTable}
   $\forall{\RefnX \!\in\! \mathit{Copied}}.$
   && $\forall{\DeclX \!\in\! \mathit{New}}.$
@@ -2827,15 +2822,15 @@ variables (taken from $e$):
 \end{property}
 
 Second, $\Desugar{}$ must preserve binding structure among the variables
-it copies:\footnote{
-  This property does not appear in prior work on hygiene because such
+it copies:\marginpar{%
+\Cref{rscope-prop2} does not appear in prior work on hygiene because such
   work typically assumes that the binding structure of a surface term
   is \emph{defined by} the binding structure of its desugaring,
   causing this property to be true by definition.
 }
 
 \begin{property} \label{rscope-prop2}
-  \whitePhantom{.}
+  \WhitePhantom{.}
 \begin{LongTable}
   $\forall{\RefnX,\DeclX \!\in\! \mathit{Copied}}.$ \\
      $\SaysScopeBound{\Desugar{e}}{\RefnX}{\DeclX}$ iff 
@@ -2847,7 +2842,7 @@ Finally, $\Desugar{}$ must preserve well-boundedness. Thus, it must not cause a
 reference to become unbound or introduce a new unbound reference:
 
 \begin{property} \label{rscope-prop3}
-  \whitePhantom{.}
+  \WhitePhantom{.}
 \begin{LongTable}
   $\forall{\RefnX \!\in\! \mathit{Used}}.$
   && $\forall{\DeclX \!\in\! \mathit{Unused}}.$
@@ -3149,8 +3144,9 @@ language (\cref{sec:rscope-rules}) falls in this category.
 \paragraph{Modeling Scope}
 
 Our description of {\sap} is similar to the view
-expressed by \cite{flatt:scope} in ``Binding as Sets of Scopes''.\footnote{
-  These were discovered independently: {\sap} arose from some
+expressed by \cite{flatt:scope} in ``Binding as Sets of Scopes''.\marginpar{%
+{\Sap} and Flatt's Sets of Scopes were discovered
+  independently: {\sap} arose from some
   of the ideas from Romeo~\cite{stansifer-romeo}.
 }
 In fact, Flatt's notion of scope can be expressed as a preorder,
@@ -3204,8 +3200,8 @@ In Unbound, binding is specified via a set of \emph{binding combinators}.
   These binding combinators can be expressed as a preorder.\footnote{
   The translation of Unbound to {\sap} is as follows. \Code{Name}
   constructs a declaration or reference, depending on whether it is a
-  Term or Pattern. Patterns $P$ have scoping rules that state
-  $\SigPExpt{i}$ and $\SigPImpt{i}$ for every $i$. Terms $T$ have
+  term or Pattern. Patterns $P$ have scoping rules that state
+  $\SigPExpt{i}$ and $\SigPImpt{i}$ for every $i$. terms $T$ have
   scoping rules that state $\SigImpt{T}{i}$ for every $i$. Finally,
   each of the four binding combinators obey the scoping rule for
   patterns or for terms, as appropriate, in addition to the following
@@ -3245,8 +3241,6 @@ inferable.  Third, modules---\`a la Scope Graphs~\cite{neron-scope}---are
 necessary for inferring scope for modules and for classes. These last
 two changes are relatively straightforward extensions to our binding
 language, but research questions when applied to scope inference.
-
-\bibliography{justin}
 
 \newpage
 
