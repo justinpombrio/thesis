@@ -4,12 +4,13 @@ TODO
 \begin{itemize}
 \item ``We make no assumption that the core language is a subset of the
   surface language, so our results can be applied to, e.g., EDSLs.''
+\item Move surf,core,aux and ellipses to impl section
 \end{itemize}
 
 In this chapter, we give formal definitions for \Sc{ast}s and
-desugaring that will be used throughout the rest of the thesis.  Most
-relevantly, we assume that desugaring is given as a set of
-pattern-based rewrite rules (a la Racket's \Code{syntax-rules}
+desugaring that will be used throughout the rest of the thesis.
+Most relevantly, we assume that desugaring is given (externally to the
+language) as a set of pattern-based rewrite rules (a la Racket's \Code{syntax-rules}
 [CITE]). This is important because it will form an expressive limit on
 resugaring. Our techniques for resugaring evaluation sequences [REF] and
 resugaring scope rules [REF] work on the kind of desugaring rules
@@ -313,7 +314,7 @@ It will prove important later that matching and substitution are
 %because substitution in non-deterministic (because it generates fresh
 %variables).
 
-\section{Desugaring}
+\section{Desugaring}\label{sec:formal-desugar}
 
 See \cref{fig:formal-expansion}.
 [TODO: Replace step with something that looks like desugaring.]
@@ -351,6 +352,8 @@ to effectively resugar them. The resugaring techniques described in
   measures how deeply nested it is within other ellipses; a top-level
   ellipsis has depth 1, an ellipsis within an ellipsis depth 2, and so
   forth.)
+\item $p$ contains no references or declarations. Rather, these
+  should be contained in its pattern variables during expansion.
 \end{enumerate}
 
 \paragraph{Restrictions on Desugaring Rules}
@@ -370,6 +373,8 @@ to effectively resugar them. The resugaring techniques described in
 \item \emph{Each transformation's \Sc{lhs} must have the form
   $\Surf{C}{e_1,\,...,\,e_n}$.} We will rely on this fact when showing that
   unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
+\item References and declarations in the \Sc{rhs} are given fresh names during
+  expansion to ensure hygiene.
 \end{enumerate}
 
 In addition, we have one extra restriction for scope resugaring, and
@@ -379,6 +384,11 @@ contain ellipses. [TODO: lift this restriction!]
 When resugaring \emph{type rules} [REF], we will also
 require that for each desugaring rule, its cases be disjoint.
 
+[FILL: desugaring]\marginpar{
+  Formally, this desugaring definition is a term rewriting system (\Sc{trs})~\cite{trs}. We call
+  the \Sc{trs}'s variables \emph{pattern variables} to avoid confusing them
+  with references and declarations, which are constants from the
+  perspective of the TRS.}
 
 \begin{figure}
   NOTES: Core terms are terms without Surf or Aux nodes. Desugaring

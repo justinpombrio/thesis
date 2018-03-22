@@ -1,12 +1,8 @@
 \chapter{Resugaring Scope}\label{chap:resugar-scope}
 
-% \(\W\)t\(\W\)  ->  \1e\2
-
 TODO
 \begin{itemize}
 \item ``scope inference'' vs. ``scope resugaring''?
-\item Assimilate 'Implementation and Evaluation' section
-\item Assimilate 'Assumptions about Desugaring' section
 \item Have sk proofread the new hygiene paragraphs (``one may wonder''
   and next paragraph).
 \end{itemize}
@@ -519,21 +515,17 @@ more tractable:
     (binding sites) must be syntactically distinguished in this
     \textsc{ast}.
   \item Each kind of term has a fixed arity. (Indefinite arity is
-    possible using a list encoding, as in Let* above.) [TODO: remove]
+    possible using a list encoding, as in Let* above.)
 \end{itemize}
 
 The last two of these assumptions are already reflected in our
 definition of (\textsc{ast}) terms in \cref{sec:formal-term}.
-For convenience, we repeat that definition here, with one change:
-scope inference will be agnostic to the difference between
-\Sc{surf}, \Sc{core}, and \Sc{aux} constructors, so we omit the
-distinction:
+For convenience, we repeat that definition here:
 
 \begin{Table}
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 term $e$ &$::=$& $\Value$ & primitive value \\
   &$|$& $\Node{C}{e_1 \dd e_n}$ & \Sc{ast} node \\
-  &$|$& $[e_1 \dd e_n]$ & list [TODO!] \\
   &$|$& $\Refn[i]{x}$  & variable reference \\
   &$|$& $\Decl[i]{x}$  & variable declaration \\
 \end{Table}
@@ -549,7 +541,7 @@ of $\Node{C}{e_1\,...\,e_n}$ when there is no danger of ambiguity.
 
 By the last assumption above, we do not support lists
 $[e_1 \dd e_n]$ (which have indefinite arity). Instead we require them
-to be encoded into fixed-arity constructs. [TODO: remove this restriction]
+to be encoded into fixed-arity constructs.
 
 \subsection{Basic Definitions}
 \label{sec:rscope-sap-defs}
@@ -1504,38 +1496,22 @@ about desugaring, and then the algorithm.
 
 \subsection{Assumptions about Desugaring} \label{sec:rscope-des-assumptions}
 
-[TODO: rewrite this subsection]
-
-We will assume that desugaring is given (externally to the language)
-by a set of rewrite rules of
-the form $p \To p'$, where $p$ and $p'$ are patterns (terms with
-\emph{pattern variables} $\PVar_i$ in them).\footnote{
-  Formally, this is a term rewriting system (TRS)~\cite{trs}. We are
-  calling the TRS's variables \emph{pattern variables} to avoid confusing them
-  with references and declarations, which are constants from the
-  perspective of the TRS. [TODO: if support ellipses, remove]}
-\marginpar{For now, we will admit \emph{unhygienic} sugars; hygiene will be
-  addressed in \cref{sec:rscope-hygiene}.}
+To briefly recap, we assume that desugaring is given by a set of
+rewrite rules of the form $p \To p'$, where $p$ and $p'$ are patterns:
 \begin{Table}
-  $p$ &$::=$& ... & (as in term $e$) \\
-      &$\mid$& $\PVar_i$ & (pattern variable)
+pattern $p$ &$::=$& $\Value$ & primitive value \\
+  &$|$& $\Node{C}{p_1 \dd p_n}$ & \Sc{ast} node \\
+  &$|$& $\Refn[i]{x}$  & variable reference \\
+  &$|$& $\Decl[i]{x}$  & variable declaration
 \end{Table}
-Furthermore, we assume that for every rule $p \To p'$:
-\begin{enumerate}
-\item Every pattern variable in $p'$ also appears in $p$.
-\item No pattern variable in $p$ or $p'$ appears more than once.
-\item $p$ contains no references or declarations. (Rather, these
-  should be contained in its pattern variables during expansion.)
-\item References and declarations in $p'$ are given fresh names during
-  expansion to ensure hygiene. (Our implementation also supports
-  \emph{global} references---e.g., calling \Code{print}---but we leave
-  this out for simplicity.)
-\end{enumerate}
+Furthermore, desugaring must obey the requirements of
+\cref{sec:formal-reqs}.
 
 When desugaring, there may be more than one rewrite rule that applies
-to a given term. We make no assumption about which will be chosen;
-even a non-deterministic desugaring is allowed. A more typical choice
-is to apply rules in outside-in order, as is done by Scheme-style
+to a given term. \textbf{None of the results of this chapter depend on
+the order of the rewrites; even a non-deterministic desugaring is allowed.}
+A more typical choice is to apply rules in outside-in order, as
+described in \cref{sec:formal-desugar}, and as is done by Scheme-style
 \Code{syntax-rules} macros~\cite{scheme5}.
 
 In general, a rewrite will look like:
@@ -2013,8 +1989,7 @@ implementation on sugars from three languages:
 \end{itemize}
 
 Some of the desugarings use ellipses in their definition, and thus had
-to be translated to match our fixed-arity assumption.
-[TODO: remove assumption] (To do so, we
+to be translated to match our fixed-arity assumption. (To do so, we
 introduced auxiliary \textsc{ast} constructors and used those to express the
 equivalent looping.) \texttt{letrec}
 required one further adjustment to successfully infer scope.\footnote{
@@ -2862,7 +2837,7 @@ $\Desugar{}$ preserves $\alpha$-equivalence:
 
 \begin{theorem}[Fundamental Hygiene Theorem] \label{thm:rscope-hygiene}
 Let $\Desugar{}$ be a desugaring function over terms with respect to
-scoping rules $\Sigma$ that obeys the assumptions of \cref{sec:rscope-des-assumptions}.
+scoping rules $\Sigma$ that obeys the assumptions of \cref{sec:formal-reqs}.
 Then $\Desugar{}$ respects $\alpha$-equivalence iff
 for every (well-bound) input term $e$ (numbering by property number):
 \begin{LongTable}
