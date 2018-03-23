@@ -4,6 +4,19 @@ In this chapter, we describe how to perform well-formedness checking
 on \Sc{ast}s, and how to check that desugaring rules preserve
 well-formedness.
 
+[TODO: This whole chapter is scratchwork. These scraps taken from the
+  formalism chapter need to be put back together.]
+
+Finally, the \Sc{ast} should distinguish between \emph{core} terms,
+\emph{surface} terms, and \emph{auxiliary} terms (which we will
+describe in [REF]).
+
+\begin{Table}
+  &$|$& $\Core{C}[i]{e_1 \dd e_n}$ & core \Sc{ast} node \\
+  &$|$& $\Surf{C}[i]{e_1 \dd e_n}$ & surface \Sc{ast} node \\
+  &$|$& $\Aux{C}[i]{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
+\end{Table}
+
 
 \section{AST Signatures} % Or Syntype Checking
 
@@ -467,3 +480,4 @@ halts.
     Then, by e-list, $\SaysExpr{L}{[e_1 ... e_n]}{[t]}$ as desired.
   \end{description}
 \end{proof}
+

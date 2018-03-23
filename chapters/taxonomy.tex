@@ -36,8 +36,7 @@ There are many dimensions by which desugaring mechanisms vary:
       to outermost} (\Sc{io}), or from \emph{outermost to innermost}
     (\Sc{oi})?
   \item[Phase] \emph{When} does desugaring occur? Is it at compilation time,
-    or at evaluation time (as in staged metaprogramming systems)? If
-    you recall our definition of syntactic sugar qqq
+    or at evaluation time (as in staged metaprogramming systems)?
   \item[Expressiveness] How expressive is it? Can a sugar take an
     arbitrary expression as a parameter, or only a primitive type
     (\Sc{Parameter})? If it can take an expression, can it
@@ -53,7 +52,7 @@ There are many dimensions by which desugaring mechanisms vary:
 
 
 
-There are two big clusters of desugaring systems that should be called
+There are two big clusters of desugaring systems that are worth calling
 out by name: macros and staged metaprogramming. Racket [CITE] is a
 prototypical language with macros: they are user-defined, the
 metalanguage is either a \Sc{dsl} or the Racket language itself, its
@@ -66,9 +65,9 @@ eventually \Code{eval}'ed at runtime. MetaOCaml is a prototypical
 metaprogramming language: the metalanguage is MetaOCaml itself,
 the desugaring order is inside-out (reflecting the evaluation
 order of OCaml), and its sugars are user-defined and are expanded at runtime.
-%This thesis is really about sugars that are expanded
-%at compile time---so staged metaprogramming systems are out of scope---but
-%they are closely enough related that we include them in the taxonomy.
+This thesis is really about sugars that are expanded
+at compile time---so staged metaprogramming systems are technically out of scope---but
+they are closely enough related that we include them in the taxonomy.
 
 
 \subsection{Representation}
@@ -243,15 +242,15 @@ a desugaring system is! However, it should give a rough idea of the
 situations in which it is appropriate to use.
 
 
-\subsection{Safety}\marginpar{
-  Safety and expressiveness are counterpoints. Safety comes from the
+\subsection{Safety}
+
+Last---but certainly not least---we will consider four different
+\emph{safety properties} of desugaring systems:\marginpar{%
+Safety and expressiveness are counterpoints. Safety comes from the
   ability of the compiler to tell whether you're doing something
   wrong, and the less expressive the language, the easier it is to
   tell.
 }
-
-Last---but certainly not least---we will consider four different
-\emph{safety properties} of desugaring systems:
 \begin{description}
   \item[Syntactic Safety] Can a sugar expand to syntactically invalid
     code? For example, in the C Preprocessor (\cref{sec:cpre}), this

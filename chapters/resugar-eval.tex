@@ -16,7 +16,7 @@ semantics---we can't change the meaning of a program!---and to ensure
 that the internals of the code introduced by the syntactic sugar does
 not leak into the output. Our chief mechanisms for achieving this are
 to (i) perform static checks on the desugaring definitions to ensure
-they fall into the subset we can handle [TODO], and (ii) rewrite the
+they fall into the subset we can handle, and (ii) rewrite the
 reduction relation with instrumentation to track the origin of terms.
 These ideas are implemented in \Tool [LINK] (see also our prototypes from
 prior publications [LINK, LINK]), and we formally verify key properties
@@ -63,9 +63,8 @@ skipped. Central to this approach are three properties:
 \item[Coverage] Resugaring is attempted on every core step, and as few
   core steps are skipped as possible.
 \item[Hygiene] Both desugaring and resugaring preserve
-  $\alpha$-equivalence on terms. [TODO: discussion]
+  $\alpha$-equivalence on terms.
 \end{description}
-[TODO: preview more precise definitions?]
 
 \section{Informal Solution Overview}
 \label{sec:reval-exposition}
@@ -84,7 +83,7 @@ let-binds its first argument in case it has side-effects):
 \begin{Codes}
 (Or α β) \(\To\) (Let [(Binding t α)]
                  (If t t β))
-\end{Codes}[TODO: impl]
+\end{Codes}
 In this section we focus on abstract syntax and ignore
 the mapping to it from concrete syntax.
 
@@ -123,7 +122,7 @@ may come about.
 \label{sec:reval-exposition-tagging}
 
 When unexpanding, we should only unexpand code that
-originated from a transformation. If the surface program itself is
+originated from desugaring. If the surface program itself is
 \begin{Codes}
 let t = not(true) in
   if t then t else not(false)
@@ -161,7 +160,7 @@ the core language, can be thought of as an identity sugar):
 \CoreStep true
 \end{Codes}
 The tags on the first two steps suggest that \Code{Or}'s
-transformation rule be applied in reverse. They can be unexpanded
+desugaring rule be applied in reverse. They can be unexpanded
 because they match the \Sc{rhs} of \Code{Or}. The third step fails to
 resugar because the \Code{if} is never unexpanded, and thus is a
 leftover core term. This step is therefore skipped, yielding no
@@ -190,8 +189,6 @@ detailed and useful surface evaluation sequences.
 \subsection{Trading Abstraction for Coverage}
 \label{sec:reval-trading}
 
-[TODO: add to Pyret implementation]
-
 Suppose the surface term \Code{α OR β OR γ} parses to
 \Code{(Or α β γ)}. We therefore want to extend \Code{Or}
 to handle more than two sub-terms.  We can do this with the desugaring
@@ -218,7 +215,7 @@ following lifted evaluation steps:
 \end{Codes}
 In particular, it correctly suppresses any presentation of the recursive
 invocation of \Code{Or}
-introduced by the transformation---precisely what Abstraction demands!
+introduced by desugaring---precisely what Abstraction demands!
 However, there are settings
 (such as debugging or education) where the user might wish to see this
 invocation, i.e., to obtain the surface evaluation sequence
@@ -250,8 +247,6 @@ an ordinary trace in the core, ignoring all sugar.
 
 \section{{\Resugarer} at Work}
 \label{sec:reval-pyret-example}
-
-[TODO: Update example for new resugarer]
 
 We demonstrate how the techniques just described come together to show
 surface evaluation sequences in the presence of sugar. Consider the
@@ -315,10 +310,23 @@ Nevertheless, here is the surface evaluation (pretty-)printed by {\Resugarer} (w
 \end{Codes}
 This sequence hides all the complexity of the core language.
 
-\section{The Transformation System}
+\section{The Rewrite System}
 \label{sec:reval-transformations}
 
 We will present evaluation resugaring in three parts. First
+(\cref{sec:reval-onerule}), we will describe how our rewrite system
+works, up to the level of performing a single rewrite. Next
+(\cref{sec:reval-manyrule}), we will describe how to use tags to fully
+desugar and resugar terms, transforming not just a term but its subterms
+as well. Finally (\cref{sec:reval-lifting}), we will show how to use the
+rewrite system to lift core evaluation sequences to surface
+evaluation sequences.
+
+
+\section{The Transformation System}
+\label{sec:reval-transformations}
+
+We will present our system in three parts. First
 (\cref{sec:reval-onerule}), we will describe how our transformation system
 works, up to the level of performing a single transformation. Next
 (\cref{sec:reval-manyrule}), we will describe how to use tags to fully
@@ -327,98 +335,210 @@ as well. Finally (\cref{sec:reval-lifting}), we will show how to use the
 transformation system to lift core evaluation sequences to surface
 evaluation sequences.
 
+\subsection{Performing a Single Transformation}
+\label{sec:reval-onerule}
 
+We begin by describing the form and application of our transformation
+rules.
 
-
-
-\newpage
-\section{SCRATCH}
-
-Extend terms:
+In order to reconstruct a surface term from its desugaring, some
+information must be recorded; otherwise two different surface terms
+that desugared to the same core term would be indistinguishable. We
+therefore place \emph{tags} on terms as they are desugared. Each tag
+has two patterns, which are approximately the \Sc{lhs} and \Sc{rhs} of
+the sugar they originated from:
 \begin{Table}
-  $e$ &$::=$& ... \\
-  &$|$& $\Tag{p}{p}{e}$ & tagged term
+  term $e$ &$::=$& $...$ \\
+  &$|$& $\Tag{p}{p'}{e}$
 \end{Table}
 
-If a term is shown in the reconstructed surface evaluation sequence, then
-each non-atomic part of it originated from the original program and
-has honest tags. (Assuming that evaluation does not modify tags.)
+%% We can now define \emph{desugaring} and \emph{resugaring} operations that
+%% translate \Sc{ast}s in the surface language to \Sc{ast}s in the core language and
+%% back.
 
-%If $\Desugar{C} \stepsCore \Desugar{C'}$,
-%then $\forall E,t_1,...,t_k$,
-%$E[C[t_1,...,t_k]] \stepsSurf E[C'[t_1,...,t_k]]$
+%% Desugaring uses a helper function called \emph{expand} that expands a
+%% single piece of syntactic sugar in a term. \emph{Expand} looks up a
+%% desugaring function to apply based on the term's topmost node and
+%% applies it. This function can be Turing-complete, and is written in
+%% the host language. In order for resugaring to work, however,
+%% desugaring must be \emph{compositional}, i.e., it must be parametric
+%% over its subterms. Hence, instead of expanding the entire term $t$ at
+%% once, \emph{expand} will first split it into a pattern and subterms,
+%% and then only expand the \emph{pattern} $C$ to a new pattern
+%% $C'$. \emph{Expand} then returns the pair $(C, C')$ of the old and new
+%% pattern.
 
+%% Desugaring of a term $t$ thus proceeds by calling $\textit{expand}(t)$
+%% to obtain the pair of patterns $(C, C')$, using matching and
+%% substitution to rewrite $C$ to $C'$, and recursively substituting
+%% the desugared subterms of $t$. The newly desugared term will be
+%% wrapped in a tag noting the original and new patterns. Later,
+%% resugaring will make use of these tags to undo each of the desugaring
+%% functions.
 
+%% Desugaring makes use of two operations over nodes. \\
+%% $\sugar{n}{C}$ looks up the desugaring function associated with node
+%% type $n$ and applies it to pattern $C$, and $\head{t}$ splits the term
+%% $t$ to obtain the pattern $C$ to be desugared. The pattern returned by
+%% $\head{t}$ may need to be more than just the topmost node of
+%% $t$. Take, for instance, a multi-armed let construct like
+%% \code{let x = 4, y = x in x + y}.
+%% One way of representing this term in our system is:
+%% \begin{codes}
+%% node(Let,
+%%   node(Bind, decl(\(x\)), node(Num, val(\(4\))),
+%%     node(Bind, decl(\(y\)), ref(\(x\))),
+%%       node(EndBinds))),
+%%   node(Plus, ref(\(x\)), ref(\(y\))))
+%% \end{codes}
+%% It would be important for \code{Let}'s desugaring function to be given
+%% all of its bindings, so the pattern returned by $\head{}$ in this case
+%% should be:
+%% \begin{codes}
+%% node(Let,
+%%   node(Bind, \(\hole\sb{1}\), \(\hole\sb{2}\),
+%%     node(Bind, \(\hole\sb{3}\), \(\hole\sb{4}\),
+%%       node(EndBinds))),
+%%   \(\hole\sb{5}\))
+%% \end{codes}
+%% While $\head{}$ could in principle be a complicated function, we
+%% believe in practice it is sufficient to partition nodes into
+%% \emph{primary} nodes like \code{Let} that can stand on their own, and
+%% secondary nodes like \code{Bind} and \code{EndBinds} that are merely
+%% part of the node above them; thus we define $\head{}$ in terms of a
+%% $\textit{is-primary}$ predicate. $\textit{is-primary}$ will return
+%% \code{true} for values, declarations, and references; it is language
+%% specific for \texttt{nodes}.
 
-\begin{figure}
-  NOTES: Surface terms are any untagged terms.
-  \begin{Table}
-    $s$ &$::=$& $\Value$ \\
-    &$|$& $\Refn{x}$ \\
-    &$|$& $\Decl{x}$ \\
-    &$|$& $\Surf{C}{s \dd}$ \\
-    &$|$& $[s \dd]$ \\
-    \\
-    $E_{rs}$ &$::=$& $\square$ \\
-    &$|$& $\Core{C}{s \dd E_{rs}\,e \dd}$ \\
-    &$|$& $\Surf{C}{s \dd E_{rs}\,e \dd}$ \\
-    &$|$& $\Aux{C}{s \dd E_{rs}\,e \dd}$ \\
-    &$|$& $\Tag{p}{p}{E_{rs}}$ \\
-    &$|$& $[s \dd E_{rs}\,e \dd]$
-  \end{Table}
+%% Desugaring is formally defined in \cref{desugar}, and
+%% resugaring in \cref{resugar}.%
+%% \footnote{Notice that resugaring begins with a
+%% \emph{resolve} step: this is only really necessary in case evaluation
+%% copies a term, thus breaking the invariant that variable declarations
+%% in resolved terms all have unique subscripts.}
+%% Desugaring and resugaring are overloaded to
+%% act on substitutions in the obvious way, e.g.,
+%% $\desugar(\repl{\hole}{t}) = \repl{\hole}{(\desugar{t})}$.
+%% Desugaring and resugaring are inverses of one another, up to a permutation of
+%% variables.
 
-  \begin{multicols}{2}
+%% To show this, we will rely on terms having \emph{honest tags}:
+%% \begin{definition}
+%% A term has \emph{honest tags} when for each subterm of the form
+%% $\stag{C}{C'} t$, $t = (t \match C') \subs C'$.
+%% \end{definition}
 
-  \TypeLabel{\SaysResugar{L}{c}{s}}
+%% \begin{figure}
+%% \begin{jtable}
+%% $\typelabel{\Desugar{t}}{t}$ \\
+%% $\Desugar{t}$ &$=$& $\desugar(\resolve{t})$ \\
+%% $\desugar{\node{a}{n}{\ellipses{t_i}}}$
+%%   &$=$& $\stag{C}{C'} (\desugar{(t \match C)} \subs C')$ \\
+%%  &&when $\expand{t} = (C, C')$ \\
+%%  &&where $t = \node{a}{n}{\ellipses{t_i}}$ \\
+%% $\desugar{t}$ &$=$& $t$ \quad otherwise
+%% \\ \\
+%% $\typelabel{\expand{t}}{(C, C)}$ \\
+%% $\expand{\node{a}{n}{\ellipses{t_i}}}$
+%%   &$=$& $(C, C')$ \\
+%%  &&when $\head{\node{a}{n}{\ellipses{t_i}}} = C$ \\
+%%  &&and $\resolve{\sugar{n}{C}} = C'$ \\
+%% $\typelabel{\head{t}}{C}$ \\
+%% $\head{\node{a}{n}{\ellipses{t_i}}}$
+%%   &$=$& $\node{a}{n}{\ellipses{\headRec{t_i}}}$ \\
+%%  &&when $\textit{is-primary}(n)$ \\
+%% $\headRec{\node{a}{n}{\ellipses{t_i}}}$
+%%   &$=$& $\node{a}{n}{\ellipses{\headRec{t_i}}}$ \\
+%%  &&when $\textit{not}(\textit{is-primary}(n))$ \\
+%% $\headRec{t}$
+%%   &$=$& $\fresh{i} \hole_i$ \quad otherwise
+%% \end{jtable}
+%% \caption{Desugaring}
+%% \label{desugar}
+%% \end{figure}
 
-  \Inference[resugar]{
-    \SaysRss{L}{c}{s}
-  }{
-    \SaysResugar{L}{c}{s}
-  }
-  
-  \TypeLabel{\SaysRs{L}{e}{e}}
-  
-  \Inference[rs-ctx]{
-    \SaysUnexp{L}{e}{e'}
-  }{
-    \SaysRs{L}{E_{rs}[e]}{E_{rs}[e']}
-  }
+%% \begin{figure}
+%% \begin{jtable}
+%% \multicolumn{2}{l}{$\typelabel{\Resugar{t}}{t \text{ or \fail}}$} \\
+%% $\Resugar{t}$ &$=$& $\unresolve{\resugar(\resolve{t})}$ \\
+%% $\resugar(\stag{C}{C'} t)$ &$=$& $(\resugar(t \match C')) \subs C$ \\
+%% &&(or {\fail} if $t \match C'$ does not match) \\
+%% $\resugar{\node{a}{n}{\ellipses{t_i}}}$ &$=$& {\fail} \\
+%% $\resugar{t}$ &$=$& $t$ \quad otherwise
+%% \end{jtable}
+%% \caption{Resugaring}
+%% \label{resugar}
+%% \end{figure}
 
-  \end{multicols}
+%% \begin{lemma}
+%% \label{desRes}
+%% For all terms $t$ with honest tags, if
+%% $\resugar{t} \neq \fail$ then $\desugar{\resugar{t}} \iso t$.
+%% \end{lemma}
+%% \begin{proof}[Proof Sketch]
+%% Proceed by induction on $t$. The interesting case is when the term $t$ is
+%% tagged:
+%% \begin{jtable}
+%% $\desugar{\resugar{\stag{C}{C'} t}}$
+%%   &$=$& $\desugar((\resugar(t \match C')) \subs C)$ \\
+%%     &&with $(C, C') = \expand{t'}$ for some $t'$ \\
+%%   &$=$& $\stag{C}{C''}
+%%          \desugar((\resugar(t \match C')) \subs C) \match C) \subs C''$ \\
+%%     &&where $\expand{\resugar(t \match C')} = (C, C'')$ \\
+%%     &&and $C' \iso C''$ \\
+%%   &$=$& $\stag{C}{C''}
+%%          \desugar{\resugar(t \match C')} \subs C''$ \\
+%%     &&by \cref{subsMatch} \\
+%%   &$\iso$& $\stag{C}{C''}
+%%          (t \match C') \subs C''$ \\
+%%     &&by I.H. \\
+%%   &$\iso$& $\stag{C}{C'} t$ \\
+%%     &&by \cref{matchSubs}
+%% \end{jtable}
+%% The first step (which introduces $t'$) relies on the tags having been
+%% produced by a call to $\expand{}$.
+%% \end{proof}
 
-  \TypeLabel{\SaysUnexp{L}{e}{e}}
+%% \begin{lemma}
+%% \label{resDes}
+%% For all terms $t$, $\resugar{\desugar{t}} = t$.
+%% \end{lemma}
+%% \begin{proof}
+%% Proceed by induction on $t$. The interesting case is where the term $t$ is
+%% not atomic:
+%% \begin{jtable}
+%% $\resugar{\desugar{t}}$
+%%   &$=$& $\resugar{\stag{C}{C'}(\desugar(t \match C) \subs C')}$ \\
+%%   &&with $\expand{t} = (C, C')$ \\
+%%   &$=$& $\resugar{((\desugar(t \match C) \subs C')} \match C')
+%%          \subs C$ \\
+%%   &$=$& $\resugar{\desugar(t \match C)} \subs C$
+%%     &by \cref{subsMatch} \\
+%%   &$=$& $(t \match C) \subs C$
+%%     &by I.H. \\
+%%   &$=$& $t$
+%%     &by \cref{matchSubs}
+%% \end{jtable}
+%% (The side condition for \cref{subsMatch} uses the fact that \\
+%% $\domain{t \match C} = \holes{C} = \holes{C'}$.)
+%% \end{proof}
 
-  \Inference[unexp-tag]{
-    e \text{ has no Tags} &
-    \SaysMatch{L}{e}{p'}{\gamma}{\_} &
-    \SaysSubs{L}{\gamma}{p}{e'}
-  }{
-    \SaysUnexp{L}{\Tag{p}{p'}{e}}{e'}
-  }
-  
-  \caption{Unexpansion}
-  \label{fig:reval-unexpansion}
-\end{figure}
-
-\begin{lemma} \label{lemma:reval-exp-inverse}
-  For all terms $e$, if $\SaysExp{L}{e}{e'}$ and
-  $\SaysUnexp{L}{e'}{e''}$ then $e = e''$.
-\end{lemma}
-\begin{proof}
-  .[FILL]
-\end{proof}
-\begin{corollary}
-  Suppose that $e$ has honest tags [TODO].
-  If $\SaysUnexp{L}{e}{e'}$ and $\SaysExp{L}{e'}{e''}$
-  then $e = e''$.
-\end{corollary}
-\begin{proof}
-  Since $e$ can unexpand, it must have exactly one tag.
-  Since that tag is honest, it came from the expansion of some term $e^{*}$.
-  By \cref{lemma:reval-exp-inverse}, $Expand(e^{*}) = e^{**}$ 
-  and $Unexpand(e^{**}) = e^{*}$ for some $e^{**}$.
-
-  (We write $Expand$ as shorthand for $\SaysExp{L}{\_}{\_}$;
-   likewise for $Unexpand$.)
-\end{proof}
+%% \begin{lemma}
+%% \label{resugar-resolve}
+%% For all terms $t$,
+%% $\resolve{\resugar{\resolve{t}}} \iso \resugar{\resolve{t}}$
+%% \end{lemma}
+%% \begin{proof}
+%% The witness permutation is the mapping the second $\resolve{}$ enacts
+%% on variable declarations. This mapping exists since resugaring can
+%% neither drop nor duplicate variables. Now we must show that  variable
+%% references are acted upon by the second $\resolve{}$ the same way as
+%% their corresponding declarations. This amounts to asking weather each
+%% variable reference $\refn{x_u}$ is in scope of exactly its declaration
+%% $\decl{x_u}$. It is: it cannot be in scope of any \emph{other}
+%% declaration, because the \emph{first} call to $\resolve{}$ gave them
+%% all distinct subscripts, and it cannot be \emph{out} of scope of its
+%% $\decl{x_u}$ because that would mean that resugaring caused an
+%% identifier to become unbound, which could only happen if the initial
+%% program contained an unbound identifier.
+%% \end{proof}

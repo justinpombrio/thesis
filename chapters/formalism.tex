@@ -1,52 +1,40 @@
 \chapter{Desugaring, Formally}\label{chap:formalism}
 
-TODO
-\begin{itemize}
-\item ``We make no assumption that the core language is a subset of the
-  surface language, so our results can be applied to, e.g., EDSLs.''
-\item Move surf,core,aux and ellipses to impl section
-\end{itemize}
-
 In this chapter, we give formal definitions for \Sc{ast}s and
 desugaring that will be used throughout the rest of the thesis.
 Most relevantly, we assume that desugaring is given (externally to the
 language) as a set of pattern-based rewrite rules (a la Racket's \Code{syntax-rules}
 [CITE]). This is important because it will form an expressive limit on
-resugaring. Our techniques for resugaring evaluation sequences [REF] and
-resugaring scope rules [REF] work on the kind of desugaring rules
-given here, but no more. The chapter on resugaring type systems [REF]
-will further restrict the allowed desuarging rules.
+resugaring. Our techniques for resugaring evaluation sequences \cref{chap:resugar-eval},
+scope rules \cref{chap:resugar-scope}, and type systems \cref{chap:resugar-type}
+work on the kind of desugaring rules given here, but no more.
 
 \section{ASTs}\label{sec:formal-term}
 
-For the purposes of resugaring, we require \Sc{ast}s to make three
+For the purposes of resugaring, we require \Sc{ast}s to make two
 distinctions explicit.  First, the \Sc{ast} must distinguish between
 variable \emph{declarations} $\Decl{x}$ (i.e., binding sites), and
 variable \emph{references} $\Refn{x}$ (i.e., uses).  Second, each
 variable and node in the \Sc{ast} must have a unique identity $i$ that
 distinguishes it from other occurrences of the same variable or node.
-Finally, the \Sc{ast} should distinguish between \emph{core} terms,
-\emph{surface} terms, and \emph{auxiliary} terms (which we will
-describe in [REF]). Exactly why these requirements are necessary will
-become clear in [REF] and [REF].
+Exactly why these requirements are necessary will become clear in
+[REF] and [REF], respectively.
 
 We will refer to \Sc{ast}s (and parts of \Sc{ast}s)
 as \emph{terms}, and write them $e$.\marginpar{%
-  Referring to terms as $e$ is unfortunate, but we need to
-  reserve $t$ to refer to types in REF.
+  While $t$ would be a more obvious letter to use for terms, we use it
+  to refer to types in \cref{chap:resugar-types}.
 }
-With that said, terms can be inductively defined as:
+Terms can be inductively defined as:
 \begin{Table}
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 term $e$ &$::=$& $\Value$ & primitive value \\
-  &$|$& $\Core{C}[i]{e_1 \dd e_n}$ & core \Sc{ast} node \\
-  &$|$& $\Surf{C}[i]{e_1 \dd e_n}$ & surface \Sc{ast} node \\
-  &$|$& $\Aux{C}[i]{e_1 \dd e_n}$ & auxilliary \Sc{ast} node \\
+  &$|$& $\Node{C}[i]{e_1 \dd e_n}$ & \Sc{ast} node \\
   &$|$& $[e_1 \dd e_n]$ & list \\
   &$|$& $\Refn[i]{x}$  & variable reference \\
   &$|$& $\Decl[i]{x}$  & variable declaration \\
-%  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval})
 \end{Table}
+
 Nodes must have fixed arity, so lists are used when a node needs to
 contain an arbitrary number of subterms. All of the work in this
 thesis will be agnostic to the representation of values, and never
@@ -55,7 +43,7 @@ inspect or modify one.
 
 \section{Patterns}
 
-Our desugaring will be based on \emph{patterns}: desugaring will
+Our desugaring formalism will be based on \emph{patterns}: desugaring will
 proceed by \emph{matching} a \Sc{lhs} pattern against a term, and then
 \emph{substituting} into the \Sc{rhs} pattern.
 
@@ -72,263 +60,146 @@ expressions to handle trees: they add a primitive $\Node{C}{\mathit{trx}_1
 \,...\,\mathit{trx}_n}$ for matching a tree node labeled $C$ with
 branches matching the regular tree expressions
 $\mathit{trx}_1\,...\,\mathit{trx}_n$. Whereas regular tree
-expressions conventionally allow choice, we represent choice by
-allowing desugaring rules to have multiple cases instead.
+expressions conventionally allow choice, we encode it using multiple
+rules, making the pattern language simpler.
 
 Patterns $p$ are defined inductively as:
 \begin{Table}
-ellipsis label $l$ &$::=$& \textit{name} & ellipsis label \\
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
-  &$|$& $\Core{C}{p_1 ... p_n}$ & core \Sc{ast} node \\
-  &$|$& $\Surf{C}{p_1 ... p_n}$ & surface \Sc{ast} node \\
-  &$|$& $\Aux{C}{p_1 ... p_n}$ & auxilliary \Sc{ast} node \\
-  &$|$& $[ps]$ & list \\
-  &$|$& $value$ & primitive value \\
+  &$|$& $\Node{C}{p_1 ... p_n}$ & \Sc{ast} node \\
+  &$|$& $[p_1 \dd p_n]$ & list of length $n$ \\
+  &$|$& $[p_1 \dd p_n\,\Ell{p}]$ & list of length $\geq n$ \\
+  &$|$& $\Value$ & primitive value \\
   &$|$& $\Refn[i]{x}$ $|$ $\Decl[i]{x}$  & variable \\
-%  &$|$& $\Tag{p}{p}{e}$ & (described in \cref{chap:resugar-eval}) \\
-  &$|$& $\Fresh{x}{p}$ & fresh variable [TODO: pick one] \\
-seq. pattern $ps$ &$::=$& $\epsilon$ & empty sequence \\
-  &$|$& $\Cons{p}{ps}$ & cons \\
-  &$|$& $\Rep{p}{l}$ & ellipsis with label $l$ \\
-  &$|$& $\EList{p_1 ... p_n}_l$ & ellipsis list (used internally) \\
 \end{Table}
 In essence, a pattern is a term that can contain pattern variables
 $\PVarA$. However, it is very convenient to also allow
 \emph{ellipses}, which denote zero or more repetitions of the pattern
-they follow. (We formally write ellipses patterns as $\Rep{p}{l}$ to
+they follow. (We formally write ellipses patterns as $\Ell{p}$ to
 distinguish them from metasyntactic ellipses).\marginpar{%
   Technically, ellipses do not add any power to pattern-based
   desugaring rules, because they are already Turing complete CITE.
   However, they are very convenient.
 }
-To simplify the formalism, we assume that every ellipsis is given a
-\emph{label} $l$, such that ellipses that share pattern variables have
-the same label (and thus must, e.g., be repeated the same number of
-times). Our implementation does not require these labels, however.
-Instead, it automatically derives them, and raises an error in the
-cases where they cannot be sensibly derived.
+%% To simplify the formalism, we assume that every ellipsis is given a
+%% \emph{label} $l$, such that ellipses that share pattern variables have
+%% the same label (and thus must, e.g., be repeated the same number of
+%% times). Our implementation does not require these labels, however.
+%% Instead, it automatically derives them, and raises an error in the
+%% cases where they cannot be sensibly derived.
 
-\section{Matching and Substitution}
+\section{Matching, Substitution, and Unification}
 
-[TODO: discuss ellipses lists]
-[TODO: make sure not to use $\bowtie$ for match2, as it's used in
-  scope resugaring for another purpose.]
-
-Our desugaring transformations are implemented with simpler operations
-on patterns: matching and substitution.
-
-\newcommand{\blist}[1]{\lceil #1 \rceil}
+Our transformations are implemented with simpler operations on patterns:
+matching and substitution.
 
 \emph{Matching} a term against a pattern induces an \emph{environment}
 that binds the pattern's variables. This environment may be
-\emph{substituted} into a pattern to produce another term. Formally,
-an environment is a map with three kinds of bindings: a pattern
-variable $\PVarA$ may be bound to a term $e$, an ellipsis label $l$
-may be bound to a sequence of environments (one for each repetition),
-and a variable name may be bound to a different variable name
-(this will only occur when resugaring evaluation sequences, in [REF]).
-\begin{Table}
-substitution $\gamma$ &$::=$&
-$\begin{cases}
-  \PVarA \mapsto e, ... \\
-  l \mapsto \EList{\gamma ... \gamma}, ... \\
-  x \mapsto x, ...
-\end{cases}$
-& \begin{tabular}{@{} l @{}}
-    regular binding \\ ellipsis binding \\ fresh var binding
-  \end{tabular}
-\end{Table}
+\emph{substituted} into a pattern to produce another term. Formally, an
+environment is a mapping from pattern variables $\PVarA$ to bindings $b$,
+where each \emph{binding} is either a term $e$, a \emph{list binding}
+$\BList{b_1...b_n}$, or an \emph{ellipsis binding}
+$\BList{b_1...b_n\ \Ell{b_e}}$. A pattern variable within ellipses is
+bound to a list binding $\BList{b_1...b_n}$ instead of a list term
+$[b_1...b_n]$; they behave slightly differently under
+substitution. Ellipsis bindings are similar, but needed only during
+unification when a variable within an ellipsis is itself bound to an
+ellipsis pattern.
 
+We will write $\Match{e}{p}$ to denote matching a term $e$ against a
+pattern $p$, and write $\Subs{\gamma}{p}$ to denote substituting the
+bindings of an environment $\gamma$ into a pattern $p$.  We will write
+$e \geq p$ to mean that $\Match{e}{p}$ is defined, and $\gamma_1 \cup
+\gamma_2$ for the \emph{right-biased} union of $\gamma_1$ and
+$\gamma_2$. The matching and substitution algorithms are given in
+\ref{fig:formal-subs}, while bindings are defined in
+\ref{fig:formal-bind}.
 
-We will write $\SimpleMatch{e}{p}$ to denote matching a term $e$
-against a pattern $p$, and write $\SimpleSubs{\gamma}{p}$ to denote
-substituting the bindings of an environment $\gamma$ into a pattern
-$p$. We will write $\gamma_1 \cup \gamma_2$ for the \emph{disjoint}
-union of $\gamma_1$ and $\gamma_2$. The matching and substitution
-algorithms are given in \cref{fig:formal-match,fig:formal-substitute}.
-[TODO: eliminate $F$?]
-
-\begin{figure}
-\TypeLabel{\SaysMatch{F}{e}{p}{\gamma}{p}}
-\begin{multicols}{2}
-  \Inference[m-pvar]{
-    e \text{ is not a \Code{Tag}}
-  }{
-    \SaysMatch{F}{e}{\PVarA}{\{\PVarA \mapsto e\}}{\PVarA}
-  }
-
-  \Inference[m-str]{}{
-    \SaysMatch{F}{string}{string}{\{\}}{string}
-  }
-
-  \Inference[m-empty]{}{
-    \SaysMatch{F}{[\phantom{.}]}{[\epsilon]}{\{\}}{[\epsilon]}
-  }
-
-  \Inference[m-cons]{
-    \SaysMatch{F}{e_1}{p}{\gamma_1}{p'} \\
-    \SaysMatch{F}{[e_2,...,e_n]}{[ps]}{\gamma_s}{[ps']} \\
-    \gamma_1 \cup \gamma_2 = \gamma
-  }{
-    \SaysMatch{F}{[e_1 ... e_n]}{[p,ps]}{\gamma}{[p',ps']}
-  }
-
-  \Inference[m-var-capture]{
-    x \not\in F
-  }{
-    \SaysMatch{F}{x}{x}{\{\}}{x}
-  }
-
-  \Inference[m-var-fresh]{
-    x \in F
-  }{
-    \SaysMatch{F}{y}{x}{\{x \mapsto y\}}{y}
-  }
-
-  \Inference[m-fresh]{
-    \SaysMatch{F,x}{e}{p}{\gamma}{p'}
-  }{
-    \SaysMatch{F}{e}{\Fresh{x}{p}}{\gamma}{\Fresh{x}{p'}}
-  }
-\end{multicols}
-\vspace{1em}
-
-\Inference[m-ellipsis]{
-  \SaysMatch{F}{e_1}{p}{\gamma_1}{p_1'} \;\cdots\; \SaysMatch{F}{e_n}{p}{\gamma_n}{p_n'}
-}{
-  \SaysMatch{F}{[e_1 ... e_n]}{[\Rep{p}{l}]}
-            {\{l \mapsto \EList{\gamma_1 ... \gamma_n}\}}
-            {\EList{p_1' ... p_n'}_l}
-}
-
-\Inference[m-core]{
-  \SaysMatch{F}{e_1}{p_1}{\gamma_1}{p_1'} \;\cdots\; \SaysMatch{F}{e_n}{p_n}{\gamma_n}{p_n'} &
-}{
-  \SaysMatch{F}{\Core{C}{e_1 ... e_n}}{\Core{C}{p_1 ... p_n}}
-            {\gamma_1 \cup ... \cup \gamma_n}
-            {\Core{C}{p_1' ... p_n'}}
-}
-  
-\Inference[m-tag]{
-  \SaysMatch{F}{e}{p}{\gamma}{p'}
-}{
-  \SaysMatch{F}{\Tag{p_{lhs}}{p_{rhs}}{e}}{p}{\gamma}{\Tag{p_{lhs}}{p_{rhs}}{p'}}
-}
-
-\caption{Matching}
-\label{fig:formal-match}
+\begin{figure}[t]
+\[\begin{array}{lcll}
+b &:=& e                &\text{(term)} \\
+  &|&  \BList{b_1\,...\,b_n}  &\text{(list binding)} \\
+  &|&  \BList{b_1\,...\,b_n\,\Ell{b_e}} &\text{(ellipsis binding)} \\ \\
+\gamma &:=& \{\PVarA \to b,\,...\} \\
+\end{array}\]
+\caption{Bindings}
+\label{fig:formal-bind}
 \end{figure}
 
+\begin{figure*}[t]
+\[\begin{array}{lclll}
+\Match{\Value}{\Value} &=& \{\} \\
+\Match{e}{\PVarA} &=& \{\PVarA \to e\} \\
+\Match{[e_1 \dd e_n]}{[p_1 \dd p_n]} &=&
+  \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\
+\Match{[e_1 \dd e_n \dd e_{n+k}]}{[p_1 \dd p_n \Ell{p_e}]} &=&
+  \bigcup_{i=1..n} (\Match{e_i}{p_i}) \cup
+  merge([\Match{e_{n+i}}{p_e}]_{i=1..k}) \\
+\Match{\Node{C}{e_1 \dd e_n}}{\Node{C}{p_1 \dd p_n}} &=&
+  \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\ \\
 
-\begin{figure}
-\TypeLabel{\SaysSubs{F}{\gamma}{p}{e}}
-\begin{multicols}{2}
-  \Inference[s-pvar]{
-    \PVarA \mapsto e \in \gamma
-  }{
-    \SaysSubs{F}{\gamma}{\PVarA}{e}
-  }
+\Subs{\gamma}{\Value}        &=& \Value \\
+\Subs{\gamma}{[p_1 \dd p_n]}    &=& [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n}) \\
+\Subs{\gamma}{[p_1 \dd p_n \Ell{p_e}]} &=&
+  [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n\,\DoublePlus\,split(\gamma, p_e)} \\
+    &&\text{(where } \DoublePlus \text{ is concatenation)} \\
+\{\dd,\PVarA \to b,\dd\}\,\PVarA &=& toTerm(b) \\
+\Subs{\gamma}{\Node{C}{p_1 \dd p_n}} &=&
+  \Node{C}{\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n}} \\ \\
 
-  \Inference[s-str]{}{
-    \SaysSubs{F}{\gamma}{string}{string}
-  }
+\multicolumn{3}{l}{merge([\{\PVarA_1 \to b_1,...\} \dd \{\PVarA_n \to b_n,...\}])} \\
+\multicolumn{3}{l}{\quad=\quad \{\PVarA_1 \to \BList{b_1 \dd b_n},\,...\}} \\ \\
 
-  \Inference[s-empty]{}{
-    \SaysSubs{F}{\gamma}{[\epsilon]}{[\phantom{.}]}
-  }
+\multicolumn{3}{l}{split(\{\PVarA_1 \to \BList{b_{11} \dd b_{1k}} \dd 
+  \PVarA_n \to \BList{b_{n1} \dd b_{nk}}\}, p)} \\
+\multicolumn{3}{l}{\quad=\quad
+  (\Subs{\{\PVarA_1 \to b_{11} \dd  \PVarA_n \to b_{n1}\}}{p} \dd 
+   \Subs{\{\PVarA_1 \to b_{1k} \dd  \PVarA_n \to b_{nk}\}}{p})} \\ \\
 
-  \Inference[s-cons]{
-    \SaysSubs{F}{\gamma}{p}{e_1} \\
-    \SaysSubs{F}{\gamma}{[ps]}{[e_2 ... e_n]}
-  }{
-    \SaysSubs{F}{\gamma}{[p,ps]}{[e_1 e_2 ... e_n]}
-  }
+toTerm(P) &=& P \\
+toTerm(\BList{b_1 \dd b_n}) &=&
+  (toTerm(b_1) \dd toTerm(b_n))
 
-  \Inference[s-var-capture]{
-    x \not\in \gamma
-  }{
-    \SaysSubs{F}{\gamma}{x}{x}
-  }
+\end{array}\]
+\caption{Matching and substitution}
+\label{fig:formal-subs}
+\end{figure*}
 
-  \Inference[s-var-fresh]{
-    x \mapsto y \in \gamma
-  }{
-    \SaysSubs{F}{\gamma}{x}{y}
-  }
 
-  \Inference[s-fresh]{
-    \SaysSubs{F}{\gamma,(x \mapsto y)}{p}{e} \quad\text{for fresh $y$}
-  }{
-    \SaysSubs{F}{\gamma}{\Fresh{x}{p}}{e}
-  }
-\end{multicols}
-\vspace{1em}
+%% For an example of matching and substitution, consider one of the rules of
+%% our running \Code{Or} example:
+%% \begin{Codes}
+%% Or([x y ys ...] ->
+%%   Let([Binding("t" x)]
+%%       If(Id("t") Id("t") Or([y ys ...])));
+%% \end{Codes}
+%% Matching \Code{Or([true Not(true) false true])}
+%% against \\ \Code{Or([x y ys ...])}
+%% produces the environment
+%% \[\gamma = \{
+%%    \PVarA \to \Code{true},\
+%%    \PVarB \to \Code{Not(true)},\
+%%    \PVarC \to \BList{\Code{false}\ \Code{true}}\}\]
+%% and substituting $\gamma$ into the rule's \Sc{rhs} produces
+%% \begin{Codes}
+%% Let([Binding("t" true)]
+%%     If(Id("t") Id("t") Or([Not(true) false true])))
+%% \end{Codes}
 
-\Inference[s-ellipsis]{
-  l \mapsto \EList{\gamma_1 ... \gamma_n} \in \gamma \\
-  \SaysSubs{F}{\gamma_1}{p}{e_1} \;\cdots\; \SaysSubs{F}{\gamma_n}{p}{e_n}
-}{
-  \SaysSubs{F}{\gamma}{[\Rep{p}{l}]}{[e_1 ... e_n]}
-}
+Later, we will need to compute unifications as well. We omit showing the
+algorithm; it is straightforward since we disallow duplicate variables (as
+seen in the next section).
 
-\Inference[s-ellipsis-list]{
-  l \mapsto \EList{\gamma_1 ... \gamma_n} \in \gamma \\
-  \SaysSubs{F}{\gamma_1}{p_1}{e_1} \;\cdots\; \SaysSubs{F}{\gamma_n}{p_n}{e_n}
-}{
-  \SaysSubs{F}{\gamma}{\EList{p_1 ... p_n}}{[e_1 ... e_n]}
-}
 
-\Inference[s-core]{
-  \SaysSubs{F}{\gamma}{p_1}{e_1} \;\cdots\; \SaysSubs{F}{\gamma}{p_n}{e_n}
-}{
-  \SaysSubs{F}{\gamma}{\Core{C}{p_1 ... p_n}}{\Core{C}{e_1 ... e_n}}
-}
-
-\Inference[s-sugar]{
-  \SaysSubs{F}{\gamma}{p_1}{e_1} \;\cdots\; \SaysSubs{F}{\gamma}{p_n}{e_n}
-}{
-  \SaysSubs{F}{\gamma}{\Surf{m}{p_1 ... p_n}}{\Surf{m}{e_1 ... e_n}}
-}
-
-\Inference[s-tag]{
-  \SaysSubs{F}{\gamma}{p}{e}
-}{
-  \SaysSubs{F}{\gamma}{\Tag{p_{lhs}}{p_{rhs}}{p}}{\Tag{p_{lhs}}{p_{rhs}}{e}}
-}
-
-\caption{Substitution}
-\label{fig:formal-substitute}
-\end{figure}
-
-It will prove important later that matching and substitution are
-(approximately) inverses:
-\begin{lemma}[matching and substitution]
-  [TODO: Matching and substitution are approximately inverses]
-%  $\SaysSubs{F}{\gamma}{p}{e}$, then $\SaysMatch{F}{e}{p}{\gamma}$.
-\end{lemma}
-\begin{proof}
-  Induct on $p$.
-  [FILL]
-\end{proof}
-%However, the reverse is not true. Matching does not undo substitution,
-%because substitution in non-deterministic (because it generates fresh
-%variables).
 
 \section{Desugaring}\label{sec:formal-desugar}
 
-See \cref{fig:formal-expansion}.
-[TODO: Replace step with something that looks like desugaring.]
-[TODO: Replace $v$ with something that looks like core terms.]
+[FILL: desugaring definition]\marginpar{
+  Formally, this desugaring definition is a term rewriting system (\Sc{trs})~\cite{trs}. We call
+  the \Sc{trs}'s variables \emph{pattern variables} to avoid confusing them
+  with references and declarations, which are constants from the
+  perspective of the TRS.}
 
-\begin{Table}
-fresh vars $F$ &$::=$& $\{x,...\}$ & fresh variable set [TODO: pick one] \\
-rewrite case $c$ &$::=$&
-  $\DsRuleCase{(p_1,\,...,\,p_k)}{\Gamma}{p'}$ \\
-desugaring rule $r$ &$::=$&
-  $\DsRule{C}{k_1,...,k_n}$ \\
-desugaring rules $rs$ &$::=$& $\{r_1, ..., r_n\}$
-\end{Table}
-[TODO: note that gamma described later.]
 
 \subsection{Restrictions on Desugaring}\label{sec:formal-reqs}
 
@@ -371,7 +242,7 @@ to effectively resugar them. The resugaring techniques described in
   running a desugaring rule in reverse, a pattern variable that
   appeared on the \Sc{lhs} but not on the \Sc{rhs} would be unbound.)
 \item \emph{Each transformation's \Sc{lhs} must have the form
-  $\Surf{C}{e_1,\,...,\,e_n}$.} We will rely on this fact when showing that
+  $\Node{C}{e_1,\,...,\,e_n}$.} We will rely on this fact when showing that
   unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
 \item References and declarations in the \Sc{rhs} are given fresh names during
   expansion to ensure hygiene.
@@ -379,303 +250,8 @@ to effectively resugar them. The resugaring techniques described in
 
 In addition, we have one extra restriction for scope resugaring, and
 one for type resugaring.
-When resugaring \emph{scope rules} [REF], desugaring rules may not
-contain ellipses. [TODO: lift this restriction!]
-When resugaring \emph{type rules} [REF], we will also
-require that for each desugaring rule, its cases be disjoint.
-
-[FILL: desugaring]\marginpar{
-  Formally, this desugaring definition is a term rewriting system (\Sc{trs})~\cite{trs}. We call
-  the \Sc{trs}'s variables \emph{pattern variables} to avoid confusing them
-  with references and declarations, which are constants from the
-  perspective of the TRS.}
-
-\begin{figure}
-  NOTES: Core terms are terms without Surf or Aux nodes. Desugaring
-  takes a term and produces a core term. Each sugar lhs and rhs is a
-  surface pattern. Pattern variables match against core terms.
-  \begin{Table}
-    $c$ &$::=$& $\Value$ \\
-    &$|$& $\Refn{x}$ \\
-    &$|$& $\Decl{x}$ \\
-    &$|$& $\Core{C}{c \dd}$ \\
-    &$|$& $\Tag{p}{p}{c}$ \\
-    &$|$& $[c \dd]$ \\
-    \\
-    $E_{ds}$ &$::=$& $\square$ \\
-    &$|$& $[c \dd E_{ds}\,e \dd]$ \\
-    &$|$& $\Core{C}{c \dd E_{ds}\,e \dd}$ \\
-    &$|$& $\Surf{C}{c \dd E_{ds}\,e \dd}$ \\
-    &$|$& $\Aux{C}{c \dd E_{ds}\,e \dd}$ \\
-    &$|$& $\Tag{p}{p}{E_{ds}}$
-  \end{Table}
-
-  \begin{multicols}{2}
-  \TypeLabel{\SaysDesugar{L}{s}{c}}
-
-  \Inference[desugar]{
-    \SaysDss{L}{s}{c}
-  }{
-    \SaysDesugar{L}{s}{c}
-  }
-
-  \TypeLabel{\SaysDs{L}{e}{e}} 
-
-  \Inference[ds-ctx]{
-    \SaysExp{L}{e}{e'}
-  }{
-    \SaysDs{L}{E_{ds}[e]}{E_{ds}[e']}
-  }
-  \end{multicols}
-
-  \TypeLabel{\SaysExp{L}{e}{e}}
-  
-  \Inference[exp-sugar]{
-    L = G,rs &
-    \DsRule{C}{k_1 ... k_n} \in rs \IS\\
-    k_i = \DsRuleCase{(p_1,...,p_n)}{\Gamma}{F}{p_{rhs}} \IS\\
-    \SaysMatch{L}{c_i}{p_i}{\gamma_i}{p_i'} \text{ for each $i$} \IS\\
-    \SaysMatch{L}{\Surf{C}{c_1 ... c_n}}{\Surf{C}{p_1 ... p_n}}{\gamma}{p_{lhs}} \IS\\
-    \gamma' \text{ gives fresh names to the variables in $F$} \IS\\
-%    \gamma_1 \cup ... \cup \gamma_n \cup \gamma' = \gamma \IS\\
-    \SaysSubs{F}{(\gamma \cup \gamma')}{p_{rhs}}{e'}
-  }{
-    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{\Tag{p_{lhs}}{p_{rhs}}{e'}}
-  }
-  
-  \Inference[exp-core]{
-    L = G,rs &
-    C \not\in rs &
-    p = \Surf{C}{\PVarA_1 ... \PVarA_n} &
-    p' = \Core{C}{\PVarA_1 ... \PVarA_n}
-  }{
-    \SaysExp{L}{\Surf{C}{c_1 ... c_n}}{\Tag{p}{p'}{\Core{C}{c_1 ... c_n}}}
-  }
-  \caption{Desugaring}
-  \label{fig:formal-expansion}
-\end{figure}
-
-
-
-\newpage
-\section{Example}
-
-\subsection{Define-struct}
-
-\paragraph{Core AST}
-\begin{Codes}
-Stmts:
-| [\{splicing-begin stmts:Stmts\} @rest:Stmts]
-   binding stmts in rest
-   providing stmts, rest
-
-| [\{let x:Var v:Expr\} @rest:Stmts]
-   binding x in rest
-
-| [\{fun f:Var args:Args body:Expr\} @rest:Stmts]
-   binding args in body, rest in body
-   providing f, rest
-\end{Codes}
-
-%% ALTERNATIVELY:
-
-%% Stmts:
-%% | \{splicing-begin stmts:Stmts rest:Stmts\}
-%%    binding stmts in rest
-%%    providing stmts, rest
-
-%% | \{let x:Var v:Expr rest:Stmts\}
-%%    binding x in rest
-
-%% | \{fun f:Var args:Args body:Expr rest:Stmts\}
-%%    binding args in body, rest in body
-%%    providing f, rest
-
-%% | \{end\}
-
-%% Params:
-%% | \{param x:Var rest:Params\}
-%% | \{end\}
-
-\paragraph{Auxiliary AST}
-\begin{Codes}
-IStructFields:
-| [field:IStructField ...fields:IStructFields]
-  providing field, fields
-
-IStructField:
-| \{i-struct-field field:Str get:Var set:Var\}
-  providing get, set
-\end{Codes}
-
-\paragraph{Surface AST}
-\begin{Codes}
-SurfStmts:
-  .....
-| [(define-struct name:Var fields:StructFields) @rest:SurfStmts]
-  binding name in rest, fields in rest
-  providing name, fields, rest
-
-StructFields:
-| [field:StructField ...fields:StructFields]
-  providing field, fields
-
-StructField:
-| (struct-field field:Str get:Var set:Var)
-  providing get, set
-\end{Codes}
-
-\paragraph{Desugaring Rules}
-\begin{Codes}
-   [(struct-field field:Str get:Var set:Var) @rest:IStructFields]
-=> [\{i-struct-field field get set\} @rest]
-  
-   [(define-struct name:Var
-      [(struct-field field:Str get:Var set:Var) ...]) @rest:SurfStmts]
-=> [\{fun name [x ...] \{record [\{record-field field x\} ...]\}\}
-    \{splicing-begin [\{fun get [rec] \{record-get rec field\}\} ...]\}
-    \{splicing-begin [\{fun set [rec val] \{record-set rec field val\}\} ...]\}
-    @rest]
-\end{Codes}
-
-\subsection{Pyret For Expressions}
-
-To handle Pyret for-expressions, we need to add desugaring rules for
-the \Code{for} and for its bindings. 
-First, when a for-expression binding (e.g. \Code{n from 0}) desugars,
-it will simply return its binding (\Code{n}) and its value (\Code{0}).
-It can do so with the desugaring rule:
-\begin{Codes}
-   (s-for-bind l:Loc b:Bind v:Expr)
-=> \{for-bind b v\}
-\end{Codes}
-where \Code{ForBind} is a new auxiliary type:
-\begin{Codes}
-ForBind += \{for-bind Bind Expr\}
-
-with list scope:
-  [\{for-bind b v\} bs ...]
-  export b
-  export bs
-\end{Codes}
-
-Then the surface grammar can be extended for \Code{for} expressions:
-\begin{Codes}
-Expr += (s-for Loc Expr [ForBind] Ann Expr Bool)
-with scope:
-  bind binds in body
-\end{Codes}
-
-Then for-expressions can be implemented with the desugaring rule:
-\begin{Codes}
-   (s-for l:Loc
-          iter:Expr
-          [\{for-bind bind:Bind value:Expr\} ...]@binds
-          ann:Ann
-          body:Expr
-          blocky:Bool)
-=> (Apply l iter
-     [(Lambda l (CONCAT "for-body<" (FORMAT l false) ">")
-        [] [bind ...] ann "" body None None blocky)
-      value ...])
-\end{Codes}
-
-Notice that \Code{s-for} is pattern matching against the results of
-desugaring the \Code{s-for-bind}s. The \Code{(CONCAT ...)} stuff is to
-compute at compile time a name for this lambda, which is what Pyret
-currently does.
-
-\newcommand{\C}{\(\sb{c}\)}
-\subsubsection{Desugaring Pyret For Expressions}
-\begin{Codes}
-   (s-for map
-     [(s-for-bind x (list [(+ 1 2)]))]
-     (* x x))
-=> (s-for map [(s-for-bind x (list
-     [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))] (* x x))
-=> (s-for map [(s-for-bind x (Tag<(list a),(list\C a)> (list\C
-     [(Tag<(+ a b),(+\C a b)> (+\C 1 2))])))] (* x x))
-=> (s-for map
-     [(Tag<(s-for-bind b v),\{for-bind b v\}> \{for-bind x
-       (Tag<(list a),(list\C a)> (list\C
-         [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))\})] (* x x))
-=> (s-for map
-     [(Tag<(s-for-bind b v),\{for-bind b v\}> \{for-bind x
-       (Tag<(list a),(list\C a)> (list\C
-         [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))\})] (* x x))
-=> (s-for map
-     [(Tag<(s-for-bind b v),\{for-bind b v\}> \{for-bind x
-       (Tag<(list a),(list\C a)> (list\C
-         [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))\})]
-     (Tag<(* a b),(*\C a b)>
-       (*\C x x)))
-=> (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (apply map [(lambda [x] (Tag<(* a b),(*\C a b)> (*\C x x)))
-        (Tag<(list a),(list\C a)> (list\C
-          [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))]))
-=> (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (apply map [(Tag<..,..> (lambda\C [x]
-          (Tag<(* a b),(*\C a b)> (*\C x x))))
-        (Tag<(list a),(list\C a)> (list\C
-          [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))]))
-=> (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (Tag<..,..> (apply\C map [(Tag<..,..>(lambda\C [x]
-          (Tag<(* a b),(*\C a b)> (*\C x x))))
-        (Tag<(list a),(list\C a)> (list\C
-          [(Tag<(+ a b),(+\C a b)> (+\C 1 2))]))])))
--> (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (Tag<..,..> (apply\C map [(Tag<..,..> (lambda\C [x]
-           (Tag<(* a b),(*\C a b)> (*\C x x))))
-        (Tag<(list a),(list\C a)> (list\C [3]))])))
-<= (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (Tag<..,..> (apply\C map [(Tag<..,..> (lambda\C [x] (* x x)))
-        (Tag<(list a),(list\C a)> (list\C [3]))])))
-<= (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (Tag<..,..> (apply\C map [(lambda [x] (* x x))
-        (list [3])])))
-<= (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (apply map [(lambda [x] (* x x)) (list [3])]))
-<= (Tag<(s-for iter
-         [(Tag<(s-for-bind b v),\{for-bind b v\}>
-             \{for-bind bind value\}) ...]
-           body),
-         (apply iter [(lambda [bind ...] body) value ...])>
-      (apply map [(lambda [x] (* x x)) (list [3])]))
-  // iter=map, bind=[x], body=(* x x), value=[(list [3])]
-<= (s-for map
-     [(Tag<(s-for-bind b v),\{for-bind b v\}>
-        \{for-bind x (list [3])\})]
-     (* x x))
-<= (s-for map
-     [(s-for-bind x (list [3]))]
-     (* x x))
-\end{Codes}
-
+When resugaring \emph{scope rules} (\cref{chap:resugar-scope}),
+desugaring rules may not contain lists or ellipses.
+When resugaring \emph{type rules} (\cref{chap:resugar-types}), we will also
+require that desugaring rules be disjoint: that is, no two rules can
+have \Sc{lhs}s that can be unified.

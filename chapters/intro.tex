@@ -204,7 +204,7 @@ We address these problems with a general approach called
 \emph{resugaring}. Thus my \textbf{thesis statement} is that:\marginpar{%
 While I use ``we'' throughout the rest of document to acknowledge
 all the others who helped with this work, my thesis statement is for
-me and me alone to defend. Hence ``my''.
+me to defend. Hence ``my''.
 }
 \begin{quote}
 Many aspects of programming languages---in particular evaluation
@@ -220,12 +220,13 @@ and systems work. Only when using syntactic sugar no longer
 inadvertently breaks abstractions can the adage
 ``oh, that's \emph{just} syntactic sugar'' finally become true.
 
-\paragraph{Roadmap}
+\section{Roadmap}
 
 The rest of this thesis is organized as follows:\marginpar{%
   Related work is dicussed individually in chapters
   \cref{chap:resugar-eval,chap:resugar-scope,chap:resugar-types}.
 }
+\paragraph{Part II: Desugaring}
 \begin{description}
 \item[\Cref{chap:taxonomy}] discusses and taxonomizes existing
   desugaring systems (of which there are a wide variety).
@@ -233,6 +234,9 @@ The rest of this thesis is organized as follows:\marginpar{%
   will serve as groundwork for the rest of the chapters.
 % [TODO] \item[\Cref{chap:well-formedness}] provides an algorithm for
 % checking that desugaring rules preserve syntactic well-formedness.
+\end{description}
+\paragraph{Part III: Resugaring}
+\begin{description}
 \item[\Cref{chap:resugar-eval}] shows how to resugar \emph{evaluation sequences}.
 \item[\Cref{chap:resugar-scope}] shows how to resugar \emph{scope rules}.
 \item[\Cref{chap:resugar-types}] shows how to resugar \emph{type rules}.

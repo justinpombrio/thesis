@@ -69,6 +69,7 @@
 \usepackage{bussproofs}
 % More formatting
 \usepackage{rotating}
+\usepackage{multirow}
 % More nice things
 \usepackage{cleveref}
 \usepackage{color}
@@ -105,6 +106,7 @@
 \newtheorem{assumption}{Assumption}
 \newtheorem{corollary}{Corollary}
 \newtheorem{property}{Property}
+\newtheorem{goal}{Goal}
 
 % Unicode "support"
 \newunicodechar{λ}{$\lambda$}
@@ -150,22 +152,42 @@
       \setlength{\itemindent}{\parindent}
       \setlength{\parsep}{\parskip}}
   \item[]}{\end{list}}
+\newcommand{\InABox}[1]{
+  \vspace{4mm}
+  \noindent
+  \fbox{
+    \begin{minipage}{\dimexpr\linewidth-4\fboxsep-2\fboxrule}
+      #1
+    \end{minipage}
+  }
+}
+\newcommand{\Sample}[1]{
+  \textbf{#1}
+}
+\newcommand{\Img}[1]{
+  \begin{minipage}[b]{0.35\textwidth}
+    \input{img/#1.tex}
+  \end{minipage}
+}
 
 
 % Math Notation
 \newcommand{\ddd}{\;\dots\;}
 \newcommand{\dd}{\,...\,}
+\newcommandx*{\seq}[3][1=1,3=n]{{#2}_{#1}\dots{#2}_{#3}}
 \newcommand{\Exists}[1]{\exists{#1}.\,\,}
 \newcommand{\ExistsUnique}[1]{\exists!{#1}.\,\,}
 \newcommand{\NotExists}[1]{\not\exists{#1}.\,\,}
 \newcommand{\Forall}[1]{\forall{#1}.\,\,}
 \newcommand{\NotForall}[1]{\not\forall{#1}.\,\,}
+\newcommand{\Iff}{\;\;\text{ iff }\;\;}
 \newcommand{\SetSuchThat}[2]{\{#1 \;|\; #2\}}
 \newcommand{\DisjUnion}{\,\dot\cup\,}
 \newcommand{\To}{\Rightarrow}
 \newcommand{\Defeq}{\;\triangleq\;}
 \newcommand{\St}[2]{\{#1\,|\,#2\}}
 \newcommandx*{\Seqn}[3][1 = 1, 3 = n]{{#2}_{#1}\,...\,{#2}_{#3}}
+\newcommand{\DoublePlus}{+\kern-1.3ex+\kern0.8ex}
 
 % Code notation
 \newcommand{\Code}[1]{\texttt{#1}}
@@ -192,6 +214,8 @@
 
 % Misc Notation
 \newcommand{\xmark}{\ding{55}}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\qmark}{\framebox{?}}
 
 % Matching and Substitution
 \newcommand{\Subs}[2]{#1 \bullet #2}
@@ -281,6 +305,7 @@
 % SeqPatterns
 \newcommand{\Cons}[2]{#1, #2}
 \newcommand{\Rep}[2]{#1\ {*}_{#2}}
+\newcommand{\Ell}[1]{#1*}
 \newcommand{\EList}[1]{\lceil #1 \rceil}
 % Types
 \newcommand{\ValueT}{\texttt{Value}}
@@ -299,6 +324,7 @@
 % Environments
 \newcommand{\EmptyEnv}{\{\}}
 \newcommand{\ConsEnv}[3]{#1:#2,\,#3}
+\newcommand{\BList}[1]{\lceil #1 \rceil}
 % Substitutions
 \newcommand{\EmptySubs}{\{\}}
 
@@ -307,6 +333,35 @@
 \newcommand{\tall}{\phantom{Q}\!\!\!\!}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Types
+
+\newcommand{\Isurf}{I_\textit{surf}}
+\newcommand{\Icore}{I_\textit{core}}
+
+% Judgments
+\newcommand{\saysEq}[2]{\{#1 = #2\}}
+\newcommand{\saysEqs}[3]{\{#1 = #2 = #3\}}
+\newcommand{\saysT}[3]{#1 \vdash #2 : #3}
+\newcommand{\saysTt}[3]{#1 \vdash \texttt{#2} : \texttt{#3}}
+\newcommand{\saysTtt}[3]{#1 \vdash \texttt{#2} : #3}
+\newcommand{\saysTL}[3]{#1 \vdash #2 \Leftarrow #3}
+\newcommand{\saysTR}[3]{#1 \vdash #2 \Rightarrow #3}
+\newcommand{\saysE}[3]{#1 \vdash #2 \Downarrow #3}
+\newcommand{\saysJ}[2]{#1 \Vdash #2}
+\newcommand{\saysD}[2]{#1 \Vdash #2}
+\newcommand{\saysVD}[3]{#1 \Vdash #2 \to #3}%{#2 \vdash_{#1} #3}
+\newcommand{\saysVJ}[3]{#1 \Vdash #2\,/\,#3}
+\newcommand{\saysTJ}[4]{#2 \Vdash #3 : #4 \text{ by } #1}
+
+% Derivations
+\newcommandx*{\RZero}[2][1=\empty]{\AxiomC{$#2$}}
+\newcommandx*{\ROne}[2][1=\empty]{\LeftLabel{\small{#1}}\UnaryInfC{$#2$}}
+\newcommandx*{\RTwo}[2][1=\empty]{\LeftLabel{\small{#1}}\BinaryInfC{$#2$}}
+\newcommandx*{\RThree}[2][1=\empty]{\LeftLabel{\small{#1}}\TrinaryInfC{$#2$}}
+\newcommandx*{\RFour}[2][1=\empty]{\LeftLabel{\small{#1}}\QuaternaryInfC{$#2$}}
+\newcommandx*{\RFive}[2][1=\empty]{\LeftLabel{\small{#1}}\QuinaryInfC{$#2$}}
+\newcommand{\squeeze}[2]{\hspace{-#1}{#2}\hspace{-#1}}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -526,6 +581,7 @@
 \newcommand{\Desugar}[1]{\ConstrBb{D}{#1}}
 \newcommand{\Resugar}[1]{\ConstrBb{R}{#1}}
 \newcommand{\Resugarer}{\Sc{Confection}}
+\newcommand{\DesugarRule}[2]{\texttt{#1}\;\;\Rightarrow\;\;\texttt{#2}}
 
 % Scope Terminology
 \newcommand{\Scopeset}[1]{\ConstrIt{scope\mbox{-}set}{#1}}
@@ -563,8 +619,7 @@
 %   Core vs. Surface
 %   Declaration vs. Reference
 
-\section{Abstract}
-  Thesis statment:
+\paragraph{Thesis Statement}
 \begin{quote}
 Many aspects of programming languages---in particular evaluation
 steps, scope rules, and type rules---can be non-trivially
@@ -574,14 +629,28 @@ abstraction provided by syntactic sugar.
 
 [FILL]
 
+\paragraph{Abstract}
+Syntactic sugar is pervasive in language technology. Programmers use
+it to shrink the size of a core language; to define domain-specific
+languages; and even to extend their language. Unfortunately, when
+syntactic sugar is eliminated by transformation, it obscures the
+relationship between the user's source program and the program being
+evaluated.  First, it obscures the evaluation steps the program takes
+when it runs, since these evaluation steps happen in the core
+(desugared) language rather than the surface (pre-desugaring) language
+the program was written in.  Second, it obscures the types of
+surface programs, frequently resulting in type errors that reference
+terms the programmer did not write. And finally, it obscures the scoping
+rules for the surface language.  I will address
+these problems by showing how evaluation steps, scoping rules, and
+scoping rules can all be \emph{resugared} from core to surface
+languages, thus restoring the abstraction provided by syntactic
+sugar. While doing so, I will use the Pyret language as a testbed to
+ensure that these techniques can be practically applied.
+
+
 
 \paragraph{Acknowledgements}. [TODO]
-
-Some of the papers that led to this thesis were rough around the edges
-when we initially submitted them. I would like to give many thanks to
-the many reviewers who gave \emph{very thorough} feedback on these
-intial versions. This thesis owes much of its quality to these
-anonymous individuals.
 
 I would like to thank Paul Stansifer, Sebastian Erdweg, and Matthew
 Flatt for their feedback on scope inference
@@ -591,6 +660,12 @@ I would like to thank Sorawee ``Oak'' Porncharoenwase for helping to
 generalize this work and integrate it with Pyret, as part of his
 Honors thesis (\cref{chap:implementation}).
 
+Some of the papers that led to this thesis were rough around the edges
+when we initially submitted them. I would like to give many thanks to
+the many reviewers who gave \emph{very thorough} feedback on these
+intial versions. This thesis owes much of its quality to these
+anonymous individuals.
+
 Finally, I would like to thank the NSF, which partly funded all of this work.
 
 \part{Syntactic Sugar}
@@ -598,240 +673,15 @@ Finally, I would like to thank the NSF, which partly funded all of this work.
 \include{chapters/taxonomy}
 \part{Desugaring}
 \include{chapters/formalism}
-\include{chapters/well-formedness}
+%\include{chapters/well-formedness}
 \part{Resugaring}
 \include{chapters/resugar-eval}
 \include{chapters/resugar-scope}
 %\include{chapters/resugar-types}
-% Chapter: Implementation
-% Chapter: Conclusion/future work
-
-
-
-
-
-\chapter{Appendix}
-
-
-% Expressions & Grammars
-\newcommand{\lit}[1]{\textbf{#1}}
-\newcommand{\expr}[2]{(#1\,#2)}
-\newcommand{\var}[1]{\textrm{\textsc{#1}}}
-
-% Grammars
-\newcommand{\exprs}[3]{(#1\,#2\,#3^{*})}
-\newcommand{\production}[2]{#1 \leftarrow #2}
-\newcommand{\saysG}[3]{#1 \vdash #2\,:\,#3}
-
-% Scope
-\newcommand{\SaysScopeCheck}[6]{#1 \vdash #2 : #3 ; #4 ; #5 ; #6}
-
-
-\subsection{Terms}
-
-We will call \textsc{ast} terms \emph{expressions} and write them in
-s-expression form. Atomic terms are either variables or literals
-(i.e. syntactic constants), and compound terms are built with
-\emph{term constructors} $P$:
-
-\begin{Table}
-  $e$
-  &$::=$& $\lit{lit}$ &(literal) \\
-  &$|$&   $\var{x}$ &(variable) \\
-  &$|$&   $\expr{P}{e_1 ... e_n}$ &(\textsc{ast} node)
-\end{Table}
-
-\subsection{Tree Grammars}
-
-A \emph{tree grammar} [CITE] is to trees as a context-free grammar is
-to strings. Thus it can be viewed either as a set of instructions for
-how to iteratively and nondeterministically rewrite a starting
-\emph{nonterminal} to a final tree; \emph{or} it can be viewed as a
-specification of a grammar that a tree may or may not follow. We will
-take the latter view.
-
-Definitionally, a tree grammar consists of a number of
-\emph{productions} that map \emph{nonterminals} $s$ to
-\emph{patterns}:
-\begin{Table}
-  $G$
-  &$::=$& $\left\{ \begin{array}{l}
-    \production{s_1}{\emph{pattern}_1} \\
-    \ddd \\
-    \production{s_n}{\emph{pattern}_n}
-    \end{array}\right.$ \\
-  \\
-  $\emph{pattern}$
-  &$::=$& $\expr{P}{s_1 \dd s_n}$ &(regular pattern) \\
-  &$|$&
-  $\exprs{P}{s_1 \dd s_n}{s_{n+1}}$
-  &(ellipses pattern) \\
-  &$|$&   $\emph{literal}$ &(matches literals) \\
-  &$|$&   $\emph{var}$ &(matches variables)
-\end{Table}
-
-The \emph{meaning} of a tree grammar (again, we are viewing the
-grammar as a \emph{specification}) is that for each production
-``$\production{s}{\emph{pattern}}$'', if a term matches the
-\emph{pattern}, then it also matches the nonterminal $s$. Formally:
-
-\[
-\fbox{$\saysG{G}{e}{s}$}
-\]
-
-\[
-\inference
-    [G-literal]
-    {}
-    {\saysG{G}{\lit{lit}}{\emph{literal}}}
-\quad
-\inference
-    [G-variable]
-    {}
-    {\saysG{G}{\var{x}}{\emph{variable}}}
-\]
-    
-\[
-\inference
-    [G-node]
-    {\Forall{i \in 1..n} \saysG{G}{e_i}{s_i} \\
-      \production{s}{\expr{P}{s_1 \dd s_n}} \in G}
-    {\saysG{G}{\expr{P}{e_1 \dd e_n}}{s}}
-\quad
-\inference
-    [G-ellipses]
-    {\Forall{i \in 1..n} \saysG{G}{e_i}{s_i} \\
-      \Forall{j \in 1..k} \saysG{G}{e_{n+j}}{s} \\
-      \production{s}{\exprs{P}{s_1 \dd s_n}{s}} \in G}
-    {\saysG{G}{\expr{P}{e_1 \dd e_n \dd e_{n+k}}}{s}}
-\]
-
-
-\section{Scope Checking}
-
-(See \cref{fig:scope}.)
-
-\begin{figure}
-\TypeLabel{\SaysScopeCheck{\Sigma}{e}
-  {\{\Decl{x}\}}
-  {\{\Refn{x}\}}
-  {\{\Decl{x}\}}
-  {\{\Refn{x}\mapsto\Decl{x}\}}}
-
-\Inference[scope-e-decl]{}{
-  \SaysScopeCheck{\Sigma}{\Decl{x}}{\{\Decl{x}\}}{\{\}}{\{\Decl{x}\}}{\{\}}
-}
-
-\Inference[scope-e-refn]{}{
-  \SaysScopeCheck{\Sigma}{\Refn{x}}{\{\}}{\{\Refn{x}\}}{\{\}}{\{\}}
-}
-
-\Inference[scope-e-con]{
-  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
-  \SaysScopeCheck{\Sigma}{e_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
-  S = \SetSuchThat{
-    \Decl[a]{x} \mapsto \Decl[b]{x}
-  }{
-    \Decl[a]{x} \in P_i,\;
-    \Decl[b]{x} \in P_j,\;
-    \Bind{\sigma}{i}{j}
-  } \IS\\
-  B = \SetSuchThat{
-    \Refn[a]{x} \mapsto \Decl[b]{x}
-  }{
-    \Refn[a]{x} \in R_i,\;
-    \Decl[b]{x} \in P_j,\;
-    \Bind{\sigma}{i}{j},\;
-    \Decl[b]{x} \not\in \Domain{S}
-  } \IS\\
-  R = \SetSuchThat{
-    \Refn[a]{x}
-  }{
-    \Refn[a]{x} \in R_i,\;
-    \NotExists{\Decl[b]{x}}{\Refn[a]{x} \mapsto \Decl[b]{x} \in B\}}
-  } \IS\\
-  P = \SetSuchThat{
-    \Decl[a]{x}
-  }{
-    \Decl[a]{x} \in P_i,\;
-    \Prov{\sigma}{i},\;
-    \Decl[a]{x} \not\in \Domain{S}
-  }
-}{
-  \SaysScopeCheck{\Sigma}{\Core{C}{e_1 ... e_n}}{P}{R}{B \cup B_1 \cup \ddd \cup B_n}
-}
-
-
-\Inference[scope-p-con]{
-  \Sigma[C] = \sigma \vspace{0.1em} \IS\\
-  \SaysScopeCheck{\Sigma}{p_i}{P_i}{R_i}{B_i} \text{ for } i \in 1..n \IS\\
-  S = \SetSuchThat{
-    a \mapsto b
-  }{
-    a \in P_i,\;
-    b \in P_j,\;
-    \Bind{\sigma}{i}{j},\;
-    \SaysCanShadow{F}{a}{b}
-  } \IS\\
-  B = \SetSuchThat{
-    a \mapsto b
-  }{
-    a \in R_i,\;
-    b \in P_j,\;
-    \Bind{\sigma}{i}{j},\;
-    b \not\in \Domain{S},\;
-    \SaysCanBind{F}{a}{b}
-  } \IS\\
-  R = \SetSuchThat{
-    a
-  }{
-    a \in R_i,\;
-    (\NotExists{b}{a \mapsto b \in B\}}
-    \text{ or $a$ is a pattern var})
-  } \IS\\
-  P = \SetSuchThat{
-    a
-  }{
-    a \in P_i,\;
-    \Prov{\sigma}{i},\;
-    a \not\in \Domain{S}
-  }
-}{
-  \SaysScopeCheck{\Sigma}{\Core{C}{p_1 ... p_n}}{P}{R}{B \cup B_1 \cup \ddd \cup B_n}
-}
-
-Two checks to make: fresh vars don't bind to non-fresh vars, and named
-vars only bind to vars of the same name:
-\begin{multicols}{3}
-  \Inference{}{
-    \SaysCanBind{F}{\Refn[1]{x}}{\Decl[2]{x}}
-  }
-  \Inference{
-    x \not\in F
-  }{
-    \SaysCanBind{F}{\Refn[1]{x}}{\PVarA}
-  }
-  \Inference{
-    x \not\in F
-  }{
-    \SaysCanBind{F}{\PVarA}{\Decl[1]{x}}
-  }
-  \Inference{}{
-    \SaysCanBind{F}{\PVarA}{\PVarB}
-  }
-  \Inference{}{
-    \SaysCanShadow{F}{\Decl[1]{x}}{\Decl[2]{x}}
-  }
-  \Inference{
-    x \not\in F
-  }{
-    \SaysCanShadow{F}{\Decl[1]{x}}{\PVarA}
-  }
-\end{multicols}
-
-\caption{Scope Checking Rules}
-\label{fig:scope}
-\end{figure}
+%\include{chapters/implementation}
+%\include{chapters/conclusion} % &future work
+%\part{Appendix}
+%\include{chapters/appendix}
 
 \bibliographystyle{plain}
 \bibliography{justin}
