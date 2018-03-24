@@ -22,8 +22,11 @@
 %   ? -> syntactic construct
 %   constant -> value
 %   transformation -> rewrite / desugaring
+%   syntactic constant -> primitive value
 % Make sure to introduce:
 %   expansion
+% Make sure to search for:
+%   TODO, REF, CITE, Pombrio, qqq
 
 \RequirePackage{silence} % :-\
     \WarningFilter{scrbook}{Usage of package `titlesec'}
@@ -281,7 +284,7 @@
 \newcommand{\SurfLabel}{\Variable{Surf}{}{}{C}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
-\newcommand{\Value}{value}
+\newcommand{\Value}{\textit{value}}
 \newcommand{\Tag}[3]{(\Code{Tag}_{#1 \To #2} #3)}
 \newcommand{\Subterm}{\sqsubseteq}
 % Specific Variables
