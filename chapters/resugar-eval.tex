@@ -414,8 +414,8 @@ bindings of an environment $\gamma$ into a pattern $p$.  We will write
 $e \geq p$ to mean that $\Match{e}{p}$ is defined, and $\gamma_1 \cup
 \gamma_2$ for the \emph{right-biased} union of $\gamma_1$ and
 $\gamma_2$. The matching and substitution algorithms are given in
-\ref{fig:formal-subs}, while bindings are defined in
-\ref{fig:formal-bind}.
+\cref{fig:reval-formal-subs}, while bindings are defined in
+\cref{fig:reval-formal-bind}.
 
 \begin{figure}[t]
 \[\begin{array}{lcll}
@@ -525,7 +525,7 @@ well-formedness criteria for the \Sc{lhs} and \Sc{rhs} of each rule:
 \item .[TODO: disjoint lhss]
 \end{enumerate}
 The first two restrictions are further justified by our formalization of
-expansion and unexpansion in Coq (section~\ref{sec:coq}), 
+expansion and unexpansion in Coq (\cref{sec:reval-coq}), 
 where they occurred naturally as pre-conditions
 for proofs.
 
@@ -592,194 +592,6 @@ We can now define \emph{desugaring} and \emph{resugaring} operations that
 translate \Sc{ast}s in the surface language to \Sc{ast}s in the core language and
 back.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% Desugaring uses a helper function called \emph{expand} that expands a
-%% single piece of syntactic sugar in a term. \emph{Expand} looks up a
-%% desugaring function to apply based on the term's topmost node and
-%% applies it. This function can be Turing-complete, and is written in
-%% the host language. In order for resugaring to work, however,
-%% desugaring must be \emph{compositional}, i.e., it must be parametric
-%% over its subterms. Hence, instead of expanding the entire term $e$ at
-%% once, \emph{expand} will first split it into a pattern and subterms,
-%% and then only expand the \emph{pattern} $p$ to a new pattern
-%% $p'$. \emph{Expand} then returns the pair $(p, p')$ of the old and new
-%% pattern.
-
-%% Desugaring of a term $e$ thus proceeds by calling $\textit{expand}(e)$
-%% to obtain the pair of patterns $(p, p')$, using matching and
-%% substitution to rewrite $p$ to $p'$, and recursively substituting
-%% the desugared subterms of $e$. The newly desugared term will be
-%% wrapped in a tag noting the original and new patterns. Later,
-%% resugaring will make use of these tags to undo each of the desugaring
-%% functions.
-
-%% Desugaring makes use of two operations over nodes. \\
-%% $\Sugar{n}{C}$ looks up the desugaring function associated with node
-%% type $n$ and applies it to pattern $C$, and $\Head{t}$ splits the term
-%% $t$ to obtain the pattern $C$ to be desugared. The pattern returned by
-%% $\Head{t}$ may need to be more than just the topmost node of
-%% $t$. Take, for instance, a multi-armed let construct like
-%% \Code{let x = 4, y = x in x + y}.
-%% One way of representing this term in our system is:
-%% \begin{Codes}
-%% node(Let,
-%%   node(Bind, decl(\(x\)), node(Num, val(\(4\))),
-%%     node(Bind, decl(\(y\)), ref(\(x\))),
-%%       node(EndBinds))),
-%%   node(Plus, ref(\(x\)), ref(\(y\))))
-%% \end{Codes}
-%% It would be important for \Code{Let}'s desugaring function to be given
-%% all of its bindings, so the pattern returned by $\Head{}$ in this case
-%% should be:
-%% \begin{Codes}
-%% node(Let,
-%%   node(Bind, α, β,
-%%     node(Bind, γ, δ,
-%%       node(EndBinds))),
-%%   ε)
-%% \end{Codes}
-%% While $\Head{}$ could in principle be a complicated function, we
-%% believe in practice it is sufficient to partition nodes into
-%% \emph{primary} nodes like \Code{Let} that can stand on their own, and
-%% secondary nodes like \Code{Bind} and \Code{EndBinds} that are merely
-%% part of the node above them; thus we define $\Head{}$ in terms of a
-%% $\textit{is-primary}$ predicate. $\textit{is-primary}$ will return
-%% \Code{true} for values, declarations, and references; it is language
-%% specific for \texttt{nodes}.
-
-%% Desugaring is formally defined in \cref{desugar}, and
-%% resugaring in \cref{resugar}.%
-%% \footnote{Notice that resugaring begins with a
-%% \emph{resolve} step: this is only really necessary in case evaluation
-%% copies a term, thus breaking the invariant that variable declarations
-%% in resolved terms all have unique subscripts.}
-%% Desugaring and resugaring are overloaded to
-%% act on substitutions in the obvious way, e.g.,
-%% $\desugar(\repl{\hole}{t}) = \repl{\hole}{(\desugar{t})}$.
-%% Desugaring and resugaring are inverses of one another, up to a permutation of
-%% variables.
-
-%% To show this, we will rely on terms having \emph{honest tags}:
-%% \begin{definition}
-%% A term has \emph{honest tags} when for each subterm of the form
-%% $\stag{C}{C'} t$, $t = (t \match C') \subs C'$.
-%% \end{definition}
-
-%% \begin{figure}
-%% \begin{jtable}
-%% $\typelabel{\Desugar{t}}{t}$ \\
-%% $\Desugar{t}$ &$=$& $\desugar(\resolve{t})$ \\
-%% $\desugar{\node{a}{n}{\ellipses{t_i}}}$
-%%   &$=$& $\stag{C}{C'} (\desugar{(t \match C)} \subs C')$ \\
-%%  &&when $\expand{t} = (C, C')$ \\
-%%  &&where $t = \node{a}{n}{\ellipses{t_i}}$ \\
-%% $\desugar{t}$ &$=$& $t$ \quad otherwise
-%% \\ \\
-%% $\typelabel{\expand{t}}{(C, C)}$ \\
-%% $\expand{\node{a}{n}{\ellipses{t_i}}}$
-%%   &$=$& $(C, C')$ \\
-%%  &&when $\Head{\node{a}{n}{\ellipses{t_i}}} = C$ \\
-%%  &&and $\resolve{\sugar{n}{C}} = C'$ \\
-%% $\typelabel{\Head{t}}{C}$ \\
-%% $\Head{\node{a}{n}{\ellipses{t_i}}}$
-%%   &$=$& $\node{a}{n}{\ellipses{\HeadRec{t_i}}}$ \\
-%%  &&when $\textit{is-primary}(n)$ \\
-%% $\HeadRec{\node{a}{n}{\ellipses{t_i}}}$
-%%   &$=$& $\node{a}{n}{\ellipses{\HeadRec{t_i}}}$ \\
-%%  &&when $\textit{not}(\textit{is-primary}(n))$ \\
-%% $\HeadRec{t}$
-%%   &$=$& $\fresh{i} \hole_i$ \quad otherwise
-%% \end{jtable}
-%% \caption{Desugaring}
-%% \label{desugar}
-%% \end{figure}
-
-%% \begin{figure}
-%% \begin{jtable}
-%% \multicolumn{2}{l}{$\typelabel{\Resugar{t}}{t \text{ or \fail}}$} \\
-%% $\Resugar{t}$ &$=$& $\unresolve{\resugar(\resolve{t})}$ \\
-%% $\resugar(\stag{C}{C'} t)$ &$=$& $(\resugar(t \match C')) \subs C$ \\
-%% &&(or {\fail} if $t \match C'$ does not match) \\
-%% $\resugar{\node{a}{n}{\ellipses{t_i}}}$ &$=$& {\fail} \\
-%% $\resugar{t}$ &$=$& $t$ \quad otherwise
-%% \end{jtable}
-%% \caption{Resugaring}
-%% \label{resugar}
-%% \end{figure}
-
-%% \begin{lemma}
-%% \label{desRes}
-%% For all terms $t$ with honest tags, if
-%% $\resugar{t} \neq \fail$ then $\desugar{\resugar{t}} \iso t$.
-%% \end{lemma}
-%% \begin{proof}[Proof Sketch]
-%% Proceed by induction on $t$. The interesting case is when the term $t$ is
-%% tagged:
-%% \begin{jtable}
-%% $\desugar{\resugar{\stag{C}{C'} t}}$
-%%   &$=$& $\desugar((\resugar(t \match C')) \subs C)$ \\
-%%     &&with $(C, C') = \expand{t'}$ for some $t'$ \\
-%%   &$=$& $\stag{C}{C''}
-%%          \desugar((\resugar(t \match C')) \subs C) \match C) \subs C''$ \\
-%%     &&where $\expand{\resugar(t \match C')} = (C, C'')$ \\
-%%     &&and $C' \iso C''$ \\
-%%   &$=$& $\stag{C}{C''}
-%%          \desugar{\resugar(t \match C')} \subs C''$ \\
-%%     &&by \cref{subsMatch} \\
-%%   &$\iso$& $\stag{C}{C''}
-%%          (t \match C') \subs C''$ \\
-%%     &&by I.H. \\
-%%   &$\iso$& $\stag{C}{C'} t$ \\
-%%     &&by \cref{matchSubs}
-%% \end{jtable}
-%% The first step (which introduces $t'$) relies on the tags having been
-%% produced by a call to $\expand{}$.
-%% \end{proof}
-
-%% \begin{lemma}
-%% \label{resDes}
-%% For all terms $t$, $\resugar{\desugar{t}} = t$.
-%% \end{lemma}
-%% \begin{proof}
-%% Proceed by induction on $t$. The interesting case is where the term $t$ is
-%% not atomic:
-%% \begin{jtable}
-%% $\resugar{\desugar{t}}$
-%%   &$=$& $\resugar{\stag{C}{C'}(\desugar(t \match C) \subs C')}$ \\
-%%   &&with $\expand{t} = (C, C')$ \\
-%%   &$=$& $\resugar{((\desugar(t \match C) \subs C')} \match C')
-%%          \subs C$ \\
-%%   &$=$& $\resugar{\desugar(t \match C)} \subs C$
-%%     &by \cref{subsMatch} \\
-%%   &$=$& $(t \match C) \subs C$
-%%     &by I.H. \\
-%%   &$=$& $t$
-%%     &by \cref{matchSubs}
-%% \end{jtable}
-%% (The side condition for \cref{subsMatch} uses the fact that \\
-%% $\domain{t \match C} = \holes{C} = \holes{C'}$.)
-%% \end{proof}
-
-%% \begin{lemma}
-%% \label{resugar-resolve}
-%% For all terms $t$,
-%% $\resolve{\resugar{\resolve{t}}} \iso \resugar{\resolve{t}}$
-%% \end{lemma}
-%% \begin{proof}
-%% The witness permutation is the mapping the second $\resolve{}$ enacts
-%% on variable declarations. This mapping exists since resugaring can
-%% neither drop nor duplicate variables. Now we must show that  variable
-%% references are acted upon by the second $\resolve{}$ the same way as
-%% their corresponding declarations. This amounts to asking weather each
-%% variable reference $\refn{x_u}$ is in scope of exactly its declaration
-%% $\decl{x_u}$. It is: it cannot be in scope of any \emph{other}
-%% declaration, because the \emph{first} call to $\resolve{}$ gave them
-%% all distinct subscripts, and it cannot be \emph{out} of scope of its
-%% $\decl{x_u}$ because that would mean that resugaring caused an
-%% identifier to become unbound, which could only happen if the initial
-%% program contained an unbound identifier.
-%% \end{proof}
 
 
 \subsubsection{Overlapping Rules}
@@ -899,86 +711,725 @@ paper. The rules are also checked against the well-formedness criteria of
 
 
 \section{Formal Justification}
-\label{sec:formal}
+\label{sec:reval-formal}
+
+qqq
 
 We will now justify many of our design decisions in terms of the formal
 properties they yield, and ultimately prove the Emulation and Abstraction
 properties relative to some reasonable assumptions about the underlying
 language.
 
-\subsection{Desugar and Resugar are Inverses}
-\label{sec:inverses}
+\subsection{Transformations as Lenses}
+\label{sec:reval-lenses}
 
-We show that $\ExpandRecff$ and $\UnexpandRecff$ are inverses of each
+We have found it helpful to view our transformation rules from the
+perspective of lenses~\cite{fgkps:comb-bidir-tree-trans}. In
+particular, the disjointness condition that prevents the \Code{Max}
+problem of \cref{sec:reval-overlapping} can be seen as a precondition for the
+lens laws, and the proof that our system obeys the Emulation property
+rests upon the fact that its transformations form lenses.
+
+A \emph{lens} has two sets $C$ and $A$, together with partial
+functions $get : C\ \dot{\to}\ A$ and $put : A \times
+C\ \dot{\to} C$ that obey the laws,
+\[\begin{array}{lllll}
+put\ (get\ c, c) = \bot \text{ or } c
+  & \forall c \in C
+  & \text{ \Getput} \\
+get\ (put\ (a, c)) = \bot \text{ or } a
+  & \forall a \in A, c \in C
+  & \text{ \Putget}
+\end{array}\]
+Taking $C = T$ and $A = (\mathbb{N}, T)$ gives $\Expandf$ and
+$\Unexpandf$ the signatures of $get$ and $put$,
+respectively. Thus if they additionally obey the two laws, they will
+form a lens. We will give a necessary and sufficient condition for the
+laws to hold, and later show that when they do hold, the Emulation
+property is preserved by resugaring.
+
+\subsubsection{The {\Getput} Law}
+\label{sec:reval-getput}
+The {\Getput} law applied to our transformations states that whenever it
+is well-defined,
+\[ \Unexpand{(\Expand{T})}{T} = T \]
+Expanding the definitions produces:
+\[ ((T \match P_i) \comp ((T \match P_i)P_i' \match P_i'))P_i = T \]
+This law can be shown to hold without further preconditions.
+\begin{lemma} The {\Getput} law holds whenever it is well-defined.
+\end{lemma}
+\begin{proof}
+Clearly $(T \match P_i) P_i' \match P_i' \subseteq T \match P_i$.
+Thus $(T \match P_i) \comp ((T \match P_i) P_i' \match P_i')
+ = T \match P_i$,
+and $((T \match P_i) \comp ((T \match P_i) P_i' \match P_i')) P_i
+ = (T \match P_i) P_i$.
+And since $T$ is closed, $(T \match P_i) P_i = T$.
+\end{proof}
+
+\subsubsection{The {\Putget} Law}
+\label{sec:reval-putget}
+\label{sec:reval-disjoint}
+The {\Putget} law states that whenever it is well-defined,
+\[ \Expand{(\Unexpand{(j, T')}{T})} = (j, T') \]
+Expanding the definitions gives that,
+\[\begin{array}{lcll}
+(i, (((T \match P_j) \comp (T' \match P_j'))P_j \match P_i)P_i')
+  = (j, T') \\
+   \text{ for $i = \text{min} \{i |
+               ((T \match P_j) \comp (T' \match P_j'))P_j \geq P_i\}_i$}
+\end{array}\]
+This law, however, does not hold for all possible {\rulelists}. In fact,
+we saw a situation in which it fails---the \Code{Max} sugar in
+\cref{sec:reval-overlapping}---as well as the alarming consequences of the
+failure. In that section we introduced the disjointness condition.
+Forcing the {\LHS}s of rules to be disjoint ensures that the surface
+representation of a core term, which was obtained by unexpanding that term
+through some rule, could only expand via the \emph{same} rule, thereby
+obtaining the core term it is supposed to represent.
+
+We can now say precisely what the disjointness check gains us: it is both
+necessary and sufficient for the {\Putget} law to hold.  We will see later
+that the {\Putget} law ensures Emulation. The reverse is not true, however,
+so the disjointness check is sufficient but not necessary to achieve
+Emulation, and a tighter test could be found (although it would almost
+certainly have to make stronger assumptions about evaluation in the core
+language than we do).
+
+\begin{definition}
+The \emph{disjointness~condition} for a {\rulelist} $\rs = P_1 \to
+P_1',\,...,\,P_n \to P_n'$ states that $P_i \join P_j = \bot$ for all
+$i \neq j$.
+\end{definition}
+
+\begin{thm}
+\label{thm:reval-putget}
+For any {\rulelist} $\rs$, the {\Putget} law holds iff the disjointness
+condition holds.
+\end{thm}
+\begin{proof}[Proof Sketch]
+The law states that:
+\[\begin{array}{lcll}
+(i, (((T \match P_j) \comp (T' \match P_j'))P_j \match P_i)P_i')
+  = (j, T') \\
+   \text{ for $i = \text{min} \{i |
+               ((T \match P_j) \comp (T' \match P_j'))P_j \geq P_i\}_i$}
+\end{array}\]
+%\[ \expand{(\unexpand{(j, T')}{T})} = (j, T') \]
+First, note that the law always holds when $i = j$, so it is sufficient to
+consider $i < j$. Let $\sigma_1 = (T \match P_j) \comp (T' \match
+P_j')$. If the {\Putget} law does not hold, then $\sigma_1 P_j \match
+P_i$ exists, so $P_i \join P_j$ exists. On the other hand, if $P_i \join
+P_j$ exists for some $i < j$, then $T$ and $T'$ can be chosen such that
+$\sigma_1 P_j \match P_i$ is guaranteed to be well-defined, forcing the
+law to not hold.
+\end{proof}
+
+
+{\Resugarer} statically checks that the {\rulelist} obeys the
+well-formedness criterion from \cref{sec:reval-wf}
+and the disjointness criterion, thereby ensuring
+that the lens laws will hold. We will next show that these lens laws imply
+that desugaring and resugaring are inverses of each
+other, which is the crux of the Emulation property.
+
+
+\subsection{Desugar and Resugar are Inverses}
+\label{sec:reval-inverses}
+
+We show that $\expandRecff$ and $\unexpandRecff$ are inverses of each
 other, after noting that surface and core terms have slightly
 different shapes.
 
-%% \begin{definition}
-%% A \term{surface~term} is a term without any tags $\Tag{O}{T}$.
-%% \end{definition}
-%% \begin{definition}
-%% A \term{core~term} is a term that contains no label {\lbl} that appears
-%% in the outermost position of any {\LHS} of the {\rulelist}.
-%% \end{definition}
+\begin{definition}
+A \emph{surface~term} is a term without any tags $\Tag{O}{T}$.
+\end{definition}
+\begin{definition}
+A \emph{core~term} is a term that contains no label {\lbl} that appears
+in the outermost position of any {\LHS} of the {\rulelist}.
+\end{definition}
 
-%% As expected, desugaring produces core terms, and resugaring produces
-%% surface terms.
-%% \begin{lemma}
-%% If $\expandRec{T} = T'$, then $T'$ is a core term. And
-%% if $\unexpandRec{T'} = T$, then $T$ is a surface term.
-%% \end{lemma}
-%% \begin{proof}
-%% By induction over the term.
-%% \end{proof}
-%% Further, $\expandRecff$ and $\unexpandRecff$ are idempotent over core and surface
-%% terms, respectively.
-%% \begin{lemma}
-%% Whenever $T$ is a surface term, $\unexpandRec{T} = T$.
-%% And whenever $T'$ is a core term, $\expandRec{T'} = T'$.
-%% \end{lemma}
-%% \begin{proof}
-%% By induction over the term.
-%% \end{proof}
+As expected, desugaring produces core terms, and resugaring produces
+surface terms.
+\begin{lemma}
+If $\expandRec{T} = T'$, then $T'$ is a core term. And
+if $\unexpandRec{T'} = T$, then $T$ is a surface term.
+\end{lemma}
+\begin{proof}
+By induction over the term.
+\end{proof}
+Further, $\expandRecff$ and $\unexpandRecff$ are idempotent over core and surface
+terms, respectively.
+\begin{lemma}
+Whenever $T$ is a surface term, $\unexpandRec{T} = T$.
+And whenever $T'$ is a core term, $\expandRec{T'} = T'$.
+\end{lemma}
+\begin{proof}
+By induction over the term.
+\end{proof}
 
-%% \begin{theorem}
-%% \label{thm:reval-exp}
-%% Assume that the lens laws hold for all transformations. Then for all
-%% surface terms $T$, $\ExpandRec{T} = T'$ implies $\UnexpandRec{T'} =
-%% T$. And for all core terms $T'$, $\unexpandRec{T'} = T$ implies
-%% $\expandRec{T} = T'$.
-%% \end{thm}
-%% \begin{proof}
-%% For both cases, proceed by induction over the term. The two nontrivial
-%% cases are $\unexpandRec{(\expandRec{\node{T_1,\,...,\,T_n}})}$ and
-%% $\expandRec{(\unexpandRec{\Tag{\MacHead{i}{\sigma}}{T'}})}$. For brevity, call
-%% $\expandRecf$ $\expRf$, call $\expandf$ $\expdf$, call $\unexpandRecf$
-%% $\unexpRf$, and call $\unexpandf$ $\unexpf$.
+\begin{thm}
+\label{thm:reval-exp}
+Assume that the lens laws hold for all transformations. Then for all
+surface terms $T$, $\expandRec{T} = T'$ implies $\unexpandRec{T'} =
+T$. And for all core terms $T'$, $\unexpandRec{T'} = T$ implies
+$\expandRec{T} = T'$.
+\end{thm}
+\begin{proof}
+For both cases, proceed by induction over the term. The two nontrivial
+cases are $\unexpandRec{(\expandRec{\node{T_1,\,...,\,T_n}})}$ and
+$\expandRec{(\unexpandRec{\Tag{\MacHead{i}{\sigma}}{T'}})}$. For brevity, call
+$\expandRecf$ $\expRf$, call $\expandf$ $\expdf$, call $\unexpandRecf$
+$\unexpRf$, and call $\unexpandf$ $\unexpf$.
 
-%% In the first case,
-%% \begin{Table}
-%%   %% && $\UnexpR{(\ExpR{\node{T_1,\,...,\,T_n}})}$ \\
-%%   %% &$=$& $\UnexpR{(\ExpR{\Tag{\MacHead{i}{\sigma}}{T'}})}$ \\
-%%   %% && when $\Expd{\node{T_1,\,...,\,T_n}} = (i, T')$ \\
-        
-%%   %% && $ \ \ \text{ and where $\sigma$ stands in for
-%%   %%         $\node{T_1,\,...,\,T_n}$}$ \\
-%%   %% &$=$& $\UnexpR{\Tag{\MacHead{i}{\sigma}}{(\ExpR{T'})}}$ \\
-%%   %% &$=$& $\Unexp{(i, \UnexpR{\ExpR{T'}})}{\node{T_1,\,...,\,T_n}}$ \\
-%%   %% &$=$& $\Unexp{(i, T')}{\node{T_1,\,...,\,T_n}} & (by I.H.)$ \\
-%%   %% &$=$& $\node{T_1,\,...,\,T_n} (by \Getput)}
-%% \end{Table}
+In the first case,
+\[\begin{array}{llll}
+  &&  \unexpR{(\expR{\node{T_1,\,...,\,T_n}})} \\
+  &=& \unexpR{(\expR{\Tag{\MacHead{i}{\sigma}}{T'}})} \\
+  &&  \ \ \text{ when }
+        \expd{\node{T_1,\,...,\,T_n}} = (i, T') \\
+  &&  \ \ \text{ and where $\sigma$ stands in for
+          $\node{T_1,\,...,\,T_n}$} \\
+  &=& \unexpR{\Tag{\MacHead{i}{\sigma}}{(\expR{T'})}} \\
+  &=& \unexp{(i, \unexpR{\expR{T'}})}{\node{T_1,\,...,\,T_n}} \\
+  &=& \unexp{(i, T')}{\node{T_1,\,...,\,T_n}} & \text{ \<(by I.H.)} \\
+  &=& \node{T_1,\,...,\,T_n} &\text{ \<(by \Getput)}
+\end{array}\]
 
-%% In the second case,
-%% \begin{Table}
-%%   %% && $\ExpR{(\UnexpR{\Tag{\MacHead{i}{\sigma}}{T'}})}$ \\
-%%   %% &$=$& $\ExpR{(\Unexp{(i, \UnexpR{T'})}{\sigma})}$ \\
-%%   %% &$=$& $\ExpR{\node{T_1,\,...,\,T_n}} & (using w.f.)$ \\
-%%   %%   && $\ \ \text{ when }
-%%   %%      \Unexp{(i, \UnexpR{T'})}{\sigma} = \node{T_1,\,...,\,T_n}$ \\
-%%   %% &$=$& $\ExpR{\Tag{\MacHead{i}{\sigma}}{(\UnexpR{T'})}}
-%%   %%   &\text{ \<(by \Putget)}$ \\
-%%   %% &$=$& $\Tag{\MacHead{i}{\sigma}}{(\ExpR{(\UnexpR{T'})})}$ \\
-%%   %% &$=$& $\Tag{\MacHead{i}{\sigma}}{T'}
-%%     & \<(by I.H.)
-%% \end{Table}
-%% \end{proof}
+In the second case,
+\[\begin{array}{llll}
+  && \expR{(\unexpR{\Tag{\MacHead{i}{\sigma}}{T'}})} \\
+  &=& \expR{(\unexp{(i, \unexpR{T'})}{\sigma})} \\
+  &=& \expR{\node{T_1,\,...,\,T_n}} &\text{ \<(using w.f.)} \\
+    && \ \ \text{ when }
+       \unexp{(i, \unexpR{T'})}{\sigma} = \node{T_1,\,...,\,T_n} \\
+  &=& \expR{\Tag{\MacHead{i}{\sigma}}{(\unexpR{T'})}}
+    &\text{ \<(by \Putget)} \\
+  &=& \Tag{\MacHead{i}{\sigma}}{(\expR{(\unexpR{T'})})} \\
+  &=& \Tag{\MacHead{i}{\sigma}}{T'}
+    &\text{ \<(by I.H.)}
+\end{array}\]
+\end{proof}
+
+
+\subsection{Ensuring Emulation and Abstraction}
+\label{sec:reval-proofs}
+
+We now precisely state and prove the Emulation and Abstraction properties,
+making use of the results of the last section.
+
+\begin{thm}[Emulation]
+\label{thm:reval-emulation}
+Given a well-formed {\rulelist} $\rs$,
+each surface term in the generated surface evaluation sequence desugars
+into the core term which it represents, so long as:
+\begin{itemize}
+\item $\emphToCore{(\coreToTerm{c})} = c$\quad for all $c$
+\item $\surfaceToTerm{(\emphToSurface{t})} = t$\quad for all $t$
+\item $(\coreToTerm{c})$ is a core term for all $c$
+\item The disjointness condition holds for $\rs$
+\end{itemize}
+\end{thm}
+\begin{proof}
+In the stepping algorithm, $s'$ represents $c$ in each iteration, so we
+would like to show that if $s'$ occurs in the surface evaluation sequence
+then $\desugar{s'} = c$. If $s'$ occurs in the surface sequence, then
+resugaring must have succeeded with $\resugar{c} = s'$. Thus we simply
+need to show that $\desugar{(\resugar{c})} = c$ for all terms $c$ in the
+core language, i.e., that
+\[\emphToCore{(\expandRec{(\surfaceToTerm{(
+    \emphToSurface{(\unexpandRec{(\coreToTerm{c})})})})})} = c\]
+The preconditions of \cref{thm:reval-exp} are satisfied. This
+expression then consists of three pairs of functions and their inverses,
+so the equation holds.
+\end{proof}
+
+To state Abstraction precisely, we must first define the origin of a term.
+Since it is possible for two different surface evaluation sequences to
+contain terms which are identical up to tagging but have different
+origins, the origin of a term must be defined with respect to a surface
+evaluation sequence (and the corresponding core evaluation sequence).
+
+\begin{definition}
+\label{def:reval-origin}
+The \emph{origin} of an occurrence of a term within a given evaluation
+sequence is defined by:
+\begin{itemize}
+\item Atomic terms have no origin.
+\item All subterms of the original input term have \emph{user} origin.
+\item When a transformation rule is applied to a term (either forward or
+  in reverse), terms bound to pattern variables retain their origins, but
+  all other terms on the {\RHS} have \emph{sugar} origin, and
+  all other terms on the {\LHS} have \emph{user} origin.
+% There is one exception: a transparency mark (\Code{!}) declares a term to
+% have \emph{user} origin.
+\item Terms maintain their origin through evaluation.
+\end{itemize}
+\end{definition}
+
+Our use of {\MacBodyf} tags purposefully mimics this definition, so that
+Abstraction is nearly true by construction.
+
+\begin{thm}[Abstraction 1]
+\label{thm:reval-abstraction}
+The surface-level representation of a term $t$ contains only subterms of
+\emph{user} origin, except as explicitly allowed by transparency marks
+(\Code{!}).
+\end{thm}
+\begin{proof}[Proof Sketch]
+Check that the application of transformation rules both forward and in
+reverse preserves the invariant that a term has \emph{sugar} origin iff it
+is tagged with at least one {\MacBodyf} tag, and \emph{user} origin
+otherwise. Now see that $\unexpandRecf$ always fails if any opaque
+{\MacBodyf} tags remain.
+\end{proof}
+\begin{thm}[Abstraction 2]
+Terms of \emph{user} origin are never hidden by unexpansion.
+\end{thm}
+\begin{proof}[Proof Sketch]
+Each subterm in the {\RHS} of a rule is wrapped in a {\MacBodyf} tag; thus
+only terms tagged with a {\MacBodyf} tag can match against it to be
+unexpanded. As argued above, only terms of \emph{sugar} origin may be
+tagged with a {\MacBodyf} tag.
+\end{proof}
+
+Notice that \cref{thm:reval-exp,thm:reval-emulation}, which together prove
+Emulation, work for any definition of rule expansion and unexpansion that
+obeys the lens laws. Consequently, our expansion/unexpansion mechanism
+does not need to be defined solely through the pattern-matching rules
+we have presented; it can be replaced by a different one that
+(i) obeys the lens
+laws, and (ii) retains a tagging mechanism for guaranteeing Abstraction.
+
+
+
+\subsection{Machine-Checking Proofs}
+\label{sec:reval-coq}
+
+We have made substantial progress formalizing our transformation system in
+the Coq proof assistant~\cite{coq-manual}. We have formalized a subset of
+our pattern language, as well as matching, substitution, unification,
+expansion, and unexpansion, and the disjointness condition. Atop these
+definitions we have constructed formal proofs that:
+\begin{enumerate}
+\item Matching is correct with respect to substitution.
+\item Unification is correct with respect to substitution and matching.
+\item Expansion and unexpansion of well-formed rules (as defined in
+  \Cref{sec:reval-wf}) that pass the first static check obey the
+  lens laws.
+\end{enumerate}
+This formalization helped us pin down the (sometimes subtle)
+well-formedness criteria of \cref{sec:reval-wf}.
+
+Our formalization does not, however, address tags or ellipsis patterns.
+It would be straightforward to add tags. Handling ellipses, though, would
+require significantly more work: when patterns may contain ellipses,
+substitution becomes non-compositional. For instance, $\sigma
+[P_1,\,...,\,P_n]$ is not a function of $\sigma P_1,\,...,\,\sigma P_n$
+when $P_1,\,...,\,P_n$ contain ellipses.
+
+
+
+\section{Obtaining Core-Language Steppers}
+\label{sec:reval-lang}
+
+
+{\Resugarer} assumes it has access to the sequence of core-language terms
+produced by evaluation, each ornamented with the tags produced by the
+initial desugaring---but typical evaluators provide neither!
+Fortunately this information can be reconstructed with little or no
+modifications to the evaluator, even if it compiles to native code. We now
+describe in general terms how this can be accomplished.  In what follows,
+we will use the term \emph{stepper}~\cite{racket-stepper} for an
+evaluator that, instead of just producing an answer, produces
+the sequence of core terms generated by evaluation.
+
+The essence of reconstructing each term is simple: it is the current
+continuation at that point of evaluation. Therefore, we need to be
+able to capture, and present, the continuation as source. (The tags
+are introduced statically, so the process of reconstructing the code
+can reconstitute these tags alongside.) Either the evaluator can be
+modified to reconstruct the source as it runs, or a pre-compilation step
+may be introduced that does so in the host language itself. We have used
+both approaches.
+
+To construct the source term at an evaluation step, we have multiple
+options. For instance,
+we can convert the code to continuation-passing style, with each
+continuation parameter represented as a pair: the closure that runs,
+combined with a function to produce a core language representation of
+the closure.
+
+Instead, our steppers use a more efficient
+transformation~\cite{continuations-from-stack}---based on
+A-normalization~\cite{a-normal-form}---to obtain a representation of
+each stack frame. To traverse the stack and accumulate these
+representations, we have two choices. In languages with generalized
+stack inspection features like continuation
+marks~\cite{clements:thesis}, or ways of emulating them (as discussed
+by Pettyjohn, et al.~\cite{continuations-from-stack}), we can exploit
+these existing run-time system features. In other cases, our steppers simply instrument
+the code to maintain a global stateful stack onto which they push and
+pop frames.
+
+In addition, our core steppers instrument the code so that it pauses at
+every evaluation step to emit the representation of the current
+continuation. This can be done by using resumable exceptions, native
+continuations, and so forth, but even in languages without such
+features, it is easy to achieve: simply pause execution to print the
+continuation, before resuming computation.
+
+Using this combination of techniques, we have created steppers for Racket
+(\url{racket-lang.org}), Pyret (\url{pyret.org}), and PLT Redex~\cite{redex} (a tool for studying
+language semantics). In the
+process we have used both the continuation mark and ``shadow stack''
+strategies.  The Racket stepper is notable because although Racket
+already has a stepper~\cite{racket-stepper},
+it is much weaker than ours (e.g., it
+does not handle state, continuations, or any user-defined
+macros). Obtaining a core stepper from PLT Redex is trivial because the tool already
+provides a function that performs a single evaluation step.
+
+\paragraph{Performance}
+
+Our prototype core steppers for Racket and Pyret induce a
+5-40\% overhead, depending on how large the stack grows and the
+relative mix of instrumented and uninstrumented calls. In addition, we
+must pay for serialization and context-switching because the
+{\Resugarer} implementation is an external process. This additional
+cost can obviously be eliminated by implementing {\Resugarer} inside
+the host language runtime.
+
+\section{Evaluation}
+\label{sec:reval-examples}
+
+In this section we describe sugars we implemented to test the
+expressiveness of our system. 
+(\Cref{sec:reval-pyret-example} shows a non-trivial outcome.)
+In what follows, we manually
+verified that each of the implemented sugars showed the expected
+surface steps.
+
+\subsection{Building on the Lambda Calculus}
+
+To see how far we could push building a useful surface language atop a
+small core, we constructed a
+simple stateful language in PLT Redex.  It contains only
+single-argument functions, application, \Code{if} statements,
+mutation, sequencing, and \Code{amb} (which nondeterministically
+chooses among its arguments), and some primitive values and operations.
+Atop this we defined sugar for
+multi-argument functions, \Code{Thunk}, \Code{Force}, \Code{Let},
+\Code{Letrec}, multi-arm \Code{And} and \Code{Or}, \Code{Cond};
+and atop these, a complex \Code{Automaton} macro~\cite{sk:automata-macros}.
+All of
+these behave exactly as one might expect other than \Code{Letrec} and
+\Code{Automaton}, discussed below.
+
+The \Code{Letrec} sugar does not show any intermediate steps in which
+some but not all branches have been evaluated; thus the surface
+evaluation shows the branches all evaluating in one step. For instance,
+\Code{(letrec ((x y) (y 2)) (+ x y))} steps directly to
+\Code{(+ 2 2)}. Though this initially
+surprised us, it is actually the correct representation of the
+semantics of \Code{letrec}; from our perspective,
+showing intermediate steps would necessarily be
+inaccurate and violate Emulation.
+
+The \Code{Automaton} macro had the same problem until we made some
+small, semantics-preserving refactorings: lifting some identifiers
+into \Code{Let} bindings, and adding \Code{!} on recursive
+annotations. \Cref{fig:reval-automaton} shows a run in Redex's evaluation
+visualizer; the underlying core evaluation took 264 steps.
+
+\begin{figure}
+  \mbox{}\hfill\includegraphics[width=0.45\columnwidth]{automaton-example}\hfill\mbox{}
+\caption{Automaton macro execution example}
+\label{fig:reval-automaton}
+\end{figure}
+
+
+\subsection{Return}
+  Having first-class access to the current continuation is a powerful
+  mechanism for defining new control flow constructs. Racket does so with
+  the built-in function \Code{call/cc}, that takes a function of one
+  argument and calls it with the program's current continuation. Using it,
+  we can define a \Code{return} sugar that returns early from a function:
+  \begin{codeex}
+  Return(x) ->
+    Let([Bind("\%RES", x)],
+        [Apply(Id("\%RET"), [Id("\%RES")])]);
+
+  Function(args, body) ->
+    Lambda(args, Apply(Id("call/cc"),
+                       [Lambda(["\%RET"], body)]));
+  \end{codeex}
+  (The definition of \Code{function} is necessary to mark the point that
+  \Code{return} should return to.) With this definition in place, we can
+  see evaluation sequences such as:
+  \begin{codeex}
+    (+ 1 ((function (x) (+ 1 (return (+ x 2)))) (+ 3 4)))
+\sstep (+ 1 ((function (x) (+ 1 (return (+ x 2)))) 7))
+\sstep (+ 1 (+ 1 (return (+ 7 2))))
+\sstep (+ 1 (+ 1 (return 9)))
+\sstep (+ 1 9)
+\sstep 10
+  \end{codeex}
+  This example illustrates that our approach is robust enough to work even
+  in the presence of dynamic control flow.
+
+
+\subsection{Pyret: A Case Study}
+\label{sec:reval-pyret}
+
+Pyret, shown in \cref{sec:reval-pyret-example}, is a new language. It makes
+heavy use of syntactic sugar to emulate the syntax of other programming
+languages like Python. This sugar was implemented by people other than
+this paper's authors, and written as a manual compiler, not as a set
+of rules; it was also implemented without any attention paid to the
+limitations of this work. Thus, the language makes for a good case
+study for the expressiveness of our work.
+
+We restricted our attention to sugar relevant to evaluation. Pyret has
+builtin syntactic forms for writing tests, and can run code both in a
+``check'' mode that only runs these tests, or in ``normal'' mode that runs
+code. We focused on ``normal'' mode since it is most
+relevant to evaluation. There were two pieces of sugar we
+were unable to express and one that
+required modification to show ideal surface steps; we
+describe these in more detail below. 
+As \cref{fig:reval-pyretsugar} shows, we were able to handle almost all
+of Pyret's sugar. An example of the result in action was shown in
+\cref{sec:reval-pyret-example}.
+
+\begin{figure}
+\begin{center}\small
+\begin{tabular}{l | l c}
+  \emph{{\AST} Node} & \emph{Description} & \emph{Implemented?} \\ \hline
+  fun & function declaration & yes \\
+  when & one-arm conditional & yes \\
+  if & multi-arm conditional & yes \\
+  cases & multi-arm conditional & yes \\
+  cases-else & multi-arm conditional & yes \\
+  for & generalized looping construct & yes \\
+  op & binary operators & yes \\
+  not & negation & yes \\
+  paren & grouping construct & yes \\
+  left-app & infix notation & yes \\
+  list & list expressions & yes \\
+  dot & indirect field lookup & yes \\
+  colon & direct field lookup & yes \\
+  (currying syntax) & allowed in \Code{fun} and \Code{op} & yes \\
+\hline
+  graph & create cyclic data & no \\
+  datatype & datatype declarations & no
+\end{tabular}
+\end{center}
+\caption{Syntactic sugar in normal-mode Pyret}
+\label{fig:reval-pyretsugar}
+\end{figure}
+
+We were unable to fully handle algebraic datatype declarations
+because they splice one block of code into another in a non-compositional
+manner; we believe these could be expressed by adding a block
+construct that does not introduce a new scope (akin to Scheme's
+\Code{begin}).
+
+We were also unable to handle \Code{graph}, which constructs cyclic data.
+It has a
+complex desugaring that involves creating and updating placeholder values
+and compile-time substitution. This could be solved either by expanding
+the expressiveness of our system or by adding a new core construct to the
+language. There is always a trade-off between the complexity of the core
+language and the complexity of the desugaring; when a feature can only be
+implemented through a highly non-compositional sugar like this, it may
+make sense to instead add the feature to the core language.
+
+Finally, the desugaring for binary operators needed to be modified to show helpful
+surface evaluation sequences. The desugaring follows
+a strategy similar to that of Python, by applying the \Code{\_plus} method
+of the left subexpression to the right subexpression (the \Code{s} terms
+are source locations, used for error-reporting):
+\begin{codeex}
+  Op(s, "+", x, y)  ->
+    App(s, Bracket(s, x, Str(s, "_plus")), [y]);
+\end{codeex}
+Given the term \Code{1 + (2 + 3)}, we would expect evaluation to step
+first to \Code{1 + 5} and then to \Code{6}. Unfortunately, {\Resugarer}
+shows only this surface evaluation sequence:
+\begin{codeex}
+    1 + (2 + 3) \ssteparrow 6
+\end{codeex}
+The core evaluation sequence reveals why:
+\begin{codeex}
+    1.["_plus"](2.["_plus"](3))
+\cstep <func>(2.["_plus"](3))
+\cstep <func>(<func>(3))
+\cstep <func>(5)
+\cstep 6
+\end{codeex}
+(\Code{<func>} denotes a resolved functional). To show the
+term \Code{1 + 5}, Emulation requires that it desugar
+precisely into one of the terms in the core sequence; but it desugars
+to \Code{1.["\_plus"](5)}, which has a different shape than any of the
+core terms.
+
+The fundamental problem is the order of evaluation induced by this
+desugaring: first the left subexpression is evaluated, then the
+\Code{\_plus} field is resolved, then the right subexpression is
+evaluated, then the ``addition'' is performed. We can obtain a more
+helpful surface sequence by instead choosing a desugaring
+that forces the left and right subexpressions to be evaluated fully before
+resolving the operation, as shown in \cref{fig:reval-alt-plus}.
+
+\begin{figure}[t]
+\begin{codeex}
+  Op(s, "+", x, y) ->
+    Block(s,
+    [ Let(s, Bind(s, "temp", ABlank),
+             Obj(s, [Field(s, Str(s, "left"), x),
+                     Field(s, Str(s, "right"), y)]))
+    , App(s, Bracket(s, Bracket(s, Id(s, "temp"),
+                                   Str(s, "left")),
+                        Str(s, "_plus")),
+             [Bracket(s, Id(s, "temp"),
+                         Str(s, "right"))])]);
+\end{codeex}
+\caption{Alternate desugaring of addition}
+\label{fig:reval-alt-plus}
+\end{figure}
+This desugaring constructs a temporary object \Code{\{left: x, right:
+  y\}}, and then computes \Code{temp.left.\_plus(temp.right)}. Notice that
+this desugaring \emph{slightly} changes the semantics of binary operators;
+the difference may be seen when the right subexpression mutates the
+\Code{\_plus} field of the left subexpression. In exchange, we obtain the
+expected surface evaluation sequence:
+\begin{codeex}
+    1 + (2 + 3) \ssteparrow 1 + 5 \ssteparrow 6
+\end{codeex}
+
+
+
+
+
+\section{Related Work}
+
+There is a long history of trying relate compiled code back to its
+source. This problem is especially pronounced in debuggers for
+optimizing compilers, where the structure of the source can be altered
+significantly~\cite{hennessy-debugging}. Most of this literature
+is based on black-box
+transformations, unlike ours, which we assume we have full control
+over.  As a result, this work tends to be very different in flavor
+from ours: some of it is focused on providing high-level
+representations of data on the heap, which is a strict subproblem of
+ours, or of correlating back to source expression \emph{locations}, which
+again is weaker than \emph{reconstructing a source term}.
+For this reason,
+this work is usually also not accompanied by strong semantic
+guarantees or proofs of them.
+
+One line of work in this direction is SELF's debugging
+system~\cite{self-debugging}. Its compiler provides its debugger with
+debugging information at selected breakpoints by (in part) limiting the
+optimizations that are performed around them. This is a sensible approach
+when the code transformation in question is optimization and can be turned
+off, but does not make sense when the transformation is a desugaring
+which is necessary to give the program meaning.
+
+Another line of work in this direction is the compile-time macro error
+reporting developed by Culpepper, et al.~\cite{fortifying-macros}.
+Constructing useful error messages is a difficult task that we have not
+yet addressed. It has a different flavor than the problem we address,
+though: akin to previous work in debugging, any source terms mentioned in
+an error appear directly in the source, rather than having to be
+reconstructed.
+
+Deursen, et al.~\cite{deursen:origin-tracking} formalize the concept of
+tracking the origins
+of terms within term rewriting systems (which in their case represent
+the \emph{evaluator}, not the \emph{syntactic sugar} as in our
+case). They go on to show various applications, including
+visualizing program execution, implementing debugger breakpoints,
+and locating the sources of errors.
+Their work does not involve the use of syntactic sugar,
+however, while our work hinges on the interplay between syntactic
+sugar and evaluation. Nevertheless, we
+have adopted their notion of origin tracking for our transformations.
+
+Krishnamurthi, et al.~\cite{sk:mcmicmac} develop a macro system meant
+to support a variety of tools, such as type-checkers and
+debuggers. Tools can provide feedback to users in terms of the
+programmer's source using source locations recorded during
+transformation. The system does not, however, reconstruct source
+terms; it merely point out relevant parts of the original source.  The
+source tracking mechanisms are based on Dybvig, et al.'s macro
+system~\cite{expansion-passing-style}.
+
+Clements~\cite[page 53]{clements:thesis} implements an algebraic
+stepper (similar to ours) for Racket---a language that has
+macros---and thus faces precisely the same problem we address in this
+paper. That work, however, side-steps these issues by handling a
+certain fixed set of macros specially (those in the ``Beginner
+Student'' language) and otherwise showing only expanded code.
+On the other hand, it proves that its method of instrumenting a program to
+show evaluation steps is correct (i.e., the instrumented program shows the
+same evaluation steps that the original program produces),
+while we only show that the lifted evaluation sequence is correct
+with respect to the core stepper. Thus its approach could be
+usefully composed with ours to achieve stronger guarantees.
+
+Fisher and Shivers~\cite{ziggurat} develop a framework
+for defining static semantics that connect the
+surface and core languages. They show how to effectively \emph{lower}
+a \emph{static} semantics from a surface language to its core
+language. This is complementary to our work, which
+shows how to \emph{lift} a \emph{dynamic} semantics from core to surface.
+This exposes a fundamental difference in starting assumptions:
+they assume the surface language has a static semantics, while we assume
+its semantics is \emph{defined} by desugaring.
+
+In a similiar vein, Lorenzen and Erdweg \cite{typechecking-exts} give a
+method for ensuring the type soundness of syntactic extensions by lowering
+author-provided typing rules for the surface language onto the core
+language's type system (and automatically verifying that soundness is
+entailed). Thus their work does for type checking what ours does for
+evaluation: it provides a surface type checker guaranteed to be sound with
+respect to the core language, while ours produces a surface evaluator
+guaranteed to emulate the core language.
+
+Model-driven software engineering also draws heavily on
+bidirectional transformation, because systems are expected to be written
+in a collection of domain-specific languages that are transformed into
+implementations. These uses tend to be \emph{static}, rather
+than addressing the inverse-mapping problem in the context of system
+execution (see the survey by
+Stevens~\cite{bidirectional-model-transfs}).
+When the problem we address does arise in this area, it is typically the
+case that either (i) both the source and target models have
+implementations, so that surface-level execution traces can be obtained
+by evaluating in the surface language directly~\cite{Perera-slicing}, or
+(ii) the surface information sought is more limited than the reduction
+sequence we provide (in the same ways as for debuggers for optimizing
+compilers, as described earlier).
+Applying our results to this area is future work.
+
+\subsection*{Artifact Evaluation}
+
+The artifact for this paper was not submitted for evaluation because
+the second author was a co-chair of the evaluation process. The
+artifact is available from
+\begin{center}
+\url{http://cs.brown.edu/research/plt/dl/resugaring/v1/}
+\end{center}
+
+\acks We thank Daniel J.~Dougherty and Matthias Felleisen for their feedback,
+Joe Politz for a language that offered an excellent proving ground for
+this work, and the anonymous reviewers who provided helpful feedback on
+the paper. This work was partially supported by support from the US
+National Science Foundation and Google.
+
+\bibliography{justin}
+\bibliographystyle{terseabbrvnat}
+
+\end{document}

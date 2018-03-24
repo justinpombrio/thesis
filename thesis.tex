@@ -356,6 +356,7 @@
 \newcommand{\CoreToTerm}[1]{\Code{c->t}\ #1}
 \newcommand{\TermToSurface}[1]{\Code{t->s}\ #1}
 \newcommand{\TermToCore}[1]{\Code{t->c}\ #1}
+\newcommand{\Expandf}{\Code{exp}_{\Rs}}
 \newcommand{\ExpandRec}[1]{\Code{desugar}_{\Rs}\ {#1}}
 \newcommand{\ExpandRecf}{\Code{desugar}_{\Rs}}
 \newcommand{\ExpandRecff}{\Code{desugar}}
@@ -630,6 +631,8 @@
 \newcommand{\LongDesugarRule}[2]{\texttt{#1}\\\;\;\Rightarrow\;\;\texttt{#2}}
 \newcommand{\rulelist}{rulelist}
 \newcommand{\Rulelist}{Rulelist}
+\newcommand{\Getput}{\emph{GetPut}}
+\newcommand{\Putget}{\emph{PutGet}}
 \newcommand{\Rs}{\mathit{rs}}
 
 % Scope Terminology
@@ -727,7 +730,7 @@ Finally, I would like to thank the NSF, which partly funded all of this work.
 \include{chapters/formalism}
 %\include{chapters/well-formedness}
 \part{Resugaring}
-\include{chapters/resugar-eval}
+%\include{chapters/resugar-eval}
 \include{chapters/resugar-scope}
 \include{chapters/resugar-types}
 %\include{chapters/implementation}
