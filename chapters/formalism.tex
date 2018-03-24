@@ -1,13 +1,20 @@
 \chapter{Desugaring, Formally}\label{chap:formalism}
 
-In this chapter, we give formal definitions for \Sc{ast}s and
-desugaring that will be used throughout the rest of the thesis.
+In this chapter, we set the groundwork of terminology and notation
+that will be used throughout the rest of the thesis.
 Most relevantly, we assume that desugaring is given (externally to the
 language) as a set of pattern-based rewrite rules (a la Racket's \Code{syntax-rules}
 [CITE]). This is important because it will form an expressive limit on
 resugaring. Our techniques for resugaring evaluation sequences \cref{chap:resugar-eval},
 scope rules \cref{chap:resugar-scope}, and type systems \cref{chap:resugar-type}
 work on the kind of desugaring rules given here, but no more.
+Some chapters go beyond what is shown here: for instance, the
+evaluation resugaring chapter (\cref{chap:resugar-eval}) formally
+supports ellipses (which are not shown here), and the scope resugaring
+chapter is agnostic to the order of desugaring (which is assumed to be
+OI here).
+
+[TODO: rewrite after this point: remove ellipses.]
 
 \section{ASTs}\label{sec:formal-term}
 

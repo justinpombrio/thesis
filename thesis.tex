@@ -19,7 +19,7 @@
 %   macro argument -> parameter
 %   ast -> term (when appropriate)
 %   ? -> constructor
-%   ? -> syntactic construct
+%   label, ? -> syntactic construct
 %   constant -> value
 %   transformation -> rewrite / desugaring
 %   syntactic constant -> primitive value
@@ -234,6 +234,8 @@
 % Matching and Substitution
 \newcommand{\Subs}[2]{#1 \bullet #2}
 \newcommand{\Match}[2]{#1 / #2}
+\newcommand{\subs}{\bullet}
+\newcommand{\match}{/}
 
 % Matching & Subs
 \newcommand{\SimpleMatch}[2]{#1 / #2}
@@ -285,7 +287,12 @@
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
 \newcommand{\Value}{\textit{value}}
-\newcommand{\Tag}[3]{(\Code{Tag}_{#1 \To #2} #3)}
+\newcommand{\Tag}[2]{(\Code{Tag}\ #1\ #2)}
+\newcommand{\MacHead}[2]{(\Code{Head}\ #1\ #2)}
+\newcommand{\MacBody}[1]{(\Code{Body}\ {#1})}
+\newcommand{\MacHeadf}{\Code{Head}}
+\newcommand{\MacBodyf}{\Code{Body}}
+%\newcommand{\Tag}[3]{(\Code{Tag}_{#1 \To #2} #3)}
 \newcommand{\Subterm}{\sqsubseteq}
 % Specific Variables
 \newcommand{\VarX}{\Variable{\empty}{x}{}{}}
@@ -365,6 +372,14 @@
 \newcommand{\UnexpandRecf}{\Code{resugar}_{\Rs}}
 \newcommand{\UnexpandRecff}{\Code{resugar}}
 \newcommand{\UnexpandRecH}[1]{\Code{R}_{\Rs}'\ {#1}}
+\newcommand{\Expd}[1]{\Code{E}\ {#1}}
+\newcommand{\Expdf}{\Code{E}}
+\newcommand{\Unexp}[2]{\Code{U}\ {#1}\ {#2}}
+\newcommand{\Unexpf}{\Code{U}}
+\newcommand{\ExpR}[1]{\Code{Des}\ {#1}}
+\newcommand{\ExpRf}{\Code{Des}}
+\newcommand{\UnexpR}[1]{\Code{Res}\ {#1}}
+\newcommand{\UnexpRf}{\Code{Res}}
 
 \newcommand{\Residue}[2]{\Code{residue}(#1, #2)}
 \newcommand{\Copy}[1]{\Code{copy}(#1)}
@@ -630,6 +645,7 @@
 \newcommand{\DesugarRule}[2]{\texttt{#1}\;\;\Rightarrow\;\;\texttt{#2}}
 \newcommand{\LongDesugarRule}[2]{\texttt{#1}\\\;\;\Rightarrow\;\;\texttt{#2}}
 \newcommand{\rulelist}{rulelist}
+\newcommand{\rulelists}{rulelists}
 \newcommand{\Rulelist}{Rulelist}
 \newcommand{\Getput}{\emph{GetPut}}
 \newcommand{\Putget}{\emph{PutGet}}
@@ -721,6 +737,12 @@ the many reviewers who gave \emph{very thorough} feedback on these
 intial versions. This thesis owes much of its quality to these
 anonymous individuals.
 
+[TODO] We thank Daniel J.~Dougherty and Matthias Felleisen for their feedback,
+Joe Politz for a language that offered an excellent proving ground for
+this work, and the anonymous reviewers who provided helpful feedback on
+the paper. This work was partially supported by support from the US
+National Science Foundation and Google.
+
 Finally, I would like to thank the NSF, which partly funded all of this work.
 
 \part{Syntactic Sugar}
@@ -730,7 +752,7 @@ Finally, I would like to thank the NSF, which partly funded all of this work.
 \include{chapters/formalism}
 %\include{chapters/well-formedness}
 \part{Resugaring}
-%\include{chapters/resugar-eval}
+\include{chapters/resugar-eval}
 \include{chapters/resugar-scope}
 \include{chapters/resugar-types}
 %\include{chapters/implementation}
