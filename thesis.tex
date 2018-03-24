@@ -21,6 +21,9 @@
 %   ? -> constructor
 %   ? -> syntactic construct
 %   constant -> value
+%   transformation -> rewrite / desugaring
+% Make sure to introduce:
+%   expansion
 
 \RequirePackage{silence} % :-\
     \WarningFilter{scrbook}{Usage of package `titlesec'}
@@ -67,9 +70,11 @@
 \usepackage{alltt}
 \usepackage{semantic}
 \usepackage{bussproofs}
+\usepackage{fancyvrb} % for BVerbatim
 % More formatting
 \usepackage{rotating}
 \usepackage{multirow}
+\usepackage{enumitem}
 % More nice things
 \usepackage{cleveref}
 \usepackage{color}
@@ -169,6 +174,12 @@
     \input{img/#1.tex}
   \end{minipage}
 }
+\newcommand{\BoxedHeading}[1]{\vspace{1em}\framebox{\textbf{#1}}\newline}
+\newcommand{\TinyHeading}[1]{\textsc{#1}}
+\newenvironment{SidewaysFigure}
+  {\begin{figure*}[h!]\begin{turn}{270}\begin{minipage}{18cm}
+          \bgroup\def\arraystretch{4}}
+  {\egroup\end{minipage}\end{turn}\end{figure*}}
 
 
 % Math Notation
@@ -334,10 +345,33 @@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Evaluation
+
+\newcommandx*{\Expand}[2][1=rs]{\texttt{exp}_{#1}(#2)}
+\newcommandx*{\Unexpand}[2][1=rs]{\texttt{unexp}_{#1}(#2)}
+\newcommand{\SurfaceToTerm}[1]{\Code{s->t}\ #1}
+\newcommand{\CoreToTerm}[1]{\Code{c->t}\ #1}
+\newcommand{\TermToSurface}[1]{\Code{t->s}\ #1}
+\newcommand{\TermToCore}[1]{\Code{t->c}\ #1}
+\newcommand{\ExpandRec}[1]{\Code{desugar}_{\Rs}\ {#1}}
+\newcommand{\ExpandRecf}{\Code{desugar}_{\Rs}}
+\newcommand{\ExpandRecff}{\Code{desugar}}
+\newcommand{\Unexpandf}{\Code{unexp}_{\Rs}}
+\newcommand{\UnexpandRec}[1]{\Code{resugar}_{\Rs}\ {#1}}
+\newcommand{\UnexpandRecf}{\Code{resugar}_{\Rs}}
+\newcommand{\UnexpandRecff}{\Code{resugar}}
+\newcommand{\UnexpandRecH}[1]{\Code{R}_{\Rs}'\ {#1}}
+
+\newcommand{\Residue}[2]{\Code{residue}(#1, #2)}
+\newcommand{\Copy}[1]{\Code{copy}(#1)}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  Types
 
 \newcommand{\Isurf}{I_\textit{surf}}
 \newcommand{\Icore}{I_\textit{core}}
+\newcommand{\Jsurf}{J_\textit{surf}}
 
 % Judgments
 \newcommand{\saysEq}[2]{\{#1 = #2\}}
@@ -362,6 +396,14 @@
 \newcommandx*{\RFour}[2][1=\empty]{\LeftLabel{\small{#1}}\QuaternaryInfC{$#2$}}
 \newcommandx*{\RFive}[2][1=\empty]{\LeftLabel{\small{#1}}\QuinaryInfC{$#2$}}
 \newcommand{\squeeze}[2]{\hspace{-#1}{#2}\hspace{-#1}}
+
+% Terminology
+\newcommand{\Lang}{\mathcal{L}}
+\newcommand{\ResugarTy}[2]{\ConstrIt{resugar}{(#1, #2)}}
+
+% Ellipses
+\newcommand{\nodeTt}[2]{({\texttt{#1}}\;{#2})}
+\newcommand{\cons}[2]{\nodeTt{cons}{#1\ #2}}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -582,6 +624,10 @@
 \newcommand{\Resugar}[1]{\ConstrBb{R}{#1}}
 \newcommand{\Resugarer}{\Sc{Confection}}
 \newcommand{\DesugarRule}[2]{\texttt{#1}\;\;\Rightarrow\;\;\texttt{#2}}
+\newcommand{\LongDesugarRule}[2]{\texttt{#1}\\\;\;\Rightarrow\;\;\texttt{#2}}
+\newcommand{\rulelist}{rulelist}
+\newcommand{\Rulelist}{Rulelist}
+\newcommand{\Rs}{\mathit{rs}}
 
 % Scope Terminology
 \newcommand{\Scopeset}[1]{\ConstrIt{scope\mbox{-}set}{#1}}
@@ -591,6 +637,9 @@
 \newcommand{\Norm}[1]{\ConstrIt{Norm}{#1}}
 \newcommand{\PVars}[1]{\ConstrIt{pattern-vars}{#1}}
 
+% Evaluation Terminology
+\newcommand{\Sugar}[1]{\ConstrIt{sugars}{#1}}
+\newcommand{\Head}[1]{\ConstrIt{head}{#1}}
 
 
 
@@ -677,7 +726,7 @@ Finally, I would like to thank the NSF, which partly funded all of this work.
 \part{Resugaring}
 \include{chapters/resugar-eval}
 \include{chapters/resugar-scope}
-%\include{chapters/resugar-types}
+\include{chapters/resugar-types}
 %\include{chapters/implementation}
 %\include{chapters/conclusion} % &future work
 %\part{Appendix}

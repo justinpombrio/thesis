@@ -1,6 +1,14 @@
-% Greek αβγ
-
 \chapter{Resugaring Evaluation Sequences}\label{chap:resugar-eval}
+
+\textbf{This whole chapter is copied from a paper and not in a coherent state.}
+
+TODO
+\begin{itemize}
+\item ``Transformation'' -> ``Rewrite''?
+\item Changed: Applying Transformations
+\end{itemize}
+
+% Greek αβγδε
 
 In this chapter, we tackle the challenge of combining syntactic sugar
 with semantics[CITE, CITE]. Given a set of desugaring rules, of the
@@ -310,18 +318,6 @@ Nevertheless, here is the surface evaluation (pretty-)printed by {\Resugarer} (w
 \end{Codes}
 This sequence hides all the complexity of the core language.
 
-\section{The Rewrite System}
-\label{sec:reval-transformations}
-
-We will present evaluation resugaring in three parts. First
-(\cref{sec:reval-onerule}), we will describe how our rewrite system
-works, up to the level of performing a single rewrite. Next
-(\cref{sec:reval-manyrule}), we will describe how to use tags to fully
-desugar and resugar terms, transforming not just a term but its subterms
-as well. Finally (\cref{sec:reval-lifting}), we will show how to use the
-rewrite system to lift core evaluation sequences to surface
-evaluation sequences.
-
 
 \section{The Transformation System}
 \label{sec:reval-transformations}
@@ -341,20 +337,262 @@ evaluation sequences.
 We begin by describing the form and application of our transformation
 rules.
 
+\section{Patterns}
+
+Since rules are applied both forward and in reverse, we represent their
+\Sc{lhs}s and \Sc{rhs}s uniformly as \emph{patterns}. Patterns $p$ are defined
+inductively by:
+
+\begin{Table}
+pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
+  &$|$& $\Node{C}{p_1 ... p_n}$ & \Sc{ast} node \\
+  &$|$& $[p_1 \dd p_n]$ & list of length $n$ \\
+  &$|$& $[p_1 \dd p_n\,\Ell{p}]$ & list of length $\geq n$ \\
+  &$|$& $\Value$ & primitive value \\
+  &$|$& $\Refn[i]{x}$ $|$ $\Decl[i]{x}$  & variable \\
+\end{Table}
+
+Variables are denoted by a lowercase
+identifier, labeled nodes are denoted by an uppercase identifier followed
+by a parenthesized list of subpatterns, and lists are denoted by a
+parenthesized list of subpatterns. Nodes must have fixed arity, so lists are
+used when a node needs to contain an arbitrary number of subterms.
+Ellipses (which we write formally as $\Ell{p}$ to distinguish them
+from metasyntactic ellipses) in a list pattern denote zero or more
+repetitions of the pattern
+they follow.
+
+[TODO: move elsewhere, give defn, mention tags]
+A \emph{term} $e$ is simply a pattern without variables or
+ellipses.
+
+Our definition of patterns determines both the expressiveness of the
+resulting transformation system and the ability to formally reason about
+it. There is a natural trade-off between the two. We pick a definition similar to
+that of Scheme \Code{syntax-rules}-style macros, though without guard
+expressions.
+
+Formally, our patterns are \emph{regular tree
+  expressions}~\cite{regular-tree-expressions}. Regular tree
+expressions $\mathit{trx}$ are the natural extension of regular
+expressions to handle trees: they add a primitive $\Node{C}{\mathit{trx}_1
+\,...\,\mathit{trx}_n}$ for matching a tree node labeled $C$ with
+branches matching the regular tree expressions
+$\mathit{trx}_1\,...\,\mathit{trx}_n$. Whereas regular tree
+expressions conventionally allow choice, we encode it using multiple
+rules, making the pattern language simpler.
+
+While we have found this definition of patterns suitably powerful for a
+wide variety of sugars---including all those discussed in this paper---our
+approach is not dependent on the exact definition. The precise
+requirements for the transformation language are given in
+\cref{sec:reval-proofs}.
+
+
+
+\section{Matching, Substitution, and Unification}
+
+Our transformations are implemented with simpler operations on patterns:
+matching and substitution.
+
+\emph{Matching} a term against a pattern induces an \emph{environment}
+that binds the pattern's variables. This environment may be
+\emph{substituted} into a pattern to produce another term. Formally, an
+environment is a mapping from pattern variables $\PVarA$ to bindings $b$,
+where each \emph{binding} is either a term $e$, a \emph{list binding}
+$\BList{b_1...b_n}$, or an \emph{ellipsis binding}
+$\BList{b_1...b_n\ \Ell{b_e}}$. A pattern variable within ellipses is
+bound to a list binding $\BList{b_1...b_n}$ instead of a list term
+$[b_1...b_n]$; they behave slightly differently under
+substitution. Ellipsis bindings are similar, but needed only during
+unification when a variable within an ellipsis is itself bound to an
+ellipsis pattern.
+
+We will write $\Match{e}{p}$ to denote matching a term $e$ against a
+pattern $p$, and write $\Subs{\gamma}{p}$ to denote substituting the
+bindings of an environment $\gamma$ into a pattern $p$.  We will write
+$e \geq p$ to mean that $\Match{e}{p}$ is defined, and $\gamma_1 \cup
+\gamma_2$ for the \emph{right-biased} union of $\gamma_1$ and
+$\gamma_2$. The matching and substitution algorithms are given in
+\ref{fig:formal-subs}, while bindings are defined in
+\ref{fig:formal-bind}.
+
+\begin{figure}[t]
+\[\begin{array}{lcll}
+b &:=& e                &\text{(term)} \\
+  &|&  \BList{b_1\,...\,b_n}  &\text{(list binding)} \\
+  &|&  \BList{b_1\,...\,b_n\,\Ell{b_e}} &\text{(ellipsis binding)} \\ \\
+\gamma &:=& \{\PVarA \to b,\,...\} \\
+\end{array}\]
+\caption{Bindings}
+\label{fig:formal-bind}
+\end{figure}
+
+\begin{figure*}[t]
+\[\begin{array}{lclll}
+\Match{\Value}{\Value} &=& \{\} \\
+\Match{e}{\PVarA} &=& \{\PVarA \to e\} \\
+\Match{[e_1 \dd e_n]}{[p_1 \dd p_n]} &=&
+  \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\
+\Match{[e_1 \dd e_n \dd e_{n+k}]}{[p_1 \dd p_n \Ell{p_e}]} &=&
+  \bigcup_{i=1..n} (\Match{e_i}{p_i}) \cup
+  merge([\Match{e_{n+i}}{p_e}]_{i=1..k}) \\
+\Match{\Node{C}{e_1 \dd e_n}}{\Node{C}{p_1 \dd p_n}} &=&
+  \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\ \\
+
+\Subs{\gamma}{\Value}        &=& \Value \\
+\Subs{\gamma}{[p_1 \dd p_n]}    &=& [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n}) \\
+\Subs{\gamma}{[p_1 \dd p_n \Ell{p_e}]} &=&
+  [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n\,\DoublePlus\,split(\gamma, p_e)} \\
+    &&\text{(where } \DoublePlus \text{ is concatenation)} \\
+\{\dd,\PVarA \to b,\dd\}\,\PVarA &=& toTerm(b) \\
+\Subs{\gamma}{\Node{C}{p_1 \dd p_n}} &=&
+  \Node{C}{\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n}} \\ \\
+
+\multicolumn{3}{l}{merge([\{\PVarA_1 \to b_1,...\} \dd \{\PVarA_n \to b_n,...\}])} \\
+\multicolumn{3}{l}{\quad=\quad \{\PVarA_1 \to \BList{b_1 \dd b_n},\,...\}} \\ \\
+
+\multicolumn{3}{l}{split(\{\PVarA_1 \to \BList{b_{11} \dd b_{1k}} \dd 
+  \PVarA_n \to \BList{b_{n1} \dd b_{nk}}\}, p)} \\
+\multicolumn{3}{l}{\quad=\quad
+  (\Subs{\{\PVarA_1 \to b_{11} \dd  \PVarA_n \to b_{n1}\}}{p} \dd 
+   \Subs{\{\PVarA_1 \to b_{1k} \dd  \PVarA_n \to b_{nk}\}}{p})} \\ \\
+
+toTerm(P) &=& P \\
+toTerm(\BList{b_1 \dd b_n}) &=&
+  (toTerm(b_1) \dd toTerm(b_n))
+
+\end{array}\]
+\caption{Matching and substitution}
+\label{fig:formal-subs}
+\end{figure*}
+
+[TODO: update example]
+For an example of matching and substitution, consider one of the rules of
+our running \Code{Or} example:
+\begin{Codes}
+Or([x y ys ...] ->
+  Let([Binding("t" x)]
+      If(Id("t") Id("t") Or([y ys ...])));
+\end{Codes}
+Matching \Code{Or([true Not(true) false true])}
+against \\ \Code{Or([x y ys ...])}
+produces the environment
+\[\gamma = \{
+   \PVarA \to \Code{true},\
+   \PVarB \to \Code{Not(true)},\
+   \PVarC \to \BList{\Code{false}\ \Code{true}}\}\]
+and substituting $\gamma$ into the rule's \Sc{rhs} produces
+\begin{Codes}
+Let([Binding("t" true)]
+    If(Id("t") Id("t") Or([Not(true) false true])))
+\end{Codes}
+
+Later, we will need to compute unifications as well. We omit showing the
+algorithm; it is straightforward since we disallow duplicate variables (as
+seen in the next section).
+
+\subsubsection{Well-formedness of Transformations}
+\label{sec:wf}
+
+The definitions we have given for matching and substitution are not
+well-behaved for all patterns. Even the crucial property that
+$\Subs{(\Match{e}{p})}{e} = e$ whenever $\Match{e}{p}$ exists fails to hold in certain
+situations, such as when a pattern's ellipsis contains no variables (e.g.,
+$(\Ell{3})$). For this reason and others, we require the following
+well-formedness criteria for the \Sc{lhs} and \Sc{rhs} of each rule:
+
+\begin{enumerate}
+\item \emph{Each variable in the \Sc{rhs} also appears in the
+  \Sc{lhs}.} Otherwise the variable would be unbound during expansion.
+\item \emph{Each variable appears at most once in the \Sc{lhs} and at
+  most once in the \Sc{rhs}.}
+  Allowing duplicate variables complicates matching, unification,
+  and proofs of correctness. It also copies code
+  and, in the worst case, can exponentially blow up programs.
+  We therefore disallow duplication,
+  with the sole exception of variables bound to atomic terms.
+\item \emph{An ellipsis of depth $n$ must contain at least one variable
+  that either appears at depth $n$ or greater on the other side of the
+  rule, or does not appear on the other side of the rule.} Otherwise it is
+  impossible to know how many times to repeat its pattern during
+  substitution. (The \emph{depth} of an ellipsis measures how deeply nested
+  it is within other ellipses; a top-level ellipsis has depth 1, an
+  ellipsis within an ellipsis depth 2, and so forth.)
+\item \emph{Each transformation's \Sc{lhs} must have the form
+  $\Node{C}{e_1 \dd e_n}$.} We will rely on this fact when showing that
+  unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
+\item .[TODO: disjoint lhss]
+\end{enumerate}
+The first two restrictions are further justified by our formalization of
+expansion and unexpansion in Coq (section~\ref{sec:coq}), 
+where they occurred naturally as pre-conditions
+for proofs.
+
+\subsubsection{Applying Transformations}
+
+A \emph{\rulelist} $\Rs$ is an ordered list of transformation
+rules $p_i \to p_i'$, where each rule is well-formed according to the
+criteria just described.
+
 In order to reconstruct a surface term from its desugaring, some
 information must be recorded; otherwise two different surface terms
 that desugared to the same core term would be indistinguishable. We
 therefore place \emph{tags} on terms as they are desugared. Each tag
 has two patterns, which are approximately the \Sc{lhs} and \Sc{rhs} of
-the sugar they originated from:
+the sugar they originated from:\marginpar{Patterns have pattern
+  variables while terms do not, and terms have tags while patterns do
+  not.}
 \begin{Table}
-  term $e$ &$::=$& $...$ \\
-  &$|$& $\Tag{p}{p'}{e}$
+term $e$ &$::=$& $\Value$ & primitive value \\
+  &$|$& $\Node{C}[i]{e_1 \dd e_n}$ & \Sc{ast} node \\
+  &$|$& $[e_1 \dd e_n]$ & list \\
+  &$|$& $\Refn[i]{x}$  & variable reference \\
+  &$|$& $\Decl[i]{x}$  & variable declaration \\
+  &$|$& $\Tag{p}{p'}{e}$ & tag
 \end{Table}
 
-%% We can now define \emph{desugaring} and \emph{resugaring} operations that
-%% translate \Sc{ast}s in the surface language to \Sc{ast}s in the core language and
-%% back.
+A term $e$ can then be \emph{expanded} with respect to
+$\Rs$ by matching $e$ against each $p_i$ in turn, and substituting
+the resulting bindings into $p_i'$ if successful:
+\begin{Table}
+  $\Expand{e}$ &$=$& $\Tag{p}{p'}{(\Subs{(\Match{e}{p_j})}{p_j})}$ \\
+  && for $j = \min \left\{ i | e \geq p_i \right\}_i$ \\
+  && where $p = \Residue{e}{p_i}$ and $p' = \Copy{p_i'}$
+\end{Table}
+The patterns in the resulting tag are almost, but not quite, the
+\Sc{lhs} and \Sc{rhs} of the expanded rule. However, instead of the
+\Sc{lhs} pattern $p_j$, the \emph{part of $e$ that matched $p_j$} is
+stored:
+\begin{Table}
+  \TypeLabel{\Residue{e}{p}}
+  
+\end{Table}
+
+Likewise, instead of the \Sc{rhs} $p_j'$, a \emph{copy} of it with
+\begin{Table}
+  \TypeLabel{\Residue{e}{p}}
+  
+\end{Table}
+These tweaks ensure that different occurences of the ``same'' term can
+be distinguished, thus preventing subtle violations of Abstraction. An
+example of such a violation is given in [REF]. 
+
+Unexpansion proceeds in reverse, matching against $p_i'$ and then
+substituting into $p_i$:
+\begin{Table}
+  $\Unexpand{\Tag{p}{p'}{e}}$ &$=$& $\Subs{(\Match{e}{p'})}{p}$
+\end{Table}
+
+Because unexpansion usually occurs \emph{after} reduction steps have
+been taken, in general the term being unexpanded is different
+from the output of expansion.
+
+We can now define \emph{desugaring} and \emph{resugaring} operations that
+translate \Sc{ast}s in the surface language to \Sc{ast}s in the core language and
+back.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Desugaring uses a helper function called \emph{expand} that expands a
 %% single piece of syntactic sugar in a term. \emph{Expand} looks up a
@@ -362,52 +600,52 @@ the sugar they originated from:
 %% applies it. This function can be Turing-complete, and is written in
 %% the host language. In order for resugaring to work, however,
 %% desugaring must be \emph{compositional}, i.e., it must be parametric
-%% over its subterms. Hence, instead of expanding the entire term $t$ at
+%% over its subterms. Hence, instead of expanding the entire term $e$ at
 %% once, \emph{expand} will first split it into a pattern and subterms,
-%% and then only expand the \emph{pattern} $C$ to a new pattern
-%% $C'$. \emph{Expand} then returns the pair $(C, C')$ of the old and new
+%% and then only expand the \emph{pattern} $p$ to a new pattern
+%% $p'$. \emph{Expand} then returns the pair $(p, p')$ of the old and new
 %% pattern.
 
-%% Desugaring of a term $t$ thus proceeds by calling $\textit{expand}(t)$
-%% to obtain the pair of patterns $(C, C')$, using matching and
-%% substitution to rewrite $C$ to $C'$, and recursively substituting
-%% the desugared subterms of $t$. The newly desugared term will be
+%% Desugaring of a term $e$ thus proceeds by calling $\textit{expand}(e)$
+%% to obtain the pair of patterns $(p, p')$, using matching and
+%% substitution to rewrite $p$ to $p'$, and recursively substituting
+%% the desugared subterms of $e$. The newly desugared term will be
 %% wrapped in a tag noting the original and new patterns. Later,
 %% resugaring will make use of these tags to undo each of the desugaring
 %% functions.
 
 %% Desugaring makes use of two operations over nodes. \\
-%% $\sugar{n}{C}$ looks up the desugaring function associated with node
-%% type $n$ and applies it to pattern $C$, and $\head{t}$ splits the term
+%% $\Sugar{n}{C}$ looks up the desugaring function associated with node
+%% type $n$ and applies it to pattern $C$, and $\Head{t}$ splits the term
 %% $t$ to obtain the pattern $C$ to be desugared. The pattern returned by
-%% $\head{t}$ may need to be more than just the topmost node of
+%% $\Head{t}$ may need to be more than just the topmost node of
 %% $t$. Take, for instance, a multi-armed let construct like
-%% \code{let x = 4, y = x in x + y}.
+%% \Code{let x = 4, y = x in x + y}.
 %% One way of representing this term in our system is:
-%% \begin{codes}
+%% \begin{Codes}
 %% node(Let,
 %%   node(Bind, decl(\(x\)), node(Num, val(\(4\))),
 %%     node(Bind, decl(\(y\)), ref(\(x\))),
 %%       node(EndBinds))),
 %%   node(Plus, ref(\(x\)), ref(\(y\))))
-%% \end{codes}
-%% It would be important for \code{Let}'s desugaring function to be given
-%% all of its bindings, so the pattern returned by $\head{}$ in this case
+%% \end{Codes}
+%% It would be important for \Code{Let}'s desugaring function to be given
+%% all of its bindings, so the pattern returned by $\Head{}$ in this case
 %% should be:
-%% \begin{codes}
+%% \begin{Codes}
 %% node(Let,
-%%   node(Bind, \(\hole\sb{1}\), \(\hole\sb{2}\),
-%%     node(Bind, \(\hole\sb{3}\), \(\hole\sb{4}\),
+%%   node(Bind, α, β,
+%%     node(Bind, γ, δ,
 %%       node(EndBinds))),
-%%   \(\hole\sb{5}\))
-%% \end{codes}
-%% While $\head{}$ could in principle be a complicated function, we
+%%   ε)
+%% \end{Codes}
+%% While $\Head{}$ could in principle be a complicated function, we
 %% believe in practice it is sufficient to partition nodes into
-%% \emph{primary} nodes like \code{Let} that can stand on their own, and
-%% secondary nodes like \code{Bind} and \code{EndBinds} that are merely
-%% part of the node above them; thus we define $\head{}$ in terms of a
+%% \emph{primary} nodes like \Code{Let} that can stand on their own, and
+%% secondary nodes like \Code{Bind} and \Code{EndBinds} that are merely
+%% part of the node above them; thus we define $\Head{}$ in terms of a
 %% $\textit{is-primary}$ predicate. $\textit{is-primary}$ will return
-%% \code{true} for values, declarations, and references; it is language
+%% \Code{true} for values, declarations, and references; it is language
 %% specific for \texttt{nodes}.
 
 %% Desugaring is formally defined in \cref{desugar}, and
@@ -441,16 +679,16 @@ the sugar they originated from:
 %% $\typelabel{\expand{t}}{(C, C)}$ \\
 %% $\expand{\node{a}{n}{\ellipses{t_i}}}$
 %%   &$=$& $(C, C')$ \\
-%%  &&when $\head{\node{a}{n}{\ellipses{t_i}}} = C$ \\
+%%  &&when $\Head{\node{a}{n}{\ellipses{t_i}}} = C$ \\
 %%  &&and $\resolve{\sugar{n}{C}} = C'$ \\
-%% $\typelabel{\head{t}}{C}$ \\
-%% $\head{\node{a}{n}{\ellipses{t_i}}}$
-%%   &$=$& $\node{a}{n}{\ellipses{\headRec{t_i}}}$ \\
+%% $\typelabel{\Head{t}}{C}$ \\
+%% $\Head{\node{a}{n}{\ellipses{t_i}}}$
+%%   &$=$& $\node{a}{n}{\ellipses{\HeadRec{t_i}}}$ \\
 %%  &&when $\textit{is-primary}(n)$ \\
-%% $\headRec{\node{a}{n}{\ellipses{t_i}}}$
-%%   &$=$& $\node{a}{n}{\ellipses{\headRec{t_i}}}$ \\
+%% $\HeadRec{\node{a}{n}{\ellipses{t_i}}}$
+%%   &$=$& $\node{a}{n}{\ellipses{\HeadRec{t_i}}}$ \\
 %%  &&when $\textit{not}(\textit{is-primary}(n))$ \\
-%% $\headRec{t}$
+%% $\HeadRec{t}$
 %%   &$=$& $\fresh{i} \hole_i$ \quad otherwise
 %% \end{jtable}
 %% \caption{Desugaring}
@@ -541,4 +779,206 @@ the sugar they originated from:
 %% $\decl{x_u}$ because that would mean that resugaring caused an
 %% identifier to become unbound, which could only happen if the initial
 %% program contained an unbound identifier.
+%% \end{proof}
+
+
+\subsubsection{Overlapping Rules}
+\label{sec:reval-overlapping}
+
+[TODO: reformat code in this section?]
+
+When multiple rules overlap, the Emulation property may be violated.
+For illustration,
+suppose a core language contains a \Code{MaxAcc} primitive
+that takes a list of numbers and a starting maximum, and in each reduction
+step pops the list and updates the starting maximum. Furthermore, say
+we want to extend this language with simple sugar for finding the maximum
+of a list of numbers, that fails with a runtime exception on empty
+lists. This could be achieved with the following transformation rules:
+\begin{Codes}
+Max([]) -> Raise("empty list");
+Max(xs) -> MaxAcc(xs, -infinity);
+\end{Codes}
+
+These rules are problematic, however, as demonstrated by the evaluation of
+the surface term \Code{Max([-infinity])}. It expands to the core term
+\Code{MaxAcc([-infinity], -infinity)}, which reduces (in the core)
+to \Code{MaxAcc([], -infinity)}, which unexpands by the second rule above to
+\Code{Max([])}. Thus, the core sequence is:
+\begin{Codes}
+    MaxAcc([-infinity], -infinity)
+\CoreStep MaxAcc([], -infinity)
+\end{Codes}
+and the derived surface evaluation sequence is:
+\begin{Codes}
+    Max([-infinity])
+\SurfStep Max([])
+\end{Codes}
+
+But the \Code{Max([])} surface step flagrantly violates the Emulation
+property! It expands into \Code{Raise("empty list")}, which is very
+different from the core term \Code{MaxAcc([], -infinity)} it purports to
+represent.
+
+Fortunately, the \Code{Max} sugar becomes safe with the following minor
+rewrite to make apparent the fact that the second rule only applies to
+non-empty argument lists:
+\begin{Codes}
+Max([]) -> Raise("Max: given empty list");
+Max([x, xs ...]) -> MaxAcc([x, xs ...], -infinity);
+\end{Codes}
+The scenario just described now plays out differently. The initial
+expansion and core reduction step remain the same, but when
+\Code{MaxAcc([], -infinity)} is unexpanded, that unexpansion fails because
+the term does not match the \Sc{rhs} pattern \Code{MaxAcc([x, xs ...],
+  -infinity)}; thus this step is safely skipped.
+
+{\Resugarer} implements a static check that admits the second definition
+but not the first. It checks that the \Sc{lhs}s of the rules are pairwise
+disjoint. This
+ensures that after unexpansion, only the same rule that was unexpanded
+applies. We formally state the rule and what it gains us in
+\cref{sec:reval-disjoint}.
+
+\subsection{Performing Transformations Recursively}
+\label{sec:reval-manyrule}
+
+[FILL]
+
+\subsection{Lifting Evaluation}
+\label{sec:lifting}
+
+We can now put the pieces together to see how {\Resugarer} works as a
+whole.
+
+We have defined desugaring and resugaring with respect to terms expressed
+in our pattern language. Real languages' source terms do not start in this form,
+so we will require functions for converting between syntax in
+the surface and core languages and terms in our pattern language. We will
+call these \SurfaceToTerm, \TermToSurface, \CoreToTerm, and
+{\TermToCore{}}, using \Code{s}, \Code{c}, and \Code{t} as abbreviations
+for surface, core, and term respectively. With these functions, we can
+define functions to fully desugar and resugar terms in the language's
+syntax:
+\begin{Table}
+$\Desugar$ &$=$& $\SurfaceToTerm\;;\;\ExpandRecf\;;\;\TermToCore$ \\
+$\Resugar$ &$=$& $\CoreToTerm\;;\;\UnexpandRecf\;;\;\TermToSurface$
+\end{Table}
+
+A surface reduction sequence for a deterministic language can now be
+computed as follows:
+\begin{Codes}
+def showSurfaceSequence(s):
+  let c = desugar*(s)
+  while c can take a reduction step:
+    let s' = resugar*(c)
+    if s': emit(s')
+    c := step(c)
+\end{Codes}
+Implementing
+this requires a \Code{step} relation; though most languages
+don't provide one natively, {\cref{sec:reval-lang}} describes how to
+obtain one.
+
+For a nondeterministic language, the aim is to lift an evaluation tree
+instead of an evaluation sequence. The set of nodes in the surface tree
+can be found by keeping a queue of as-yet-unexplored core terms,
+initialized to contain just \Code{desugar(s)}, and repeatedly dequeing a
+core term and checking whether it can be resugared. If it can, add its
+resugaring to the node set, and either way add the core terms it can step to to the end of
+the queue. The tree structure can be reconstructed with additional
+bookkeeping.
+
+We have a complete implementation of {\Resugarer}, in
+which all examples from this paper were run. It uses a user-written
+\emph{grammar file} that specifies grammars for both the core and surface
+syntax, and a set of rewrite rules. Though the grammars and rewrite rules
+mimic the syntax used by Stratego~\cite{stratego}, the rules obey the semantics described in this
+paper. The rules are also checked against the well-formedness criteria of
+\cref{sec:reval-wf}, thus ensuring that our results hold.
+
+
+\section{Formal Justification}
+\label{sec:formal}
+
+We will now justify many of our design decisions in terms of the formal
+properties they yield, and ultimately prove the Emulation and Abstraction
+properties relative to some reasonable assumptions about the underlying
+language.
+
+\subsection{Desugar and Resugar are Inverses}
+\label{sec:inverses}
+
+We show that $\ExpandRecff$ and $\UnexpandRecff$ are inverses of each
+other, after noting that surface and core terms have slightly
+different shapes.
+
+%% \begin{definition}
+%% A \term{surface~term} is a term without any tags $\Tag{O}{T}$.
+%% \end{definition}
+%% \begin{definition}
+%% A \term{core~term} is a term that contains no label {\lbl} that appears
+%% in the outermost position of any {\LHS} of the {\rulelist}.
+%% \end{definition}
+
+%% As expected, desugaring produces core terms, and resugaring produces
+%% surface terms.
+%% \begin{lemma}
+%% If $\expandRec{T} = T'$, then $T'$ is a core term. And
+%% if $\unexpandRec{T'} = T$, then $T$ is a surface term.
+%% \end{lemma}
+%% \begin{proof}
+%% By induction over the term.
+%% \end{proof}
+%% Further, $\expandRecff$ and $\unexpandRecff$ are idempotent over core and surface
+%% terms, respectively.
+%% \begin{lemma}
+%% Whenever $T$ is a surface term, $\unexpandRec{T} = T$.
+%% And whenever $T'$ is a core term, $\expandRec{T'} = T'$.
+%% \end{lemma}
+%% \begin{proof}
+%% By induction over the term.
+%% \end{proof}
+
+%% \begin{theorem}
+%% \label{thm:reval-exp}
+%% Assume that the lens laws hold for all transformations. Then for all
+%% surface terms $T$, $\ExpandRec{T} = T'$ implies $\UnexpandRec{T'} =
+%% T$. And for all core terms $T'$, $\unexpandRec{T'} = T$ implies
+%% $\expandRec{T} = T'$.
+%% \end{thm}
+%% \begin{proof}
+%% For both cases, proceed by induction over the term. The two nontrivial
+%% cases are $\unexpandRec{(\expandRec{\node{T_1,\,...,\,T_n}})}$ and
+%% $\expandRec{(\unexpandRec{\Tag{\MacHead{i}{\sigma}}{T'}})}$. For brevity, call
+%% $\expandRecf$ $\expRf$, call $\expandf$ $\expdf$, call $\unexpandRecf$
+%% $\unexpRf$, and call $\unexpandf$ $\unexpf$.
+
+%% In the first case,
+%% \begin{Table}
+%%   %% && $\UnexpR{(\ExpR{\node{T_1,\,...,\,T_n}})}$ \\
+%%   %% &$=$& $\UnexpR{(\ExpR{\Tag{\MacHead{i}{\sigma}}{T'}})}$ \\
+%%   %% && when $\Expd{\node{T_1,\,...,\,T_n}} = (i, T')$ \\
+        
+%%   %% && $ \ \ \text{ and where $\sigma$ stands in for
+%%   %%         $\node{T_1,\,...,\,T_n}$}$ \\
+%%   %% &$=$& $\UnexpR{\Tag{\MacHead{i}{\sigma}}{(\ExpR{T'})}}$ \\
+%%   %% &$=$& $\Unexp{(i, \UnexpR{\ExpR{T'}})}{\node{T_1,\,...,\,T_n}}$ \\
+%%   %% &$=$& $\Unexp{(i, T')}{\node{T_1,\,...,\,T_n}} & (by I.H.)$ \\
+%%   %% &$=$& $\node{T_1,\,...,\,T_n} (by \Getput)}
+%% \end{Table}
+
+%% In the second case,
+%% \begin{Table}
+%%   %% && $\ExpR{(\UnexpR{\Tag{\MacHead{i}{\sigma}}{T'}})}$ \\
+%%   %% &$=$& $\ExpR{(\Unexp{(i, \UnexpR{T'})}{\sigma})}$ \\
+%%   %% &$=$& $\ExpR{\node{T_1,\,...,\,T_n}} & (using w.f.)$ \\
+%%   %%   && $\ \ \text{ when }
+%%   %%      \Unexp{(i, \UnexpR{T'})}{\sigma} = \node{T_1,\,...,\,T_n}$ \\
+%%   %% &$=$& $\ExpR{\Tag{\MacHead{i}{\sigma}}{(\UnexpR{T'})}}
+%%   %%   &\text{ \<(by \Putget)}$ \\
+%%   %% &$=$& $\Tag{\MacHead{i}{\sigma}}{(\ExpR{(\UnexpR{T'})})}$ \\
+%%   %% &$=$& $\Tag{\MacHead{i}{\sigma}}{T'}
+%%     & \<(by I.H.)
+%% \end{Table}
 %% \end{proof}

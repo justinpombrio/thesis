@@ -1,0 +1,5 @@
+\begin{prooftree}
+\RZero[]{$((bind x A Γ) ⊢ (hlc ~e ~Q) : B)$}
+\RZero[]{$(Γ ⊢ ~a : A)$}
+\RTwo[hlc-let]{$(Γ ⊢ (hlc ~e (hlc/let x = ~a in ~Q)) : B)$}
+\end{prooftree}

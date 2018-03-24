@@ -1,0 +1,6 @@
+\begin{prooftree}
+\RZero[]{$(Γ ⊢ ~e : (Variant (field l C (field r H ρ1))))$}
+\RZero[]{\hspace{-2em}$((bind x C Γ) ⊢ ~l : K)$}
+\RZero[]{\hspace{-2em}$((bind y H Γ) ⊢ ~r : K)$}
+\RThree[case]{$(Γ ⊢ (case* ~e of (x => ~l) (y => ~r)) : K)$}
+\end{prooftree}

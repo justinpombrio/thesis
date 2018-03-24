@@ -1,0 +1,5 @@
+\begin{prooftree}
+\RZero[]{$(Γ ⊢ ~list : (List D))$}
+\RZero[]{$((bind x D (bind break (Unit -> B) Γ)) ⊢ ~body : j)$}
+\RTwo[foreach]{$(Γ ⊢ (foreach x ~list ~body) : (List j))$}
+\end{prooftree}
