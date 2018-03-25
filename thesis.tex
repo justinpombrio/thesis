@@ -687,10 +687,6 @@
 %\title{Resugaring: Restoring the Abstractions that Syntactic Sugar is Supposed to Provide}
 \maketitle
 
-% Terminology (steal from ICFP resugar eval seq.):
-%   Core vs. Surface
-%   Declaration vs. Reference
-
 \paragraph{Thesis Statement}
 \begin{quote}
 Many aspects of programming languages---in particular evaluation
@@ -698,8 +694,6 @@ steps, scope rules, and type rules---can be non-trivially
 \emph{resugared} from core to surface language, restoring the
 abstraction provided by syntactic sugar.
 \end{quote}
-
-[FILL]
 
 \paragraph{Abstract}
 Syntactic sugar is pervasive in language technology. Programmers use
@@ -724,7 +718,16 @@ ensure that these techniques can be practically applied.
 
 
 
-\paragraph{Acknowledgements}. [TODO]
+\paragraph{Acknowledgements}. %[TODO]
+
+I would like to thank my thesis committee---Mitchell Wand, Eelco
+Visser, and Shriram Krishnamurthi---for overseeing this large and
+technical body of work.
+
+I would like to thank Daniel J.~Dougherty and Matthias Felleisen for
+their feedback on evaluation resugaring, and Joe Politz for providing
+a language that offered an excellent proving ground for it
+(\cref{chap:resugar-eval}).
 
 I would like to thank Paul Stansifer, Sebastian Erdweg, and Matthew
 Flatt for their feedback on scope inference
@@ -732,19 +735,13 @@ Flatt for their feedback on scope inference
 
 I would like to thank Sorawee ``Oak'' Porncharoenwase for helping to
 generalize this work and integrate it with Pyret, as part of his
-Honors thesis (\cref{chap:implementation}).
+Honors thesis.% (\cref{chap:implementation}).
 
 Some of the papers that led to this thesis were rough around the edges
 when we initially submitted them. I would like to give many thanks to
-the many reviewers who gave \emph{very thorough} feedback on these
+the many reviewers who gave very thorough feedback on these
 intial versions. This thesis owes much of its quality to these
 anonymous individuals.
-
-[TODO] We thank Daniel J.~Dougherty and Matthias Felleisen for their feedback,
-Joe Politz for a language that offered an excellent proving ground for
-this work, and the anonymous reviewers who provided helpful feedback on
-the paper. This work was partially supported by support from the US
-National Science Foundation and Google.
 
 Finally, I would like to thank the NSF, which partly funded all of this work.
 
