@@ -353,6 +353,10 @@
 % Hacks
 \newcommand{\WhitePhantom}[1]{{\color{white}#1}}
 \newcommand{\tall}{\phantom{Q}\!\!\!\!}
+\newenvironment{CorrectlyIndentedCodes}
+               {\newline\begin{minipage}{\linewidth}\vspace{0.75em}\begin{Codes}}
+               {\end{Codes}\end{minipage}\vspace{0.75em}}
+               
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -704,15 +708,15 @@ relationship between the user's source program and the program being
 evaluated.  First, it obscures the evaluation steps the program takes
 when it runs, since these evaluation steps happen in the core
 (desugared) language rather than the surface (pre-desugaring) language
-the program was written in.  Second, it obscures the types of
+the program was written in.  Second, it obscures the scoping
+rules for the surface language, making it difficult for \Sc{ide}s and
+other tools to obtain binding information.  And finally, it obscures the types of
 surface programs, frequently resulting in type errors that reference
-terms the programmer did not write. And finally, it obscures the scoping
-rules for the surface language.  I will address
+terms the programmer did not write.  I address
 these problems by showing how evaluation steps, scoping rules, and
-scoping rules can all be \emph{resugared} from core to surface
+type rules can all be lifted---or \emph{resugared}---from core to surface
 languages, thus restoring the abstraction provided by syntactic
-sugar. While doing so, I will use the Pyret language as a testbed to
-ensure that these techniques can be practically applied.
+sugar.
 
 \tableofcontents
 
@@ -752,9 +756,9 @@ Finally, I would like to thank the NSF, which partly funded all of this work.
 \include{chapters/notation}
 %\include{chapters/well-formedness}
 \part{Resugaring}
-\include{chapters/resugar-eval}
-\include{chapters/resugar-scope}
-\include{chapters/resugar-types}
+%% \include{chapters/resugar-eval}
+%% \include{chapters/resugar-scope}
+%% \include{chapters/resugar-types}
 %\include{chapters/implementation}
 %\include{chapters/conclusion} % &future work
 %\part{Appendix}

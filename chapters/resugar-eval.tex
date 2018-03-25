@@ -16,7 +16,7 @@ TODO
 
 In this chapter, we tackle the challenge of combining syntactic sugar with
 semantics. Given a set of transformation rules written in an expressive
-but restricted language, we show how to \emph{resugar} program execution:
+but restricted language, we show how to resugar \emph{program execution}:
 to \emph{automatically} convert an
 evaluation sequence in the core language into a representative
 evaluation sequence in the surface syntax. Each step in the surface
@@ -38,7 +38,8 @@ assumptions, in the Coq proof assistant.
 This chapter comes from work published in PLDI 2014 and ICFP 2015
 under the titles of \emph{Resugaring: Lifting Evaluation Sequences
   through Syntactic Sugar} and \emph{Hygienic Resugaring of
-  Compositional Desugaring}~\cite{pombrio-resugar,pombrio-resugar-hygienic}.
+  Compositional Desugaring} (both co-authored with Shriram
+Krishnamurthi)~\cite{pombrio-resugar,pombrio-resugar-hygienic}.
 
 
 \section{Our Approach}
@@ -262,12 +263,14 @@ an ordinary trace in the core, ignoring all sugar.
 
 The implementation discussed in this
 chapter---{\Resugarer}---represents variables as strings and is not
-hygienic. The next chapter, \cref{chap:resugar-scope}, addresses how
-to infer scope rules for a surface language such that desugaring will
-by hygienic. In \cref{sec:rscope-eval-hygiene}, we argue that---with
-some minor adjustments to the algorithms here---this scope inference
-process will also make this chapter's \emph{resugaring} hygienic.
-
+hygienic. The next chapter, \cref{sec:rscope-eval-hygiene}, shows how
+to fix this. Three changes must be made: (i) sugars must pass that
+chapter's \emph{scope inference} algorithm; (ii) introduced variables
+must (unsurprisingly) be given fresh names, and resugaring must allow
+introduced variables to match against any name; and (iii) sugars must
+not drop pattern variables. Given these changes,
+\cref{sec:rscope-eval-hygiene} proves that both desugaring and
+resugaring will be hygienic.
 
 \section{{\Resugarer} at Work}
 \label{sec:reval-pyret-example}

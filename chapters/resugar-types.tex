@@ -27,8 +27,9 @@ process for automatically reconstructing type rules for the surface
 language using rules for the core. We have implemented this theory,
 and show several interesting case studies.
 
-This chapter comes from work published in PLDI 2018 under the
-title \emph{Inferring Type Rules for Syntactic Sugar}[CITE: to appear].
+This chapter comes from work published in PLDI 2018 under the title
+\emph{Inferring Type Rules for Syntactic Sugar} (co-authored with
+Shriram Krishnamurthi)[CITE: to appear].
 
 \section{Introduction}
 
@@ -41,15 +42,13 @@ virtue of keeping the type-checker's target language more
 tractable. However, errors are now going to be generated in terms of
 desugared code, and it is not always clear how to report these in
 terms of the surface language. This is further complicated when the
-code violates implicit type assumptions made by the sugar. In
-addition, it requires extra work (that does not correspond to the
-implementation of the type-checker) to provide a typed account of the
-surface language, which is what the programmer needs to see.
+code violates implicit type assumptions made by the sugar, which
+likely results in a confusing error message.
 
-Alternatively, suppose we type-check surface code. This too has two
-problems. First, it turns syntactic sugar into a burden by
+Alternatively, suppose we type-check surface code. This too is
+problematic. It turns syntactic sugar into a burden by
 forcing the type-checker to expand with the size of the surface
-language. This is especially problematic in languages with macro-like
+language. This is especially bad in languages with macro-like
 facilities, because the macro author must now also know how to extend
 a type-checker. This destroys a valuable division of labor: macro
 authors may be experts in a domain but not in programming language
@@ -98,7 +97,7 @@ surface language's type structure.
 \section{Type Resugaring} \label{sec:rtype-walkthrough}
 
 Our overall aim is to be able to generate type judgments for the
-surface language given desugaring rules and judgments for the core.
+surface language given desugaring rules and judgments for the core,
 i.e., to perform \emph{type resugaring}. Type resugaring, in which
 \emph{type rules} are inferred \emph{through syntactic sugar},
 should be distinguished from ordinary type
@@ -1633,9 +1632,9 @@ details of what the sugar expands to.
 
 We discussed restrictions on the pattern language of sugars in \cref{sec:rtype-req-desugar}
 and the underlying type system in \cref{sec:rtype-req-type,sec:rtype-req-resugar}. We also presented
-some limitations of the implementation in \cref{sec:rtype-eval-type}. All of
-these are worth investigating to make this idea even more broadly
-applicable.
+some limitations of the implementation in \cref{sec:rtype-eval-type}. It is
+worth investigating to see if these restrictions can be lifted to make
+this idea even more broadly applicable.
 
 In principle, not much in our work has specifically been about
 \emph{types}. Therefore, this idea could just as well be applied to
@@ -1797,7 +1796,6 @@ automatically bound (i.e., marked as capturing) to escape from the function.
 \label{fig:rtype-examples-2}
 \end{figure*}
 
-\newpage
 \section{Demos}
 
 This section shows SweetT in action. \cref{fig:rtype-demo} shows a sample

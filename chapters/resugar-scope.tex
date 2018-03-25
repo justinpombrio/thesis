@@ -17,8 +17,9 @@ proving that a desugaring system preserves $\alpha$-equivalence even
 though scoping rules have been provided \emph{only} for the core
 language.
 
-This chapter comes from work published in ICFP 2017 under the
-title \emph{Inferring Scope through Syntactic Sugar}~\cite{pombrio-scope}.
+This chapter comes from work published in ICFP 2017 under the title
+\emph{Inferring Scope through Syntactic Sugar} (co-authored with
+Shriram Krishnamurthi and Mitchell Wand)~\cite{pombrio-scope}.
 
 \section{Introduction}
 
@@ -2956,7 +2957,7 @@ process: since desugaring preserves scope by \cref{thm:rscope-resugar},
 bindings between variables must not change. Finally, property 3 is
 exactly what $\Op{checkScope}{}$ checks.
 
-\subsection{Hygiene for Evaluation Resugaring}
+\section{Hygiene for Evaluation Resugaring}
 \label{sec:rscope-eval-hygiene}
 
 We can also use this hygiene theorem to show how to make the
@@ -3292,7 +3293,7 @@ comparison. We have shown that our binding specification language
 compares favorably in expressiveness, while simultaneously being
 simple enough to enable scope inference.
 
-\section{Conclusion and Future Work}
+\section{Discussion and Conclusion}
 We have presented what we believe is the first algorithm for
 inferring scoping rules through syntactic sugar. It makes use
 of our description of scope as a preorder in
