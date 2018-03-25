@@ -41,7 +41,7 @@ for (Iterator i = best_numbers.iterator(); i.hasNext(); ) \{
 And in fact the Java spec formally recognizes this equivalence, and
 writes, ``The meaning of the enhanced for statement is given by
 translation into a basic for statement.''~\cite[section 14.14.2]{java8} Ignoring some
-irrelevant details, it states (in so many words) that this \emph{sugar}:
+irrelevant details, it states that this \emph{sugar}:
 \begin{Codes}
 for (<type> <var> : <expr>) \{ <statement> \}
 \end{Codes}
@@ -55,8 +55,6 @@ for (Iterator i = <expr>.iterator(); i.hasNext(); ) \{
 Here, the things we have written in angle brackets are
 \emph{parameters} to the sugar: they are pieces of code that it
 takes as arguments.
-
-[FILL: introduce define-syntax-rule?]
 
 
 \paragraph{But what \emph{is} it?}
@@ -85,10 +83,10 @@ Thus syntactic sugar splits a language into two parts: a (small) core
 language and a rich set of usable syntax atop that core. In this
 thesis, we use the term \emph{surface} to refer to the language the
 programmer sees, and \emph{core} for the target of desugaring.
-This makes syntactic sugar a subset of \emph{compilation}: it is
+This makes desugaring a subset of \emph{compilation}: it is
 compilation from a language to a subset of that language. It also
-makes clear the relationship between syntactic sugar and
-\emph{macros}: macros are a way of allowing users of a language to
+makes clear that \emph{macros} are a special case of syntactic sugar:
+they are a way of allowing users of a language to
 define syntactic sugar within the language itself.
 % Also: macros are a DSL for writing a compiler
 %   https://www.cs.utah.edu/plt/publications/macromod.pdf
@@ -100,8 +98,8 @@ Syntactic sugar is an essential component of programming languages and
 systems, and it is now actively used in many practical settings:
 \begin{itemize}
 \item In the definition of language constructs in many languages
-  ranging from Python to Haskell.
-\item To extend the language, in languages ranging from the Lisp
+  ranging from Java to Haskell.
+\item To allow users to extend the language, in languages ranging from the Lisp
   family to C++ to Julia to Rust.
 \item To shrink the semantics of large scripting languages with many
   special-case behaviors, such as JavaScript and Python, to small core
@@ -139,9 +137,9 @@ we should look for things that most programming languages
     an argument to a function: if you attempt to do so, the value the
     variable is bound to will be passed instead). Therefore, creating
     new binding constructs is a good use for syntactic sugar in most
-    languages. However, in R variable names can be abstracted
+    languages. However, in R~\cite{rlang} variable names can be abstracted
     over (e.g. \Code{assign("x", 3); x} prints 3), and so sugar isn't
-    necessary for this purpose~\cite{rlang}.
+    necessary for this purpose.
   \item Most languages use eager evaluation,
     which forces the arguments to a function to be
     evaluated when it is called, rather than allowing the function to
@@ -186,11 +184,10 @@ sugar (by design) \emph{hides} details: programmers only ever see the
 sugar, and not the desugared code (except perhaps in error messages),
 and thus may not be fully aware what sort of code they are implicitly
 writing. In contrast, writing the code out in full is more explicit,
-if tedious.  This thesis will not address either of these concerns:
-they arise by design from the nature of syntactic sugar: the whole
-\emph{point} is to give great latitude to extend a language, so of
-course it can be abused; it is up to sugar authors to use sugar
-responsibly.
+if tedious.  This thesis will not address either of these concerns.
+The entire point of syntactic sugar is to give great latitude to
+extend a language, so of course it can be abused: it is up to sugar
+authors to use sugar responsibly.
 
 Instead, we focus on the importance of the abstraction
 provided by sugar not leaking~\cite{leaky-abstractions}.  The code
@@ -246,7 +243,7 @@ The rest of this thesis is organized as follows:\marginpar{%
 \begin{description}
 \item[\Cref{chap:taxonomy}] discusses and taxonomizes existing
   desugaring systems (of which there are a wide variety).
-\item[\Cref{chap:notation}] provides a formalism for desugaring that
+\item[\Cref{chap:notation}] provides notation that
   will serve as groundwork for the rest of the chapters.
 % [TODO] \item[\Cref{chap:well-formedness}] provides an algorithm for
 % checking that desugaring rules preserve syntactic well-formedness.

@@ -1,10 +1,5 @@
 \chapter{Notation}\label{chap:notation}
 
-TODO
-\begin{itemize}
-\item Proofread: This whole chapter
-\end{itemize}
-
 In this chapter, we set the groundwork of notation and basic assumptions
 that will be used throughout the rest of the thesis.
 
@@ -46,9 +41,10 @@ and then \emph{substituting} into the \Sc{rhs} pattern.
 Patterns $p$ are just terms that can contain pattern variables $\PVarA$:
 \begin{Table}
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
-  &$|$& $\Node{C}{p_1 ... p_n}$ & \Sc{ast} node \\
   &$|$& $\Value$ & primitive value \\
-  &$|$& $\Refn[i]{x}$ $|$ $\Decl[i]{x}$  & variable \\
+  &$|$& $\Node{C}{p_1 ... p_n}$ & \Sc{ast} node \\
+  &$|$& $\Refn[i]{x}$  & variable reference at posn. $i$ \\
+  &$|$& $\Decl[i]{x}$  & variable declaration at posn. $i$ \\
 \end{Table}
 Matching a term against a pattern produces an \emph{environment}, or a
 mapping from pattern variable to term:
@@ -104,7 +100,7 @@ to effectively resugar them.
 \item \emph{Each pattern variable in the \Sc{rhs} also appears in the
   \Sc{lhs}.} Otherwise the pattern variable would be unbound during
   expansion.
-\item \Sc{Lhs} patterns contain no references or declarations. Rather, these
+\item The \Sc{lhs} pattern contains no references or declarations. Rather, these
   should be contained in its pattern variables during expansion.
 \end{enumerate}
 
@@ -117,18 +113,19 @@ to effectively resugar them.
   and, in the worst case, can exponentially blow up programs.
   We therefore disallow duplication,
   with some exceptions for pattern variables bound to atomic terms.
-\item \emph{Each transformation's \Sc{lhs} must have the form
+\item \emph{Each desugaring rule's \Sc{lhs} must have the form
   $\Node{C}{e_1,\,...,\,e_n}$.} We will rely on this fact when showing that
   unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
 \item References and declarations in the \Sc{rhs} are given fresh names during
   expansion to ensure hygiene.
-\item \emph{The transformations' \Sc{lhs}s must be disjoint.} If they
+\item \emph{The rules' \Sc{lhs}s must be disjoint.} If they
   are not, it presents issues both for resugaring evaluation sequences,
   and resugaring type systems.
 \end{enumerate}
 
-Some chapters go beyond the assumptions shown here: for instance, the
+Some of the resugaring chapters go beyond the assumptions shown here: for instance, the
 evaluation resugaring chapter (\cref{chap:resugar-eval}) formally
 supports ellipses (which allow matching zero or more repetitions of a
 pattern), and the scope resugaring chapter is agnostic to the order of
-desugaring (which is assumed to be \Sc{oi} here). However, 
+desugaring (which is assumed to be \Sc{oi} here). However, all
+chapters handle at least these kinds of sugars.
