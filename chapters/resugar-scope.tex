@@ -2,9 +2,11 @@
 
 TODO
 \begin{itemize}
-\item ``scope inference'' vs. ``scope resugaring''?
-\item Have sk proofread the new hygiene paragraphs (``one may wonder''
-  and next paragraph).
+\item Terminology: ``scope inference'' vs. ``scope resugaring''?
+\item Proofread: two new paragraphs about hygiene in general
+  (the paragraph that begins ``One may wonder'', and the next
+  paragraph).
+\item Proofread: section ``Hygiene for Evaluation Resugaring''
 \end{itemize}
 
 In this chapter, we show how to lift scoping rules defined on a core
@@ -2954,7 +2956,108 @@ process: since desugaring preserves scope by \cref{thm:rscope-resugar},
 bindings between variables must not change. Finally, property 3 is
 exactly what $\Op{checkScope}{}$ checks.
 
+\subsection{Hygiene for Evaluation Resugaring}
+\label{sec:rscope-eval-hygiene}
 
+We can also use this hygiene theorem to show how to make the
+resugaring system from the previous chapter (\Resugarer) hygienic,
+both during expansion and during unexpansion. Two things must be
+done. First, when {\Resugarer} desugars, it must (unsurprisingly) give
+newly introduced variables fresh names, and when resugaring it should
+account for these fresh names when matching. Second, this chapter's scope
+inference must be applied. This, unfortunately, disallows sugars that
+contain ellipses, although we are currently working to lift this
+restriction. Remember that scope inference serves a dual % TODO!
+purpose: it not only infers scope rules, it also rejects bad sugars
+for which no valid scope rules exist.
+
+While it may seem strange to use a scope inference process simply to
+make a system hygienic, keep in mind that we use a very strong
+definition of hygiene in this chapter. This definition refers to
+properties such as ``desugaring may not cause a variable to become
+unbound'' that are not even defined without the existence of surface
+scope rules. Presumably, a weaker version of hygiene could be
+achieved more easily (although it is not quite as simple as using an
+off-the-shelf hygienic expansion system, as it isn't immediately clear
+how that should interact with unexpansion).
+
+With that said, we can state and prove the lemma:
+\begin{lemma}
+  Let $\Lang$ be a set of desugaring rules, and let $\SigmaCore$ be
+  scope rules for its core langauge. Suppose that:
+  \begin{itemize}[noitemsep]
+  \item $\ExpandRecf$ gives fresh names to introduced variables (that
+    is, variables on the \Sc{rhs}).
+  \item $\UnexpandRecf$ allows any variable name to match against an
+    introduced variable.
+  \item No rule in $\Lang$ drops a pattern variable.
+  \item $\SigmaSurf = \Op{inferScope}{\SigmaCore,\,\Lang}$.
+  \end{itemize}
+  Then both $\ExpandRecf$ and $\UnexpandRecf$ preserve
+  $\alpha$-equivalence.
+\end{lemma}
+\begin{proof}
+  We will apply the hygiene theorem in both directions: both forward
+  (during expansion) and in reverse (during unexpansion). There are
+  two sets of requirements for the theorem: the assumptions about
+  resugaring in \cref{sec:rscope-des-assumptions}, and properties
+  (1)--(3) in this section. We must show that both sets of
+  requirements hold both forward and in reverse:
+  \subsubsection{Assumptions about desugaring (\cref{sec:rscope-des-assumptions})}
+  \begin{itemize}[noitemsep]
+  \item[] \emph{Assumption (1, forward)} is an assumption of this lemma.
+  \item[] \emph{Assumption (1, reverse)} is a basic well-formedness
+    requirement (a pattern variable on the \Sc{rhs} but not the
+    \Sc{lhs} does not make sense).
+  \item[] \emph{Assumption (2, forward)} is assumed in \cref{sec:reval-wf}.
+  \item[] \emph{Assumption (2, reverse)} is identical.
+  \item[] \emph{Assumption (3, forward)} is also assumed in \cref{sec:reval-wf}.
+  \item[] \emph{Assumption (3, reverse)} does not hold: rules'
+    \Sc{rhs}s often \emph{do} contain variables. Thus we must argue
+    that unexpanding a rule whose \Sc{rhs} contains variables does not
+    modify $\alpha$-equivalence. Since the variables in the term being
+    unexpanded were freshly named during desugaring, no other
+    variables in the term could possibly be bound by or bound to
+    them. Thus removing them preserves $\alpha$-equivalence.
+  \item[] \emph{Assumption (4, forward)} is an assumption of this lemma.
+  \item[] \emph{Assumption (4, reverse)} is vacuously true, since the
+    \Sc{lhs} is assumed to not contain variables (\cref{sec:reval-wf}).
+  \end{itemize}
+  \subsubsection{Properties (1)--(3)}
+  \begin{itemize}[noitemsep]
+  \item[] \emph{Property (1, forward)} holds because we assume
+    variables are given fresh names.
+  \item[] \emph{Property (1, reverse)} is vacuously true because we
+    assume that pattern variables are not dropped, so
+    $\mathit{Unused}$ is empty.
+  \item[] \emph{Property (2, forward)} follows from our scope
+    inference process: since desugaring preserves scope by
+    \cref{thm:rscope-resugar}, bindings between variables must not
+    change.
+  \item[] \emph{Property (2, reverse)} also follows from our scope
+    inference process, which shows that desugaring rules preserve
+    scope. Preserving scope is a symmetric property, and will hold
+    just as well if you run the rule in reverse.
+  \item[] \emph{Property (3, forward)} is checked by the
+    \Op{checkScope} subroutine of the \Op{inferScope} function; if the
+    check failed, then \Op{inferScope} would have failed.
+  \item[] \emph{Property (3, reverse)}: consider the two equations of
+    this property in turn. The first is equivalent to the first
+    equation in Property (1, forward), which we already showed. The
+    second is vacuously true (since $\mathit{Unused}$ is empty), as
+    well as following from the surface term being well-bound.
+  \end{itemize}
+  Thus the hygiene theorem applies in both directions, so both
+  $\ExpandRecf$ and $\UnexpandRecf$ are hygienic.
+\end{proof}
+
+% NOTE: If you allow a desugaring rule to delete a pattern variable,
+% then resugaring will not technically be hygienic. For example,
+% suppose that (lambda x. x) => (lambda x. 3). This is a legit
+% desugaring, but during resugaring 'x' will be captured! So I think
+% this hygiene violation is OK. HOWEVER, we don't seem to need/want to
+% drop pattern variables ANYWAYS, so I'm just stating the stronger
+% property.
 
 
 
@@ -3044,15 +3147,6 @@ exactly what $\Op{checkScope}{}$ checks.
 \section{Related Work}
 \label{sec:rscope-related}
 
-
-This work bears some similarity to our previous work on resugaring
-\cite{pombrio-resugar,pombrio-resugar-hygienic}:
-take part of a core
-language and lift or \emph{resugar} it to the surface
-language. However, our previous work
-lifted \emph{evaluation steps} though sugar
-\emph{dynamically}, while we now lift \emph{scoping rules} through sugar
-\emph{statically}.
 
 Below, we discuss work related to two aspects of our approach to
 scope inference. However, none of them infer scope through syntactic

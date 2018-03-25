@@ -1,16 +1,14 @@
 \chapter{Resugaring Evaluation Sequences}\label{chap:resugar-eval}
 
-\textbf{This whole chapter is copied from a paper and not in a coherent state.}
-
 TODO
 \begin{itemize}
-\item ``Transformation'' -> ``Rewrite''?
-\item Changed: Applying Transformations
+\item Proofread: Applying Transformations
 \item Proofread: first couple paragraphs
 \item Proofread: first mention of ``hygiene''
 \item Proofread: ``Maintaining Abstraction''
 \item Proofread: ``Maintaining Hyiene''
 \item Proofread: ``well-formedness of transformations'', number 5.
+\item Terminology: ``Transformation'' -> ``Rewrite''?
 \item Future link: ``Maintaining Hygiene''
 \end{itemize}
 
@@ -36,6 +34,11 @@ rewrite the reduction relation with instrumentation to track the origin of
 terms. We implement these ideas in a tool called {\Resugarer}, and
 formally verify key properties of our approach, given simplifying
 assumptions, in the Coq proof assistant.
+
+This chapter comes from work published in PLDI 2014 and ICFP 2015
+under the titles of \emph{Resugaring: Lifting Evaluation Sequences
+  through Syntactic Sugar} and \emph{Hygienic Resugaring of
+  Compositional Desugaring}~\cite{pombrio-resugar,pombrio-resugar-hygienic}.
 
 
 \section{Our Approach}
@@ -261,9 +264,9 @@ The implementation discussed in this
 chapter---{\Resugarer}---represents variables as strings and is not
 hygienic. The next chapter, \cref{chap:resugar-scope}, addresses how
 to infer scope rules for a surface language such that desugaring will
-by hygienic. In [REF], we argue that---with some minor adjustments to
-the algorithms here---this scope inference process will also make this
-chapter's \emph{resugaring} hygienic.
+by hygienic. In \cref{sec:rscope-eval-hygiene}, we argue that---with
+some minor adjustments to the algorithms here---this scope inference
+process will also make this chapter's \emph{resugaring} hygienic.
 
 
 \section{{\Resugarer} at Work}
@@ -362,7 +365,7 @@ pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
   &$|$& $[p_1 \dd p_n]$ & list of length $n$ \\
   &$|$& $[p_1 \dd p_n\,\Ell{p}]$ & list of length $\geq n$ \\
   &$|$& $\Value$ & primitive value \\
-  &$|$& $\Refn[i]{x}$ $|$ $\Decl[i]{x}$  & variable \\
+  &$|$& $\VarX$  & variable \\
   &$|$& $\Tag{o}{p}$ & origin tag \\ \\
 term $e$ &$::=$& $p$ & pattern w/o pattern variables or ellipses \\ \\
 origin tag $o$ &$::=$&
@@ -371,7 +374,9 @@ origin tag $o$ &$::=$&
 \end{Table}
 
 Variables are denoted by a lowercase
-identifier, compound nodes are written in s-expression form,
+identifier (we omit the reference/declaration distinction, and the
+identity $i$, because they are not relevant in this chapter);
+compound nodes are written in s-expression form;
 and lists are denoted by a
 bracketed list of subpatterns. Nodes must have fixed arity, so lists are
 used when a node needs to contain an arbitrary number of subterms.
@@ -380,11 +385,10 @@ from metasyntactic ellipses) in a list pattern denote zero or more
 repetitions of the pattern
 they follow.
 
-A \emph{term} $e$ is simply a pattern without variables or
+A \emph{term} $e$ is simply a pattern without pattern variables or
 ellipses. Tags and origins ($o$) are described in \cref{sec:reval-tagging}.
-We do \emph{not} address hygiene in our system. We believe it is largely
-orthogonal to the problem at hand, and that our transformation system
-could be made hygienic without significant alterations.
+We do \emph{not} address hygiene in this chapter, but rather discuss
+it in \cref{sec:rscope-eval-hygiene}.
 
 Our definition of patterns determines both the expressiveness of the
 resulting transformation system and the ability to formally reason about
@@ -416,7 +420,7 @@ Our transformations are implemented with simpler operations on patterns:
 matching and substitution.
 
 \emph{Matching} a term against a pattern induces an \emph{environment}
-that binds the pattern's variables. This environment may be
+that binds the pattern's pattern variables. This environment may be
 \emph{substituted} into a pattern to produce another term. Formally, an
 environment is a mapping from pattern variables $\PVarA$ to bindings $b$,
 where each \emph{binding} is either a term $e$, a \emph{list binding}
@@ -425,7 +429,7 @@ $\BList{b_1 \dd b_n\ \Ell{b_e}}$. A pattern variable within ellipses is
 bound to a list binding $\BList{b_1 \dd b_n}$ instead of a list term
 $[b_1 \dd b_n]$; they behave slightly differently under
 substitution. Ellipsis bindings are similar, but needed only during
-unification when a variable within an ellipsis is itself bound to an
+unification when a pattern variable within an ellipsis is itself bound to an
 ellipsis pattern.
 
 We will write $\Match{e}{p}$ to denote matching a term $e$ against a
@@ -451,6 +455,7 @@ b &:=& e                &\text{(term)} \\
 \begin{figure*}[t]
 \[\begin{array}{lclll}
 \Match{\Value}{\Value} &=& \{\} \\
+\Match{\VarX}{\VarX} &=& \{\} \\
 \Match{e}{\PVarA} &=& \{\PVarA \to e\} \\
 \Match{[e_1 \dd e_n]}{[p_1 \dd p_n]} &=&
   \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\
@@ -461,6 +466,7 @@ b &:=& e                &\text{(term)} \\
   \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\ \\
 
 \Subs{\gamma}{\Value}        &=& \Value \\
+\Subs{\gamma}{\VarX}        &=& \VarX \\
 \Subs{\gamma}{[p_1 \dd p_n]}    &=& [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n}) \\
 \Subs{\gamma}{[p_1 \dd p_n \Ell{p_e}]} &=&
   [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n\,\DoublePlus\,split(\gamma, p_e)} \\
@@ -508,7 +514,7 @@ Let([Binding("t" true)]
 \end{Codes}
 
 Later, we will need to compute unifications as well. We omit showing the
-algorithm; it is straightforward since we disallow duplicate variables (as
+algorithm; it is straightforward since we disallow duplicate pattern variables (as
 seen in the next section).
 
 \subsubsection{Well-formedness of Transformations}
@@ -517,21 +523,21 @@ seen in the next section).
 The definitions we have given for matching and substitution are not
 well-behaved for all patterns. Even the crucial property that
 $\Subs{(\Match{e}{p})}{e} = e$ whenever $\Match{e}{p}$ exists fails to hold in certain
-situations, such as when a pattern's ellipsis contains no variables (e.g.,
+situations, such as when a pattern's ellipsis contains no pattern variables (e.g.,
 $(\Ell{3})$). For this reason and others, we require the following
 well-formedness criteria for the \Sc{lhs} and \Sc{rhs} of each rule:
 
 \begin{enumerate}
-\item \emph{Each variable in the \Sc{rhs} also appears in the
-  \Sc{lhs}.} Otherwise the variable would be unbound during expansion.
-\item \emph{Each variable appears at most once in the \Sc{lhs} and at
+\item \emph{Each pattern variable in the \Sc{rhs} also appears in the
+  \Sc{lhs}.} Otherwise the pattern variable would be unbound during expansion.
+\item \emph{Each pattern variable appears at most once in the \Sc{lhs} and at
   most once in the \Sc{rhs}.}
-  Allowing duplicate variables complicates matching, unification,
+  Allowing duplicate pattern variables complicates matching, unification,
   and proofs of correctness. It also copies code
   and, in the worst case, can exponentially blow up programs.
   We therefore disallow duplication,
-  with the sole exception of variables bound to atomic terms.
-\item \emph{An ellipsis of depth $n$ must contain at least one variable
+  with the sole exception of pattern variables bound to atomic terms.
+\item \emph{An ellipsis of depth $n$ must contain at least one pattern variable
   that either appears at depth $n$ or greater on the other side of the
   rule, or does not appear on the other side of the rule.} Otherwise it is
   impossible to know how many times to repeat its pattern during
@@ -570,14 +576,14 @@ to know which rule to use, as multiple rules may have similar or identical
 
 Unexpansion proceeds in reverse, matching against $p_i'$ and then
 substituting into $p_i$. Recall, however, that our well-formedness
-criteria insisted that the variables in a rule's \Sc{rhs} pattern be a
+criteria insisted that the pattern variables in a rule's \Sc{rhs} pattern be a
 subset of those in its \Sc{lhs} pattern, but not vice versa. This allows a
 rule to ``forget'' information when applied forward. Allowing information
 to be lost substantially increases the set of desugarings expressible in
 our system in exchange for breaking the symmetry between expansion and
-unexpansion. Because variables may be dropped in the \Sc{rhs}, the
+unexpansion. Because pattern variables may be dropped in the \Sc{rhs}, the
 unexpansion of a term $e'$ takes an additional argument---the original
-input term $e$---with which to bind variables in $p_i$ that do not
+input term $e$---with which to bind pattern variables in $p_i$ that do not
 appear in $p_i'$. Formally,
 \[\begin{array}{lllll}
   \Unexpand{(j, e')}{e} &=&
@@ -586,7 +592,7 @@ appear in $p_i'$. Formally,
 Notice that $e$ contains a good deal of redundant
 information. Since $p_j$ and $p_j'$ are statically known, it
 suffices to store only the environment $\gamma = e \match p_j$
-restricted to the variables not free in $p_j'$. We will say that $\gamma$
+restricted to the pattern variables not free in $p_j'$. We will say that $\gamma$
 \emph{stands in} for $e$, and overload $\Unexpandf$ by writing:
 \[\begin{array}{lllll}
   \Unexpand{(j, e')}{\gamma} &=&
@@ -684,9 +690,9 @@ indicating whether it was made visible in this way; we will call these tags
 {\MacHeadf} tags serve a dual role. First, they store the index of the
 rule which was applied, thus ensuring that only that rule may be applied
 in reverse during resugaring; this is necessary to maintain
-Emulation. Second, when the \Sc{rhs} of a rule contains fewer variables than
+Emulation. Second, when the \Sc{rhs} of a rule contains fewer pattern variables than
 the \Sc{lhs}, {\MacHeadf} tags store the bindings $\gamma$ for those
-variables present in the \Sc{lhs} but not in the \Sc{rhs}.
+pattern variables present in the \Sc{lhs} but not in the \Sc{rhs}.
 
 While {\MacHeadf} tags mark which rule they originated from, {\MacBodyf}
 tags do not. In principle, this
@@ -708,6 +714,7 @@ Other desugaring orders, e.g., bottom-up instead of top-down, are
 applying $\Expandf$ at each node:
 \[\begin{array}{lcl}
 \ExpandRec{\Value} \!&=&\! \Value \\
+\ExpandRec{\VarX} \!&=&\! \VarX \\
 \ExpandRec{\Node{C}{e_1,\,...,\,e_n}} \!&=&\!
   \ExpandRec{\Tag{\MacHead{i}{\gamma}}{e'}} \\
   & \multicolumn{2}{l}{\text{
@@ -745,6 +752,7 @@ Abstraction.
 \end{array}\]
 \[\begin{array}{lcl}
 \UnexpandRecH{\Value} &=& \Value \\
+\UnexpandRecH{\VarX} &=& \VarX \\
 \UnexpandRecH{\Tag{\MacBody{b}}{e}} &=&
   \Tag{\MacBody{b}}{\UnexpandRecH{e}} \\
 \UnexpandRecH{\Tag{\MacHead{i}{\gamma}}{e'}} &=&

@@ -277,13 +277,14 @@
 \newcommand{\NodeRm}[2]{\Node{\texttt{#1}}{#2}}
 \newcommand{\NodeStd}{\Node{C}{\Seqn[1]{t}[n]}}
 \newcommand{\ASTNode}[4]{(\Variable{#3}{}{#2}{#1}\;#4)}
-\newcommandx*{\Node}[3][2=\empty]{({#1}_{#2}\;#3)}
-\newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
-\newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
-\newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
-\newcommand{\CoreLabel}{\Variable{Core}{}{}{C}}
-\newcommand{\AuxLabel}{\Variable{Aux}{}{}{C}}
-\newcommand{\SurfLabel}{\Variable{Surf}{}{}{C}}
+%\newcommandx*{\Node}[3][2=\empty]{({#1}_{#2}\;#3)}
+\newcommandx*{\Node}[2]{({#1}\;#2)}
+%\newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
+%\newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
+%\newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
+%\newcommand{\CoreLabel}{\Variable{Core}{}{}{C}}
+%\newcommand{\AuxLabel}{\Variable{Aux}{}{}{C}}
+%\newcommand{\SurfLabel}{\Variable{Surf}{}{}{C}}
 \newcommandx*{\Decl}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{d}}
 \newcommandx*{\Refn}[3][1=\empty, 3=\empty]{\Variable{#1}{#2}{#3}{r}}
 \newcommand{\Value}{\textit{value}}
@@ -751,7 +752,7 @@ Finally, I would like to thank the NSF, which partly funded all of this work.
 \include{chapters/intro}
 \include{chapters/taxonomy}
 \part{Desugaring}
-\include{chapters/formalism}
+\include{chapters/notation}
 %\include{chapters/well-formedness}
 \part{Resugaring}
 \include{chapters/resugar-eval}

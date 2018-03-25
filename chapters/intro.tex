@@ -4,7 +4,7 @@
 
 % http://www.cs.cmu.edu/~crary/819-f09/Landin64.pdf
 The term \emph{syntactic sugar} was introduced by Peter Landin in
-1964[CITE]. It refers to surface syntactic forms that are provided for
+1964~\cite{syntactic-sugar}. It refers to surface syntactic forms that are provided for
 convenience, but could instead be written using the syntax of the rest
 of the language. This captures the spirit and purpose of syntactic
 sugar.
@@ -40,7 +40,7 @@ for (Iterator i = best_numbers.iterator(); i.hasNext(); ) \{
 
 And in fact the Java spec formally recognizes this equivalence, and
 writes, ``The meaning of the enhanced for statement is given by
-translation into a basic for statement. [CITE]'' Ignoring some
+translation into a basic for statement.''~\cite[section 14.14.2]{java8} Ignoring some
 irrelevant details, it states (in so many words) that this \emph{sugar}:
 \begin{Codes}
 for (<type> <var> : <expr>) \{ <statement> \}
@@ -139,9 +139,9 @@ we should look for things that most programming languages
     an argument to a function: if you attempt to do so, the value the
     variable is bound to will be passed instead). Therefore, creating
     new binding constructs is a good use for syntactic sugar in most
-    languages. However, in R[CITE] variable names can be abstracted
+    languages. However, in R variable names can be abstracted
     over (e.g. \Code{assign("x", 3); x} prints 3), and so sugar isn't
-    necessary for this purpose.
+    necessary for this purpose~\cite{rlang}.
   \item Most languages use eager evaluation,
     which forces the arguments to a function to be
     evaluated when it is called, rather than allowing the function to
@@ -230,7 +230,7 @@ The rest of this thesis is organized as follows:\marginpar{%
 \begin{description}
 \item[\Cref{chap:taxonomy}] discusses and taxonomizes existing
   desugaring systems (of which there are a wide variety).
-\item[\Cref{chap:formalism}] provides a formalism for desugaring that
+\item[\Cref{chap:notation}] provides a formalism for desugaring that
   will serve as groundwork for the rest of the chapters.
 % [TODO] \item[\Cref{chap:well-formedness}] provides an algorithm for
 % checking that desugaring rules preserve syntactic well-formedness.
