@@ -257,9 +257,9 @@ Safety and expressiveness are counterpoints. Safety comes from the
   \item[Syntactic Safety] Can a sugar expand to syntactically invalid
     code? For example, in the C Preprocessor (\cref{sec:cpre}), this
     (textual) macro:
-\begin{Codes}
+\begin{CorrectlyIndentedCodes}
 #define discriminant(a,b,c) ((b) * (b) - (4 * (a) * (c))
-\end{Codes}
+\end{CorrectlyIndentedCodes}
     is a completely valid macro that the preprocessor will happily
     expand for you, leading to syntax errors at its use site because
     its parentheses aren't balanced.
@@ -276,22 +276,22 @@ Safety and expressiveness are counterpoints. Safety comes from the
     an example, consider this simple \Code{or} sugar (using Racket
     syntax):\marginpar{Why not just write \Code{(if a a b)}? That
       wouldn't work well if \Code{a} had side effects.}
-\begin{Codes}
+\begin{CorrectlyIndentedCodes}
 (define-syntax-rule
   (or a b)
   (let ((temp a)) (if temp temp b)))
-\end{Codes}
+\end{CorrectlyIndentedCodes}
     If a desugaring system did nothing special with variables, then
     this code:
-\begin{Codes}
+\begin{CorrectlyIndentedCodes}
 (let ((temp "70 degrees"))
   (or false temp))
-\end{Codes}
+\end{CorrectlyIndentedCodes}
     would desugar into this code:
-\begin{Codes}
+\begin{CorrectlyIndentedCodes}
 (let ((temp "70 degrees"))
   (let ((temp false)) (if temp temp temp)))
-\end{Codes}\marginpar{%
+\end{CorrectlyIndentedCodes}\marginpar{%
   Some of the examples here were inspired by Clinger and Rees CITE.
 }%[CITE]
     which would then evaluate to \Code{false}, which is wrong. The
@@ -319,14 +319,18 @@ Safety and expressiveness are counterpoints. Safety comes from the
     that a desugaring system is \emph{type safe} if sugars cannot
     introduce type errors. For example, this MetaOCaml program (the
     \Code{.< ... >.} syntax quotes an expression):
-\begin{Codes}
+\begin{CorrectlyIndentedCodes}
 let sugar() = .<3 + "four">.;;
-\end{Codes}
+\end{CorrectlyIndentedCodes}
     does not compile because of the type error present in the
     sugar---even though the sugar is never used.
 \end{description}
 
-\section{C Preprocessor} \label{sec:cpre}
+\section{Applying the Taxonomy to Desugaring Systems}
+
+In this section, we apply the taxonomy to a number of desugaring systems.
+
+\subsection{C Preprocessor} \label{sec:cpre}
 
 \Desc{Desugaring Order} IO
 
@@ -392,7 +396,7 @@ inherent to text-based transformations, and essentially cannot be
 fixed from within the paradigm. \emph{Overall, code transformations
   should never operate at the level of text.}
 
-\section{C++ Templates} \label{sec:cpp}
+\subsection{C++ Templates} \label{sec:cpp}
 
 \Desc{Representation} Concrete syntax
 \Desc{Authorship} User-defined
@@ -468,7 +472,7 @@ a template see the concrete type (e.g. \Code{int}) that is passed to
 it, even if this type is the result of another template expansion.
 
 
-\section{Rust Macros} \label{sec:rust}
+\subsection{Rust Macros} \label{sec:rust}
 
 \Desc{Representation} Concrete Syntax
 
@@ -482,7 +486,7 @@ it, even if this type is the result of another template expansion.
 \Desc{Discussion}
 
 
-\section{Haskell Templates} \label{sec:haskell}
+\subsection{Haskell Templates} \label{sec:haskell}
 
 \Desc{Representation} Concrete or abstract syntax
 \Desc{Authorship} User-defined
@@ -504,7 +508,7 @@ NOTES:
 \end{itemize}
 
 
-\section{MetaOCaml} \label{sec:metaocaml}
+\subsection{MetaOCaml} \label{sec:metaocaml}
 
 \Desc{Representation} Concrete syntax
 \Desc{Authorship} User-defined
