@@ -1826,13 +1826,24 @@ leads to the \emph{strength} of our hygiene property. While ``sanity''
 is a somewhat subjective notion, we can at least show that our binding
 language passes one basic litmus test. Any set of scope rules in our
 binding language will lead to a notion of $\alpha$-equivalence that is
-invariant under permuting variables:
+invariant under permuting variable names (that is, it is
+\emph{equivariant}~\cite{nominal-logic}):
 \begin{lemma}
-  If $\sigma$ is a variable permutation, and
-  $\SaysScopeEqa[\Sigma]{e}{e'}$, then $\SaysScopeEqa[\Sigma]{\sigma{e}}{\sigma(e')}$.
+  If $\sigma$ is a variable permutation and
+  $\SaysScopeEqa[\Sigma]{e}{e'}$, then
+  $\SaysScopeEqa[\Sigma]{\sigma(e)}{\sigma(e')}$.
 \end{lemma}
 \begin{proof}[Proof sketch]
-  .[FILL]
+  A formula $\phi(a_1, \dd, a_n)$ is \emph{equivariant} if for all
+  arguments $a_1, \dd, a_n$, and for all permuations of variable names
+  $\sigma$, $\phi(a_1, \dd, a_n) \text{ iff } \phi(\sigma(a_1), \dd,
+  \sigma(a_n))$.  The only parts of $\alpha$-equivalence
+  (\cref{def:rscope-eqa}) that inspect variable names are the various
+  rules that implicitly check that two variables have the same name
+  (such as S-Decl and S-WB). However, equality checking is
+  equivariant. Furthermore, formulas that do not inspect or modify
+  names are equivariant, and any composition of equivariant formulas
+  is itself equivariant. Thus $\alpha$-equivalence is equivariant.
 \end{proof}
 The ``insane'' notion of $\alpha$-equivalence above---that defines
 surface language $\alpha$-equivalence in terms of a naive
@@ -3009,7 +3020,7 @@ With that said, we can state and prove the lemma:
   Then both $\ExpandRecf$ and $\UnexpandRecf$ preserve
   $\alpha$-equivalence.
 \end{lemma}
-\begin{proof}
+\begin{proof}[Proof sketch]
   We will apply the hygiene theorem in both directions: both forward
   (during expansion) and in reverse (during unexpansion). There are
   two sets of requirements for the theorem: the assumptions about
@@ -3024,15 +3035,14 @@ With that said, we can state and prove the lemma:
   \item[] \emph{Assumption (1, reverse)} is a basic well-formedness
     requirement (a pattern variable on the \Sc{rhs} but not the
     \Sc{lhs} does not make sense).
-  \item[] \emph{Assumption (2, reverse)} is identical.
+  \item[] \emph{Assumption (2, reverse)} is identical to Assumption (2, forward).
   \item[] \emph{Assumption (3, reverse)} does not hold: rules'
     \Sc{rhs}s often \emph{do} contain variables. Thus we must argue
     that unexpanding a rule whose \Sc{rhs} contains variables does not
     modify $\alpha$-equivalence. Since the variables in the term being
     unexpanded were freshly named during desugaring, no other
     variables in the term could possibly be bound by or bound to
-    them. Thus removing them preserves $\alpha$-equivalence.
-  \item[] \emph{Assumption (4, forward)} is an assumption of this lemma.
+    them. Thus removing them (all at once) preserves $\alpha$-equivalence.
   \item[] \emph{Assumption (4, reverse)} is vacuously true, since the
     \Sc{lhs} is assumed to not contain variables (\cref{sec:reval-wf}).
   \end{itemize}
@@ -3052,8 +3062,8 @@ With that said, we can state and prove the lemma:
     scope. Preserving scope is a symmetric property, and will hold
     just as well if you run the rule in reverse.
   \item[] \emph{Property (3, forward)} is checked by the
-    \Op{checkScope} subroutine of the \Op{inferScope} function; if the
-    check failed, then \Op{inferScope} would have failed.
+    \Op{checkScope}{} subroutine of the \Op{inferScope}{} function; if the
+    check failed, then \Op{inferScope}{} would have failed.
   \item[] \emph{Property (3, reverse)}: consider the two equations of
     this property in turn. The first is equivalent to the first
     equation in Property (1, forward), which we already showed. The
