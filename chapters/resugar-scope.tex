@@ -1,14 +1,5 @@
 \chapter{Resugaring Scope}\label{chap:resugar-scope}
 
-TODO
-\begin{itemize}
-\item Terminology: ``scope inference'' vs. ``scope resugaring''?
-\item Proofread: two new paragraphs about hygiene in general
-  (the paragraph that begins ``One may wonder'', and the next
-  paragraph).
-\item Proofread: section ``Hygiene for Evaluation Resugaring''
-\end{itemize}
-
 In this chapter, we show how to lift scoping rules defined on a core
 language to rules on the surface, a process of \emph{scope inference}.
 In the process we introduce a new representation of binding
@@ -1807,26 +1798,45 @@ and can then ask whether these inferred rules preserve
 $\alpha$-equivalence. In \cref{sec:rscope-hygiene} we will show that they do,
 so long as inference was successful and $\Op{scopeCheck}{}$ passed.
 
-One may wonder how useful of a property this is. To put it bluntly:
-what good does it for
-desugaring to preserve $\alpha$-equivalence, when $\alpha$-equivalence
-for the surface language was \emph{made up}?  In fact, there is a
-situation in which preserving $\alpha$-equivalence is completely
-useless: define $e_1 =_\alpha e_2$ in the surface language to mean
-that $\Desugar{e_1} =_\alpha \Desugar{e_2}$ in the core language,
-where $\Desugar{}$ is a naive, scope-unaware desugaring. Then
-desugaring will preserve $\alpha$-equivalence, despite not being
-hygienic in any way!
-It is therefore crucial that our binding language cannot express this
-(rather insane) notion of surface-language $\alpha$-equivalence. It
-is the \emph{weakness} (i.e., sanity) of our binding language that
-leads to the \emph{strength} of our hygiene property.
-
 This covers the $\Op{solve}{}$ algorithm in \cref{fig:rscope-resugar}, and
 completes our description of scope inference: (i) find constraints for
 every desugaring rule; (ii) find their least fixpoint, starting
 with the known scoping rules for the core language; and (iii) check
 that none of the sugars can produce unbound identifiers.
+
+
+\subsection{Discussion of the Hygiene Property}
+
+One may wonder how useful of a property preserving $\alpha$-equivalence is.
+To put it strongly: what good is it
+desugaring to preserve $\alpha$-equivalence, when $\alpha$-equivalence
+for the surface language was \emph{made up}?  In fact, there is a
+situation in which preserving $\alpha$-equivalence is useless.
+Suppose that $e_1 =_\alpha e_2$ in the surface language was \emph{defined} to mean
+that $\Desugar{e_1} =_\alpha \Desugar{e_2}$ in the core language,
+where $\Desugar{}$ is a naive, scope-unaware desugaring. Then
+desugaring will preserve $\alpha$-equivalence, despite not being
+hygienic in any way!
+
+It is therefore crucial that our binding language cannot express this
+(rather insane) notion of surface-language $\alpha$-equivalence. It
+is the \emph{weakness} (i.e., sanity) of our binding language that
+leads to the \emph{strength} of our hygiene property. While ``sanity''
+is a somewhat subjective notion, we can at least show that our binding
+language passes one basic litmus test. Any set of scope rules in our
+binding language will lead to a notion of $\alpha$-equivalence that is
+invariant under permuting variables:
+\begin{lemma}
+  If $\sigma$ is a variable permutation, and
+  $\SaysScopeEqa[\Sigma]{e}{e'}$, then $\SaysScopeEqa[\Sigma]{\sigma{e}}{\sigma(e')}$.
+\end{lemma}
+\begin{proof}
+  .[FILL]
+\end{proof}
+The ``insane'' notion of $\alpha$-equivalence above---that defines
+surface language $\alpha$-equivalence in terms of a naive
+desugaring---does not respect variable permutation, and thus cannot be
+expressed in our binding language.
 
 
 \subsection{Correctness and Runtime}
