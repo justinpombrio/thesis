@@ -638,7 +638,7 @@ a normalization.
 
 \subsection{Relationship to ``Binding as Sets of Scopes''}
 \label{sec:rscope-sos}
-{\Sap} aligns with the notion of scope expressed by \cite{flatt:scope}.
+{\Sap} aligns with the notion of scope expressed by Flatt~\cite{flatt:scope}.
 In his formulation,
 each subterm in the program is labeled with a \emph{set of scopes},
 called its \emph{scope set}. A reference's binding (i.e., declaration)
@@ -1880,7 +1880,7 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
        \bigwedge_i \left(\bigwedge_j F_{ij}' \text{ iff } \bigwedge_k F_{ik}''\right)
     \]
     That is,
-    \begin{enumerate}
+    \begin{enumerate}[noitemsep]
       \item Every fact in $\SigmaSurf$ is true
       \item Every fact in $\SigmaCore$ is true
       \item Every fact in the core language but \emph{not} in
@@ -1893,7 +1893,7 @@ The $\Op{inferScope}{}$ algorithm correctly solves the constraints:
     $\SigmaCore$ and $\mathbb{C}$. Furthermore, every step of $\Op{solve}{}$
     maintains $\phi$. There are three kinds of steps to consider, and
     each follows from a logical equivalence:
-    \begin{itemize}
+    \begin{itemize}[noitemsep]
     \item ``If a fact $F$ in a constraint is in $\SigmaSurf$:
       Delete $F$ from the constraint.''
       \[ F \wedge (F \wedge F_2 \wedge ...
@@ -2020,8 +2020,10 @@ describe many of these sugars in more detail, ending with \texttt{do}.
 
 In practice, the running times are very modest. In our implementation in
 Rust (\url{rust-lang.org}) all of the sugars we have tested run in
-about 130ms on a generic desktop, of which ~60ms is parsing
-time. Therefore, the speed is even fast enough for scope inference to
+about 18ms on a generic desktop, of which ~8ms is parsing
+time.\marginpar{The original publication gave a total running time of
+  130ms because the code was compiled without \Code{cargo -{}-release}.}
+Therefore, the speed is even fast enough for scope inference to
 be used as part of a language developer's rapid prototyping workflow.
 
 \subsection{Case Study: Pyret \texttt{for} Expressions}
@@ -2938,8 +2940,7 @@ their sources in $e$.
           renamed, $\DeclXi$ must be in $\Image{\DeclX}$. Thus:
           \begin{equation}
             \text{If } \SaysScopeBound{\Desugar{e}}{\RefnXi}{\DeclXi}
-            \text{ and } \phi(\RefnXi) \text{ exists },
-            \text{ then } \phi(\DeclXi) \text{ exists, and }
+            \text{ and } \phi(\RefnXi) \text{ exists }, \text{ then } \phi(\DeclXi) \text{ exists, and }
             \phi(\RefnXi) \Bound \phi(\DeclXi)
           \end{equation}
       \end{enumerate}
@@ -2995,15 +2996,15 @@ how that should interact with unexpansion).
 
 With that said, we can state and prove the lemma:
 \begin{lemma}
-  Let $\Lang$ be a set of desugaring rules, and let $\SigmaCore$ be
+  Let $\Rs$ be a set of desugaring rules, and let $\SigmaCore$ be
   scope rules for its core langauge. Suppose that:
   \begin{itemize}[noitemsep]
   \item $\ExpandRecf$ gives fresh names to introduced variables (that
     is, variables on the \Sc{rhs}).
   \item $\UnexpandRecf$ allows any variable name to match against an
     introduced variable.
-  \item No rule in $\Lang$ drops a pattern variable.
-  \item $\SigmaSurf = \Op{inferScope}{\SigmaCore,\,\Lang}$.
+  \item No rule in $\Rs$ drops a pattern variable.
+  \item $\SigmaSurf = \Op{inferScope}{\SigmaCore,\,\Rs}$.
   \end{itemize}
   Then both $\ExpandRecf$ and $\UnexpandRecf$ preserve
   $\alpha$-equivalence.
@@ -3012,18 +3013,18 @@ With that said, we can state and prove the lemma:
   We will apply the hygiene theorem in both directions: both forward
   (during expansion) and in reverse (during unexpansion). There are
   two sets of requirements for the theorem: the assumptions about
-  resugaring in \cref{sec:rscope-des-assumptions}, and properties
+  resugaring in \cref{sec:formal-reqs}, and properties
   (1)--(3) in this section. We must show that both sets of
   requirements hold both forward and in reverse:
-  \subsubsection{Assumptions about desugaring (\cref{sec:rscope-des-assumptions})}
+  \subsubsection{Assumptions about desugaring (\cref{sec:formal-reqs})}
+  The three assumptions in \cref{sec:formal-reqs} are also assumed for
+  evaluation resugaring (in \cref{sec:reval-wf}), so the
+  \emph{forward} versions of them hold. Now consider the reverse versions:
   \begin{itemize}[noitemsep]
-  \item[] \emph{Assumption (1, forward)} is an assumption of this lemma.
   \item[] \emph{Assumption (1, reverse)} is a basic well-formedness
     requirement (a pattern variable on the \Sc{rhs} but not the
     \Sc{lhs} does not make sense).
-  \item[] \emph{Assumption (2, forward)} is assumed in \cref{sec:reval-wf}.
   \item[] \emph{Assumption (2, reverse)} is identical.
-  \item[] \emph{Assumption (3, forward)} is also assumed in \cref{sec:reval-wf}.
   \item[] \emph{Assumption (3, reverse)} does not hold: rules'
     \Sc{rhs}s often \emph{do} contain variables. Thus we must argue
     that unexpanding a rule whose \Sc{rhs} contains variables does not
@@ -3173,24 +3174,24 @@ its meaning. Typically, however, $\alpha$-equivalence is only
 \emph{defined} for the core language. Thus, traditional approaches to
 hygiene have had to focus on avoiding specific issues like
 variable capture~\cite{hygienic-macros}.
-Recent work by \cite{adams-hygiene} advances the theory by
+Recent work by Adams advances the theory by
 giving an algorithm-independent set of issues to
-avoid. However, even this work lacks the ground truth of
+avoid~\cite{adams-hygiene}. However, even this work lacks the ground truth of
 $\alpha$-equivalence preservation to base its claims on.
 
-In contrast, \cite{herman-hygiene}
+In contrast, Herman et al.
 advocate that sugar specify the binding structure of the constructs
-they introduce, and build a system that does so.
-\cite{stansifer-romeo} follow with a more powerful system
-called Romeo based on the same approach.
+they introduce, and build a system that does so~\cite{herman-hygiene}.
+Stansifer et al. follow with a more powerful system
+called Romeo based on the same approach~\cite{stansifer-romeo}.
 (We will discuss the binding languages used by these two tools in the
 next subsection.)
 Since we \emph{infer} scope rules for the surface language, we can
 verify that desugaring preserves $\alpha$-equivalence without
 requiring scope annotations on sugars.
 
-\cite{erdweg-hygiene} put forward an interesting alternative approach to hygiene
-with the \emph{name-fix} algorithm.
+Erdweg et al. put forward an interesting alternative approach to hygiene
+with the \emph{name-fix} algorithm~\cite{erdweg-hygiene}.
 \emph{Name-fix} assumes that the scoping for the surface language is
 known. Instead of using this information to \emph{avoid} unwanted
 variable capture in the first place, \emph{name-fix} uses it
@@ -3200,7 +3201,7 @@ preserves $\alpha$-equivalence, but for a \emph{weaker} definition
 of $\alpha$-equivalence than ours that doesn't include
 well-boundedness (thus allowing desugaring to produce unbound variables).
 
-Our work differs from the above work: we assume that scope is defined
+This chapter's work differs from the above work: we assume that scope is defined
 \emph{only} for the core language, and not for the
 surface language (\`a la Erdweg) or for individual rewrite rules (\`a la Herman).
 This assumption is also made by traditional capture-avoiding work on
@@ -3225,7 +3226,7 @@ language (\cref{sec:rscope-rules}) falls in this category.
 \paragraph{Modeling Scope}
 
 Our description of {\sap} is similar to the view
-expressed by \cite{flatt:scope} in ``Binding as Sets of Scopes''.\marginpar{%
+expressed by Flatt in ``Binding as Sets of Scopes''~\cite{flatt:scope}.\marginpar{%
 {\Sap} and Flatt's Sets of Scopes were discovered
   independently: {\sap} arose from some
   of the ideas from Romeo~\cite{stansifer-romeo}.
@@ -3233,8 +3234,8 @@ expressed by \cite{flatt:scope} in ``Binding as Sets of Scopes''.\marginpar{%
 In fact, Flatt's notion of scope can be expressed as a preorder,
 as we show in \cref{sec:rscope-sos}.
 
-\cite{neron-scope} describe \emph{scope graphs}, which are also based on a
-similar view, but have a more complicated set of definitions.
+Neron et al. describe \emph{scope graphs}, which are also based on a
+similar view, but have a more complicated set of definitions~\cite{neron-scope}.
 Unlike {\sap}, however, scope graphs include mechanisms for handling
 module scope, which gives it the ability to model both modules and
 also other constructs like objects and field lookup.
@@ -3248,7 +3249,7 @@ future work.
 
 Our preorder-based binding specification language is novel, but
 similar in expressiveness to many others.  It is perhaps most similar
-to \cite{stansifer-romeo}'s Romeo.
+to Stansifer et al.'s Romeo~\cite{stansifer-romeo}.
 The primary difference between the two is that
 Romeo has slightly more expressive power: given two declarations
 $\DeclX[1]$ and $\DeclX[2]$, it is possible in Romeo for $\DeclX[1]$
@@ -3263,17 +3264,17 @@ should be allowed to shadow one another), and to simplify scope
 inference (which would otherwise have to manipulate formulas over
 Romeo's combinators, instead of merely preorders).
 
-In a similar vein, \cite{sewell-ott-jfp} present a semantics engineering
+In a similar vein, Sewell et al. present a semantics engineering
 workbench called Ott, which includes a comparable binding
-specification language. Like Romeo, Ott would allow two declarations
+specification language~\cite{sewell-ott-jfp}. Like Romeo, Ott would allow two declarations
 to each shadow one another in different places. Furthermore, it gives
 additional power, by allowing terms to \emph{name} what they provide.
 For instance, a term could export \emph{two} binding lists, one named
 ``value-bindings'' and one named ``type-bindings''.
 
-\cite{weirich-scope} present a binding specification language called
+Weirich et al. present a binding specification language called
 Unbound, which can be expressed using {\sap} (and
-hence is no more expressive than it).
+hence is no more expressive than it)~\cite{weirich-scope}.
 They implement Unbound in Haskell, and give language-agnostic
 implementations of operations such as constructing and deconstructing
 terms, determining $\alpha$-equivalence, and performing substitution.
