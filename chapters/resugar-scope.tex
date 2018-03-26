@@ -50,7 +50,7 @@ after desugaring (\cref{thm:rscope-resugar}).
 Essentially, scope inference ``pushes scope back through the sugar''. We
 can think of this as statically lifting a ``lightweight semantics'' of
 the language. Thus it is a precursor to lifting other notions of semantics
-(whether type-checking rules or the evaluation rules themselves),
+(such as lifting type-checking rules, as we do in the next chapter)
 though of course the mechanics of doing so will depend heavily on the
 semantics itself.
 
@@ -520,8 +520,8 @@ For convenience, we repeat that definition here:
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 term $e$ &$::=$& $\Value$ & primitive value \\
   &$|$& $\Node{C}{e_1 \dd e_n}$ & \Sc{ast} node \\
-  &$|$& $\Refn[i]{x}$  & variable reference \\
-  &$|$& $\Decl[i]{x}$  & variable declaration \\
+  &$|$& $\Refn[i]{x}$  & variable reference at position $i$ \\
+  &$|$& $\Decl[i]{x}$  & variable declaration at position $i$ \\
 \end{Table}
 To reiterate, references and declarations have both a name \textsc{x}
 (as written in the source), and an \textsc{ast} position $i$
@@ -1499,7 +1499,8 @@ pattern $p$ &$::=$& $\Value$ & primitive value \\
   &$|$& $\Decl[i]{x}$  & variable declaration
 \end{Table}
 Furthermore, desugaring must obey the requirements of
-\cref{sec:formal-reqs}.
+\cref{sec:formal-reqs}, and references and declarations in the
+\Sc{rhs} of a rule must be given fresh names during expansion.
 
 When desugaring, there may be more than one rewrite rule that applies
 to a given term. \textbf{None of the results of this chapter depend on
@@ -1808,7 +1809,7 @@ that none of the sugars can produce unbound identifiers.
 \subsection{Discussion of the Hygiene Property}
 
 One may wonder how useful of a property preserving $\alpha$-equivalence is.
-To put it strongly: what good is it
+To put it strongly: what good is it for
 desugaring to preserve $\alpha$-equivalence, when $\alpha$-equivalence
 for the surface language was \emph{made up}?  In fact, there is a
 situation in which preserving $\alpha$-equivalence is useless.
@@ -1830,7 +1831,7 @@ invariant under permuting variables:
   If $\sigma$ is a variable permutation, and
   $\SaysScopeEqa[\Sigma]{e}{e'}$, then $\SaysScopeEqa[\Sigma]{\sigma{e}}{\sigma(e')}$.
 \end{lemma}
-\begin{proof}
+\begin{proof}[Proof sketch]
   .[FILL]
 \end{proof}
 The ``insane'' notion of $\alpha$-equivalence above---that defines
@@ -3281,15 +3282,15 @@ In Unbound, binding is specified via a set of \emph{binding combinators}.
   The translation of Unbound to {\sap} is as follows. \Code{Name}
   constructs a declaration or reference, depending on whether it is a
   term or Pattern. Patterns $P$ have scoping rules that state
-  $\SigPExpt{i}$ and $\SigPImpt{i}$ for every $i$. terms $T$ have
-  scoping rules that state $\SigImpt{T}{i}$ for every $i$. Finally,
+  $\SigPExpt{i}$ and $\SigPImpt{i}$ for every $i$. terms $e$ have
+  scoping rules that state $\SigImpt{e}{i}$ for every $i$. Finally,
   each of the four binding combinators obey the scoping rule for
   patterns or for terms, as appropriate, in addition to the following
   facts:
   \begin{center}
   \begin{tabular}{l l @{\quad} l l}
-    Bind $P$ $T$   & $\{\SigBind{\text{Bind}}{2}{1}\}$ &
-    Embed $T$      & $\emptyset$ \\
+    Bind $P$ $e$   & $\{\SigBind{\text{Bind}}{2}{1}\}$ &
+    Embed $e$      & $\emptyset$ \\
     Rebind $P$ $P$ & $\{\SigBind{\text{Rebind}}{2}{1}\}$ &
     Rec $P$        & $\{\SigBind{\text{Rec}}{1}{1}\}$
   \end{tabular}

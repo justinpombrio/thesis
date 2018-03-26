@@ -119,8 +119,9 @@ to effectively resugar them.
 \item \emph{Each desugaring rule's \Sc{lhs} must have the form
   $\Node{C}{e_1,\,...,\,e_n}$.} We will rely on this fact when showing that
   unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
-\item References and declarations in the \Sc{rhs} are given fresh names during
-  expansion to ensure hygiene.
+%\item References and declarations in the \Sc{rhs} are given fresh names during
+%   expansion to ensure hygiene.
+% (Discussed, but not actually assumed in Chapter 5.)
 \item \emph{The rules' \Sc{lhs}s must be disjoint.} If they
   are not, it presents issues both for resugaring evaluation sequences,
   and resugaring type systems.
