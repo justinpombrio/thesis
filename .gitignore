@@ -21,7 +21,6 @@
 *.mtc1
 *.out
 *.synctex.gz
-*.pdf
 *.o
 *.hi
 *.dyn_o
@@ -30,3 +29,4 @@
 texput.log
 sugars/haskell/main
 examples
+img/*.pdf
