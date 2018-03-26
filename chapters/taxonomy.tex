@@ -7,6 +7,7 @@ TODO
 \item State version of each system discussed
 \item mention macro-defining-macros in expressiveness?
 \item More examples
+\item Define 'metalanguage' before it is used.
 \end{itemize}
 
 There are a bewildering variety of desugaring systems.  In this
@@ -86,7 +87,7 @@ Desugaring systems may be based on either representation.
 \emph{However, text is a terrible representation for desugaring rules.}
 The semantics of a language is almost always defined in terms of its
 (abstract syntax) tree representation. Thus, insofar as a programmer
-as a programmer is forced to think of their program as text rather
+is forced to think of their program as text rather
 than as a tree, they are being distracted from its semantics. There
 are well-known examples of bugs that arise in text-based desugaring
 rules unless they are written in a very defensive style: we discuss
@@ -120,7 +121,7 @@ When sugars are user-defined, it raises difficulties with tools such
 as editors that need to support the new syntax. For example, if sugars
 are language-defined then an editor can just support the full
 language. If they are user-defined, however, how can an editor provide
-correct indentation, syntax highlighting, etc.?
+correct indentation, syntax highlighting, etc.? % TODO: rewrite this paragraph
 
 Different languages work around this problem in different ways.
 
@@ -130,10 +131,8 @@ are well-balanced (and that there are no tokenization errors).
 The higher layer checks that the s-expression makes syntactic sense.
 For example, \Code{(define x 1} is invalid at both layers,
 \Code{(define ((x)) 1)} is valid at the first layer but not at the
-second, and \Code{(define x 1)} is valid at both layers.\marginpar{%
-The phrase \emph{bicameral syntax} was coined by Shriram Krishnamurthi <CITE plai>.
-}
-This can be called \emph{bicameral syntax}, by analogy to legislative
+second, and \Code{(define x 1)} is valid at both layers.
+This can be called \emph{bicameral syntax}[CITE: plai], by analogy to legislative
 houses that are split into a lower and upper level.
 
 This separation of concerns makes it easy for editors to support the
@@ -173,7 +172,7 @@ Inside-out (\Sc{io}) desugaring:\marginpar{
   ignore it.
 }
 \begin{description}
-\item[\Sc{oi}] desugaring is superficially similar to lazy
+\item[\Sc{Outside-in}:] \Sc{oi} desugaring is superficially similar to lazy
   evaluation, in that desugaring proceeds from the outside in.
   However, there is one crucial difference: in lazy evaluation, if a
   function uses (e.g., does case analysis on) one of its (lazy)
@@ -189,14 +188,14 @@ Inside-out (\Sc{io}) desugaring:\marginpar{
   In the most extreme case, it may be impossible
   to even tell where the innermost sugars are, so \Sc{oi} is the only
   possible desugaring order.
-\item[\Sc{io}] desugaring is similar to eager evaluation: the
+\item[\Sc{Inside-out}:] \Sc{io} desugaring is similar to eager evaluation: the
   innermost sugars desugar first. The above paragraph suggested that
   \Sc{io} order may not be possible, but there are a number of common
   settings in which it is: (i) the syntax that sugars can introduce is
   limited enough that you can always tell where nested sugars are;
   (iii) sugars act on the \Sc{ast} rather than on concrete syntax; or
   (ii) sugars cannot deconstruct their parameters, so the desugaring
-  order is largely irrelevant anyways; . In these settings, \Sc{io}
+  order is largely irrelevant anyways. In these settings, \Sc{io}
   order has the advantage of being more analogous to evaluation (which
   developers are quite familiar with). It is
   also sometimes useful for sugars to use the desugared version of
@@ -268,7 +267,7 @@ Safety and expressiveness are counterpoints. Safety comes from the
     In contrast, a syntactically safe desugaring system would raise an
     error on such a sugar definition, \emph{even if that sugar was
       never used}. This is analogous to type checking: a type checker
-    will warn that a function definition contains a type error even, if
+    will warn that a function definition contains a type error even
     if that function is never used.
   \item[Hygiene] Unlike the other safety properties discussed here,
     hygiene [CITE] is not about the error behavior of the desugaring
@@ -293,7 +292,7 @@ Safety and expressiveness are counterpoints. Safety comes from the
   (let ((temp false)) (if temp temp temp)))
 \end{CorrectlyIndentedCodes}\marginpar{%
   Some of the examples here were inspired by Clinger and Rees CITE.
-}%[CITE]
+}
     which would then evaluate to \Code{false}, which is wrong. The
     issues is that the user-written variable called \Code{temp} is
     captured by the sugar-introduced variable called \Code{temp}.
@@ -308,14 +307,14 @@ Safety and expressiveness are counterpoints. Safety comes from the
     examples where a sugar-introduced variable gets captured by a
     user-written variable). There is more to say about hygiene, and we
     will discuss it further in [REF], but this is sufficient for our
-    present taxometric purposes.
+    present taxometric purposes. % TODO: long sentence. Rewrite.
     
   \item[Scope Safety] Can a sugar \emph{introduce} scope errors?  We
     will say that a desugaring system is \emph{scope safe} if sugars
     cannot introduce an unbound identifier or cause a user-defined
     variable to become unbound.
 
-  \item[Type Safety] Can a sugar introduce a type error? We will say
+  \item[Type Safety] Can a sugar introduce type errors? We will say
     that a desugaring system is \emph{type safe} if sugars cannot
     introduce type errors. For example, this MetaOCaml program (the
     \Code{.< ... >.} syntax quotes an expression):
@@ -388,7 +387,7 @@ the sugar is used in expression position, as in the \Code{SUB}
 example, this can be done with parentheses. In other positions,
 different tricks must be used: e.g., a rule meant to be used in
 statement position can be wrapped in \Code{do \{...\} while(0)}.
-Software developers should not need to know this.
+Software developers should not need to know this. % TODO: not clear enough
 
 There are other issues that arise with text-based transformations as
 well, such as variable capture. Furthermore, all of these issues are
@@ -407,12 +406,12 @@ fixed from within the paradigm. \emph{Overall, code transformations
 \Desc{Desugaring Order} IO
 \Desc{Phases} One
 \Desc{Syntax safe} Yes
-\Desc{Scope safe} NA
-\Desc{Type safe} NA
+\Desc{Scope safe} Not Applicable
+\Desc{Type safe} Not Applicable
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
 C++ templates [CITE] are not general-purpose sugars,
-because they cannot take code as an parameter. Thus you cannot, for
+because they cannot take code as a parameter. Thus you cannot, for
 example, express a sugar that takes an expression \Code{e} and expands
 it to \Code{e + 1}.
 
@@ -421,7 +420,7 @@ primarily to instantiate polymorphic code by replacing type parameters
 with concrete types.  Let's use the following template declaration,
 taken from [CITE: pg344], as a running example. It declares a function
 to compute the area of a circle, that can be instantiated with
-different possible (presumably numeric) types \Code{T}:
+different (presumably numeric) types \Code{T}: % TODO: describe pi
 \begin{Codes}
 template<class T>
 T circular_area(T r) \{
@@ -484,6 +483,7 @@ it, even if this type is the result of another template expansion.
 
 %https://doc.rust-lang.org/1.2.0/book/macros.html
 \Desc{Discussion}
+NOTE: This is about Rust's regular macros, not Rust's ``procedural'' macros.
 
 
 \subsection{Haskell Templates} \label{sec:haskell}

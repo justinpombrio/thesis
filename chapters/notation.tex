@@ -12,14 +12,15 @@ scope rules \cref{chap:resugar-scope}, and type systems \cref{chap:resugar-types
 
 \section{ASTs}\label{sec:formal-term}
 
-For the purposes of resugaring scope, we require \Sc{ast}s to explicitly distinguish between
+For the purposes of resugaring scope, we require \Sc{ast}s
+(\emph{abstract syntax trees}) to explicitly distinguish between
 variable \emph{declarations} $\Decl{x}$ (i.e., binding sites), and
 variable \emph{references} $\Refn{x}$ (i.e., uses).
 This distinction will be important in \cref{chap:resugar-scope}, but
 can otherwise be ignored.
 
 We will refer to \Sc{ast}s (and parts of \Sc{ast}s)
-as \emph{terms}, and write them $e$.\marginpar{%
+as \emph{terms}, and write them as $e$.\marginpar{%
   While $t$ would be a more obvious letter to use for terms, we use it
   to refer to types in \cref{chap:resugar-types}.
 }
@@ -28,9 +29,11 @@ Terms can be inductively defined as:
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 term $e$ &$::=$& $\Value$ & primitive value \\
   &$|$& $\Node{C}{e_1 \dd e_n}$ & \Sc{ast} node \\
-  &$|$& $\Refn[i]{x}$  & variable reference at posn. $i$ \\
-  &$|$& $\Decl[i]{x}$  & variable declaration at posn. $i$ \\
+  &$|$& $\Refn[i]{x}$  & variable reference at position $i$ \\
+  &$|$& $\Decl[i]{x}$  & variable declaration at position $i$ \\
 \end{Table}
+A ``constructor'' is the name of a syntactic construct, e.g. \Code{+}
+or \Code{if}. Thus $(\NodeRm{+}{\Refn[i]{x}\ 1}$ is a term.
 
 \section{Patterns}
 
@@ -43,8 +46,8 @@ Patterns $p$ are just terms that can contain pattern variables $\PVarA$:
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
   &$|$& $\Value$ & primitive value \\
   &$|$& $\Node{C}{p_1 ... p_n}$ & \Sc{ast} node \\
-  &$|$& $\Refn[i]{x}$  & variable reference at posn. $i$ \\
-  &$|$& $\Decl[i]{x}$  & variable declaration at posn. $i$ \\
+  &$|$& $\Refn[i]{x}$  & variable reference at position $i$ \\
+  &$|$& $\Decl[i]{x}$  & variable declaration at position $i$ \\
 \end{Table}
 Matching a term against a pattern produces an \emph{environment}, or a
 mapping from pattern variable to term:
