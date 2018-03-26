@@ -15,13 +15,13 @@ TODO
 % Greek αβγδε
 
 In this chapter, we tackle the challenge of combining syntactic sugar with
-semantics. Given a set of transformation rules written in an expressive
-but restricted language, we show how to resugar \emph{program execution}:
-to \emph{automatically} convert an
+semantics. Given a set of desugaring rules written in the style of the
+last chapter, we show how to resugar \emph{program execution}:
+to automatically convert an
 evaluation sequence in the core language into a representative
 evaluation sequence in the surface syntax. Each step in the surface
 language emulates one or more steps
-in the core language. The computed steps hide the transformation, thus
+in the core language. The computed steps hide the desugaring, thus
 maintaining the abstraction provided by the surface language.
 
 The chief challenge is to
@@ -29,7 +29,7 @@ remain faithful to the original semantics---we can't change the meaning of
 a program!---and to ensure that the internals of the code introduced by
 the syntactic sugar does not leak into the output. Our chief mechanisms
 for achieving this are to (a) perform static checks on the desugaring
-definitions to ensure they fall into the subset we can handle, and (b)
+rules to ensure they fall into the subset we can handle, and (b)
 rewrite the reduction relation with instrumentation to track the origin of
 terms. We implement these ideas in a tool called {\Resugarer}, and
 formally verify key properties of our approach, given simplifying
@@ -99,7 +99,7 @@ not. We present our examples using a traditional infix concrete syntax.
 We start by defining a simple, binary version of \Code{Or} (that
 let-binds its first argument in case it has side-effects):\marginpar{%
 We present these examples using the actual syntax of {\Resugarer},
-which uses \Code{x} instead of $\alpha$ for a pattern variable, and
+which uses {\normalfont \Code{x}} instead of $\alpha$ for a pattern variable, and
 represents variables as strings.}
 \begin{Codes}
 Or(x, y) -> Let([Binding("t", x)],
@@ -143,7 +143,7 @@ may come about.
 \label{sec:reval-exposition-tagging}
 
 When unexpanding, we should only unexpand code that
-originated from a transformation. If the surface program itself is
+originated from a sugar. If the surface program itself is
 \begin{Codes}
 let t = not(true) in
   if t then t else not(false)
@@ -153,19 +153,20 @@ this would be confusing and break the second clause of the Abstraction property.
 
 We therefore augment each subterm in a core term
 with a list of \emph{tags}, which indicate whether a term
-originated in the original source or from the transformation.%
+originated in the original source or from sugar.%
 \marginpar{Whereas the tags used in hygienic macro
   expansion~\cite{hygienic-macros} specify time steps,
   the tags in resugaring specify which sugar the
   code originated from.}
 Unexpansion attempts to process terms marked as
-originating from a transformation rule; this
+originating from a desugaring rule; this
 unexpansion will fail if the tagged term no longer has the form of
 the rule's \Sc{rhs}. When this happens, we conclude that there is no
 surface representation of the core term and skip the step.
 
 To illustrate this, we revisit the same core evaluation sequence as
-before. ``\Code{\{Head$_\texttt{Or}$:~\}}'' is a tag on the desugared expression that
+before. \newline %NEWLINE
+``\Code{\{Head$_\texttt{Or}$:~\}}'' is a tag on the desugared expression that
 indicates it originated from the \Code{Or} sugar, and ``\Code{\{Body:~\}}''
 is a tag that indicates it originated from sugar (without saying
 which, although in this case it came from \Code{Or}):
@@ -173,7 +174,7 @@ which, although in this case it came from \Code{Or}):
     \{Head\(\sb{\texttt{Or}}\): let t = not(true) in
       \{Body: if t then t else not(false)\}\}
 \CoreStep \{Head\(\sb{\texttt{Or}}\): let t = false in
-      \{Body: if t then t else not(false)\}
+      \{Body: if t then t else not(false)\}\}
 \CoreStep \{Body: if false then false else not(false)\}
 \CoreStep not(false)
 \CoreStep true
@@ -181,7 +182,7 @@ which, although in this case it came from \Code{Or}):
 The tags on the first two steps suggest that \Code{Or}'s
 desugaring rule be applied in reverse. They can be unexpanded
 because they match the \Sc{rhs} of \Code{Or}. The third step fails to
-resugar because the \Code{not} is never unexpanded, and thus is a
+resugar because the \Code{if} is never unexpanded, and thus is a
 leftover fragment of sugar. This step is therefore skipped, yielding no
 surface step. The last two steps are not tagged and are
 therefore included in the surface evaluation sequence as-is.
@@ -200,8 +201,12 @@ However, a stepper that only shows the final step is unhelpful. We therefore
 propose a third property, Coverage, which states that steps
 are not ``unnecessarily'' skipped. While Emulation and
 Abstraction are formally proved in \cref{sec:reval-proofs}, we have not found a
-formalization of Coverage, so we can only strive to attain it in
-our systems and evaluate it in practice. Our examples
+complete formalization of Coverage, so we can only strive to attain it in
+our systems and evaluate it in practice.\marginpar{%
+A \emph{partial} formalization of coverage can be found in the second
+paper this chapter is based on~\cite{pombrio-resugar-hygienic}.
+}
+Our examples
 (\cref{sec:reval-pyret-example} and \cref{sec:reval-examples}) show
 that we do indeed obtain detailed and useful surface evaluation sequences.
 
@@ -234,10 +239,10 @@ following lifted evaluation steps:
 \end{Codes}
 In particular, it correctly suppresses any presentation of the recursive
 invocation of \Code{Or}
-introduced by the transformation---precisely what Abstraction demands!
+introduced by desugaring---precisely what Abstraction demands!
 However, there are settings
 (such as debugging or education) where the user might wish to see this
-invocation, i.e., to obtain the surface evaluation sequence
+invocation, i.e., to obtain the surface evaluation sequence:
 \begin{Codes}
     false OR false OR true
 \SurfStep false OR true
@@ -245,7 +250,7 @@ invocation, i.e., to obtain the surface evaluation sequence
 \end{Codes}
 Thus, we let sugar authors make part of a rule's \Sc{rhs}
 visible by prefixing it with \Code{!}. Here, writing the second
-\Code{Or} rule as
+\Code{Or} rule as:
 \begin{Codes}
 Let([Binding("t", x)],
     If(Id("t"), Id("t"), !Or([y, ys ...])))
@@ -343,7 +348,8 @@ This sequence hides all the complexity of the core language.
 
 We will present our system in three parts. First
 (\cref{sec:reval-onerule}), we will describe how our transformation system
-works, up to the level of performing a single transformation. Next
+works, up to the level of performing a single \emph{transformation}:
+either expanding or unexpanding a single (instance of a) sugar. Next
 (\cref{sec:reval-manyrule}), we will describe how to use tags to fully
 desugar and resugar terms, transforming not just a term but its subterms
 as well. Finally (\cref{sec:reval-lifting}), we will show how to use the
