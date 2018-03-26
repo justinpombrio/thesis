@@ -704,14 +704,14 @@ Syntactic sugar is pervasive in language technology. Programmers use
 it to shrink the size of a core language; to define domain-specific
 languages; and even to extend their language. Unfortunately, when
 syntactic sugar is eliminated by transformation, it obscures the
-relationship between the user's source program and the program being
-evaluated.  First, it obscures the evaluation steps the program takes
+relationship between the user's source program and the transformed
+program.  First, it obscures the evaluation steps the program takes
 when it runs, since these evaluation steps happen in the core
 (desugared) language rather than the surface (pre-desugaring) language
 the program was written in.  Second, it obscures the scoping
 rules for the surface language, making it difficult for \Sc{ide}s and
 other tools to obtain binding information.  And finally, it obscures the types of
-surface programs, frequently resulting in type errors that reference
+surface programs, which can result in type errors that reference
 terms the programmer did not write.  I address
 these problems by showing how evaluation steps, scoping rules, and
 type rules can all be lifted---or \emph{resugared}---from core to surface
