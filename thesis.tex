@@ -362,12 +362,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  Evaluation
 
-\newcommandx*{\Expand}[2][1=rs]{\texttt{exp}_{#1}(#2)}
-\newcommandx*{\Unexpand}[2][1=rs]{\texttt{unexp}_{#1}(#2)}
-\newcommand{\SurfaceToTerm}[1]{\Code{s->t}\ #1}
-\newcommand{\CoreToTerm}[1]{\Code{c->t}\ #1}
-\newcommand{\TermToSurface}[1]{\Code{t->s}\ #1}
-\newcommand{\TermToCore}[1]{\Code{t->c}\ #1}
+\newcommand{\Expand}[1]{\Code{exp}_{\Rs}\ {#1}}
+\newcommand{\Unexpand}[2]{\Code{unexp}_{\Rs}\ {#1}\ {#2}}
+\newcommand{\SurfaceToTerm}[1]{\Code{s->e}\ \,#1}
+\newcommand{\CoreToTerm}[1]{\Code{c->e}\ \,#1}
+\newcommand{\TermToSurface}[1]{\Code{e->s}\ \,#1}
+\newcommand{\TermToCore}[1]{\Code{e->c}\ \,#1}
+% Possible alternative to fancyD and fancyR:
+%\newcommand{\FullExpand}{\Code{desugar}^*_{\Rs}}
+%\newcommand{\FullUnexpand}{\Code{resugar}^*_{\Rs}}
 \newcommand{\Expandf}{\Code{exp}_{\Rs}}
 \newcommand{\ExpandRec}[1]{\Code{desugar}_{\Rs}\ {#1}}
 \newcommand{\ExpandRecf}{\Code{desugar}_{\Rs}}
@@ -386,8 +389,7 @@
 \newcommand{\UnexpR}[1]{\Code{Res}\ {#1}}
 \newcommand{\UnexpRf}{\Code{Res}}
 
-\newcommand{\Residue}[2]{\Code{residue}(#1, #2)}
-\newcommand{\Copy}[1]{\Code{copy}(#1)}
+\newcommand{\compose}{\cup} % Was \cdot in the original paper, which was terrible notation.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -423,7 +425,7 @@
 
 % Terminology
 \newcommand{\Lang}{\mathcal{L}}
-\newcommand{\ResugarTy}[2]{\ConstrIt{resugar}{(#1, #2)}}
+\newcommand{\ResugarTy}[2]{\ConstrIt{resugar}{#1, #2}}
 
 % Ellipses
 \newcommand{\nodeTt}[2]{({\texttt{#1}}\;{#2})}

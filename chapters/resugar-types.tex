@@ -1,13 +1,5 @@
 \chapter{Resugaring Types}\label{chap:resugar-types}
 
-TODO
-\begin{itemize}
-\item Proofread: Discussion and conclusion, second paragraph.
-\item Proofread: First ~3 paragraphs of introduction.
-\item Proofread: 'Type Resugaring', first couple sentences.
-\item Proofread: last sentence of 'work with similar goals'.
-\end{itemize}
-
 % Formatting specific to this chapter
 \newcommand{\reflem}[1]{lemma \ref{lemma:rtype-#1} (#1)}
 \newcommand{\Reflem}[1]{Lemma \ref{lemma:rtype-#1} (#1)}
@@ -395,11 +387,12 @@ notation we will use throughout the chapter.
   \begin{Table}
     $e$ &$::=$& $\Value$
     & (primitive value) \\
-        &$|$&  $(P\,\seq{e})$
-    & (compound expression \\
-    &&& of syntactic category $P$) \\
+    &$|$& $x$ & (variable) \\
+    &$|$& $\Node{C}{e_1 \dd e_n}$
+    & (\Sc{ast} node) \\
     $p$ &$::=$& $\Value$ \\
-      &$|$&   $(P\,\seq{e})$ \\
+    &$|$& $x$ \\
+    &$|$& $\Node{C}{p_1 \dd p_n}$ \\
         &$|$&   $\alpha$
     & (pattern variable) \\
     $t$ &$::=$& $type$
@@ -455,12 +448,14 @@ with the \Sc{rhs}. Formally:
 \begin{Table}
   $\Desugar{\Value}$
   &$=$& $\Value$ \\
+  $\Desugar{x}$
+  &$=$& $x$ \\
   $\Desugar{\Subs{\gamma}{p}}$
   &$=$& $\Subs{(\Desugar{\gamma})}{(\Lang[p])}$ \\
   && if $p$ is in the surface language \\
-  $\Desugar{P\,\seq{e}}$
-  &$=$& $(P\,\Desugar{e_1}\dots\Desugar{e_n})$ \\
-  && if $P$ is in the core language \\
+  $\Desugar{C\,\seq{e}}$
+  &$=$& $(C\,\Desugar{e_1}\dots\Desugar{e_n})$ \\
+  && if $C$ is in the core language \\
 \end{Table}
 where $\Desugar{\cdot}$ is desugaring, $\Lang$ represents the
 desugaring rules, $\Lang[p]$ is the \Sc{rhs} of the desugaring
@@ -489,6 +484,8 @@ Unsurprisingly, substitution distributes over pattern-based desugaring:
 
   \textit{Base case: $e$ is a primitive value}:\\
   $\Desugar{\Subs{\gamma}{\Value}} = \Value = \Subs{\Desugar{\gamma}}{\Value}$.
+  
+  \textit{Base case: $e$ is a variable}: likewise.
 
   \textit{Base case: $e$ is a pattern variable $\alpha$}:\\
   $\Desugar{\Subs{\gamma}{\alpha}}
@@ -877,7 +874,7 @@ construction:
 \begin{proof}
   Let $\ResugarTy{\Icore}{p_\Sc{lhs} \To p_\Sc{rhs}} = \seq{J} / J_\Sc{lhs}$
   be any surface rule. We aim to show that $\seq{J}$ and $J_\Sc{lhs}$ do
-  not mention core constructs $P$. By \refass{resugaring},
+  not mention core constructs $C$. By \refass{resugaring},
   $\saysVD{\Icore}{\seq{J}}{\Desugar{J_\Sc{lhs}}}$, where $\seq{J}$ are all provable
   using \Code{t-premise}. We gave the \Code{t-premise} rule in \cref{sec:rtype-walkthrough},
   and generalize it in \cref{sec:rtype-fresh} and \cref{sec:rtype-globals}. However, in \emph{all} of its
@@ -913,8 +910,8 @@ have presented so far. We therefore extend the desugaring language
 with a feature called \Code{calc-type}. In this example, it can be used
 as follows:
 
-$\LongDesugarRule{let $x$ = $\alpha$ in $\beta$}
-                {calc-type $\alpha$ as $X$ in ($\lambda$ $x:X\,.$ $\beta$)($\alpha$)}$
+\[\LongDesugarRule{let $x$ = $\alpha$ in $\beta$}
+                {calc-type $\alpha$ as $X$ in ($\lambda$ $x:X\,.$ $\beta$)($\alpha$)}\]
 
 This binds the type variable $X$ to the type of $\alpha$ in the
 rest of the desugaring.
@@ -1798,7 +1795,7 @@ automatically bound (i.e., marked as capturing) to escape from the function.
 
 \section{Demos}
 
-This section shows SweetT in action. \cref{fig:rtype-demo} shows a sample
+This section shows SweetT in action. \Cref{fig:rtype-demo} shows a sample
 usage of SweetT, and \cref{fig:rtype-sample1,fig:rtype-sample2,fig:rtype-sample3} show
 many sugars and their resugared type rules. These sugars are mostly
 very simple; their purpose is not to show that SweetT can handle

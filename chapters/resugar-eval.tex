@@ -1,17 +1,5 @@
 \chapter{Resugaring Evaluation Sequences}\label{chap:resugar-eval}
 
-TODO
-\begin{itemize}
-\item Proofread: Applying Transformations
-\item Proofread: first couple paragraphs
-\item Proofread: first mention of ``hygiene''
-\item Proofread: ``Maintaining Abstraction''
-\item Proofread: ``Maintaining Hyiene''
-\item Proofread: ``well-formedness of transformations'', number 5.
-\item Terminology: ``Transformation'' -> ``Rewrite''?
-\item Future link: ``Maintaining Hygiene''
-\end{itemize}
-
 % Greek αβγδε
 
 In this chapter, we tackle the challenge of combining syntactic sugar with
@@ -365,14 +353,16 @@ rules.
 \subsubsection{Patterns}
 
 Since rules are applied both forward and in reverse, we represent their
-\Sc{lhs}s and \Sc{rhs}s uniformly as \emph{patterns}. Patterns $p$ are defined
-inductively by:
+\Sc{lhs}s and \Sc{rhs}s uniformly as \emph{patterns}. We give a
+broader definition of patterns here than in \cref{sec:formal-term}:
+here we allow patterns to contain lists, ellipses, and (for the
+purposes of resugaring) tags.
 
 \begin{Table}
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
   &$|$& $\Node{C}{p_1 ... p_n}$ & \Sc{ast} node \\
   &$|$& $[p_1 \dd p_n]$ & list of length $n$ \\
-  &$|$& $[p_1 \dd p_n\,\Ell{p}]$ & list of length $\geq n$ \\
+  &$|$& $[p_1 \dd p_n\,\Ell{p}]$ & list of length $\geq n$ (ellipses) \\
   &$|$& $\Value$ & primitive value \\
   &$|$& $\VarX$  & variable \\
   &$|$& $\Tag{o}{p}$ & origin tag \\ \\
@@ -405,7 +395,7 @@ it. There is a natural trade-off between the two. We pick a definition similar t
 that of Scheme \Code{syntax-rules}-style macros, though without guard
 expressions.
 
-Formally, our patterns are \emph{regular tree
+Formally, these patterns are \emph{regular tree
   expressions}~\cite{regular-tree-expressions}. Regular tree
 expressions $\mathit{trx}$ are the natural extension of regular
 expressions to handle trees: they add a primitive $\Node{C}{\mathit{trx}_1
@@ -480,7 +470,7 @@ b &:=& e                &\text{(term)} \\
 \Subs{\gamma}{[p_1 \dd p_n \Ell{p_e}]} &=&
   [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n\,\DoublePlus\,split(\gamma, p_e)} \\
     &&\text{(where } \DoublePlus \text{ is concatenation)} \\
-\{\dd,\PVarA \to b,\dd\}\,\PVarA &=& toTerm(b) \\
+\Subs{\{\dd,\PVarA \to b,\dd\}}{\PVarA} &=& toTerm(b) \\
 \Subs{\gamma}{\Node{C}{p_1 \dd p_n}} &=&
   \Node{C}{\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n}} \\ \\
 
@@ -493,7 +483,7 @@ b &:=& e                &\text{(term)} \\
   (\Subs{\{\PVarA_1 \to b_{11} \dd  \PVarA_n \to b_{n1}\}}{p} \dd 
    \Subs{\{\PVarA_1 \to b_{1k} \dd  \PVarA_n \to b_{nk}\}}{p})} \\ \\
 
-toTerm(P) &=& P \\
+toTerm(p) &=& p \\
 toTerm(\BList{b_1 \dd b_n}) &=&
   (toTerm(b_1) \dd toTerm(b_n))
 
@@ -566,7 +556,7 @@ for proofs.
 
 \subsubsection{Applying Transformations}
 
-A \emph{\rulelist} $\Rs$ is an ordered list of transformation
+A \emph{\rulelist} $\Rs$ is an ordered list of desugaring
 rules $p_i \to p_i'$, where each rule is well-formed according to the
 criteria just described.
 A term $e$ can then be \emph{expanded} with respect to
@@ -596,7 +586,7 @@ input term $e$---with which to bind pattern variables in $p_i$ that do not
 appear in $p_i'$. Formally,
 \[\begin{array}{lllll}
   \Unexpand{(j, e')}{e} &=&
-    ((e \match p_j) \cdot (e' \match p_j')) \subs p_j
+    ((e \match p_j) \compose (e' \match p_j')) \subs p_j
 \end{array}\]
 Notice that $e$ contains a good deal of redundant
 information. Since $p_j$ and $p_j'$ are statically known, it
@@ -605,7 +595,7 @@ restricted to the pattern variables not free in $p_j'$. We will say that $\gamma
 \emph{stands in} for $e$, and overload $\Unexpandf$ by writing:
 \[\begin{array}{lllll}
   \Unexpand{(j, e')}{\gamma} &=&
-    (\gamma \cdot (e' \match p_j')) \subs p_j
+    (\gamma \compose (e' \match p_j')) \subs p_j
 \end{array}\]
 Because unexpansion usually occurs \emph{after} reduction steps have
 been taken, in general the term being unexpanded is different
@@ -674,8 +664,7 @@ applies. We formally state the rule and what it gains us in
 We have described how to perform a \emph{single} transformation. We will now
 describe how to use tags to keep track of which rule each core term came
 from, and how to use this information to perform recursive expansion and
-unexpansion of terms, which we will dub \emph{desugaring} and
-\emph{resugaring} respectively.
+unexpansion of terms, a.k.a. desugaring and resugaring.
 
 \subsubsection{Tagging}
 \label{sec:reval-tagging}
@@ -783,13 +772,13 @@ in our pattern language. Real languages' source terms do not start in this form,
 so we will require functions for converting between syntax in
 the surface and core languages and terms in our pattern language. We will
 call these \SurfaceToTerm, \TermToSurface, \CoreToTerm, and
-{\TermToCore{}}, using \Code{s}, \Code{c}, and \Code{t} as abbreviations
+{\TermToCore{}}, using \Code{s}, \Code{c}, and \Code{e} as abbreviations
 for surface, core, and term respectively. With these functions, we can
 define functions to fully desugar and resugar terms in the language's
 syntax:
 \begin{Table}
-$\Desugar$ &$=$& $\SurfaceToTerm\;;\;\ExpandRecf\;;\;\TermToCore$ \\
-$\Resugar$ &$=$& $\CoreToTerm\;;\;\UnexpandRecf\;;\;\TermToSurface$
+$\Desugar{}$ &$=$& $\SurfaceToTerm\;;\;\ExpandRecf\;;\;\TermToCore$ \\
+$\Resugar{}$ &$=$& $\CoreToTerm\;;\;\UnexpandRecf\;;\;\TermToSurface$
 \end{Table}
 
 A surface reduction sequence for a deterministic language can now be
@@ -870,15 +859,15 @@ The {\Getput} law applied to our transformations states that whenever it
 is well-defined,
 \[ \Unexpand{(\Expand{e})}{e} = e \]
 Expanding the definitions produces:
-\[ \Subs{((\Match{e}{p_i}) \cdot (\Match{\Subs{(\Match{e}{p_i})}{p_i'}}{p_i'}))}{p_i} = e \]
+\[ \Subs{((\Match{e}{p_i}) \compose (\Match{\Subs{(\Match{e}{p_i})}{p_i'}}{p_i'}))}{p_i} = e \]
 This law can be shown to hold without further preconditions.
 \begin{lemma} The {\Getput} law holds whenever it is well-defined.
 \end{lemma}
 \begin{proof}
 Clearly $\Match{\Subs{(\Match{e}{p_i})}{p_i'}}{p_i'} \subseteq \Match{e}{p_i}$.
-Thus $(\Match{e}{p_i}) \cdot (\Match{\Subs{(\Match{e}{p_i})}{p_i'}}{p_i'})
+Thus $(\Match{e}{p_i}) \compose (\Match{\Subs{(\Match{e}{p_i})}{p_i'}}{p_i'})
  = \Match{e}{p_i}$,
-and $((\Match{e}{p_i}) \cdot \Subs{(\Match{\Subs{(\Match{e}{p_i})}{p_i'}}{p_i'}))}{p_i}
+and $((\Match{e}{p_i}) \compose \Subs{(\Match{\Subs{(\Match{e}{p_i})}{p_i'}}{p_i'}))}{p_i}
  = \Subs{(\Match{e}{p_i})}{p_i}$.
 And since $e$ is closed, $\Subs{(\Match{e}{p_i})}{p_i} = e$.
 \end{proof}
@@ -890,10 +879,10 @@ The {\Putget} law states that whenever it is well-defined,
 \[ \Expand{(\Unexpand{(j, e')}{e})} = (j, e') \]
 Expanding the definitions gives that,
 \[\begin{array}{lcll}
-(i, (((e \match p_j) \cdot (e' \match p_j')) \subs p_j \match p_i) \subs p_i')
+(i, (((e \match p_j) \compose (e' \match p_j')) \subs p_j \match p_i) \subs p_i')
   = (j, e') \\
    \text{ for $i = \text{min} \{i |
-               ((e \match p_j) \cdot (e' \match p_j'))p_j \geq p_i\}_i$}
+               ((e \match p_j) \compose (e' \match p_j')) \subs p_j \geq p_i\}_i$}
 \end{array}\]
 This law, however, does not hold for all possible {\rulelists}. In fact,
 we saw a situation in which it fails---the \Code{Max} sugar in
@@ -926,18 +915,18 @@ condition holds.
 \begin{proof}[Proof Sketch]
 The law states that:
 \[\begin{array}{lcll}
-(i, (((e \match p_j) \cdot (e' \match p_j'))p_j \match p_i)p_i')
+(i, (((e \match p_j) \compose (e' \match p_j')) \subs p_j \match p_i) \subs p_i')
   = (j, e') \\
    \text{ for $i = \text{min} \{i |
-               ((e \match p_j) \cdot (e' \match p_j'))p_j \geq p_i\}_i$}
+               ((e \match p_j) \compose (e' \match p_j')) \subs p_j \geq p_i\}_i$}
 \end{array}\]
 %\[ \Expand{(\Unexpand{(j, e')}{e})} = (j, e') \]
 First, note that the law always holds when $i = j$, so it is sufficient to
-consider $i < j$. Let $\gamma_1 = (e \match p_j) \cdot (e' \match
-p_j')$. If the {\Putget} law does not hold, then $\gamma_1 p_j \match
+consider $i < j$. Let $\gamma_1 = (e \match p_j) \compose (e' \match
+p_j')$. If the {\Putget} law does not hold, then $\gamma_1 \subs p_j \match
 p_i$ exists, so $p_i \!\vee\! p_j$ exists. On the other hand, if $p_i \!\vee\!
 p_j$ exists for some $i < j$, then $e$ and $e'$ can be chosen such that
-$\gamma_1 p_j \match p_i$ is guaranteed to be well-defined, forcing the
+$(\gamma_1 \subs p_j) \match p_i$ is guaranteed to be well-defined, forcing the
 law to not hold.
 \end{proof}
 
@@ -993,7 +982,7 @@ $\ExpandRec{e} = e'$.
 \end{theorem}
 \begin{proof}
 For both cases, proceed by induction over the term. The two nontrivial
-cases are $\UnexpandRec{(\ExpandRec{\Node{C}{e_1,\,...,\,e_n}})}$ and
+cases are $\UnexpandRec{(\ExpandRec{\Node{C}{e_1,\,...,\,e_n}})}$ and \\ %NEWLINE
 $\ExpandRec{(\UnexpandRec{\Tag{\MacHead{i}{\gamma}}{e'}})}$. For brevity, call
 $\ExpandRecf$ $\ExpRf$, call $\Expandf$ $\Expdf$, call $\UnexpandRecf$
 $\UnexpRf$, and call $\Unexpandf$ $\Unexpf$.
@@ -1041,7 +1030,7 @@ each surface term in the generated surface evaluation sequence desugars
 into the core term which it represents, so long as:
 \begin{itemize}
 \item $\TermToCore{(\CoreToTerm{c})} = c$\quad for all $c$
-\item $\SurfaceToTerm{(\TermToSurface{t})} = t$\quad for all $t$
+\item $\SurfaceToTerm{(\TermToSurface{e})} = e$\quad for all $e$
 \item $(\CoreToTerm{c})$ is a core term for all $c$
 \item The disjointness condition holds for $\Rs$
 \end{itemize}
@@ -1051,7 +1040,7 @@ In the stepping algorithm, $s'$ represents $c$ in each iteration, so we
 would like to show that if $s'$ occurs in the surface evaluation sequence
 then $\Desugar{s'} = c$. If $s'$ occurs in the surface sequence, then
 resugaring must have succeeded with $\Resugar{c} = s'$. Thus we simply
-need to show that $\Desugar{(\Resugar{c})} = c$ for all terms $c$ in the
+need to show that $\Desugar{\Resugar{c}} = c$ for all terms $c$ in the
 core language, i.e., that
 \[\TermToCore{(\ExpandRec{(\SurfaceToTerm{(
     \TermToSurface{(\UnexpandRec{(\CoreToTerm{c})})})})})} = c\]
@@ -1088,7 +1077,7 @@ Abstraction is nearly true by construction.
 
 \begin{theorem}[Abstraction 1]
 \label{thm:reval-abstraction}
-The surface-level representation of a term $t$ contains only subterms of
+The surface-level representation of a term $e$ contains only subterms of
 \emph{user} origin, except as explicitly allowed by transparency marks
 (\Code{!}).
 \end{theorem}
@@ -1139,7 +1128,7 @@ well-formedness criteria of \cref{sec:reval-wf}.
 Our formalization does not, however, address tags or ellipsis patterns.
 It would be straightforward to add tags. Handling ellipses, though, would
 require significantly more work: when patterns may contain ellipses,
-substitution becomes non-compositional. For instance, $\gamma
+substitution becomes non-compositional. For instance, $\gamma \subs
 [p_1,\,...,\,p_n]$ is not a function of $\gamma \subs p_1,\,...,\,\gamma \subs p_n$
 when $p_1,\,...,\,p_n$ contain ellipses.
 
