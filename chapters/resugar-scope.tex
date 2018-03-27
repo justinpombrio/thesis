@@ -1503,7 +1503,7 @@ Furthermore, desugaring must obey the requirements of
 \Sc{rhs} of a rule must be given fresh names during expansion.
 
 When desugaring, there may be more than one rewrite rule that applies
-to a given term. \textbf{None of the results of this chapter depend on
+to a given term. \emph{None of the results of this chapter depend on
 the order of the rewrites; even a non-deterministic desugaring is allowed.}
 A more typical choice is to apply rules in outside-in order, as
 described in \cref{sec:formal-desugar}, and as is done by Scheme-style
@@ -1817,7 +1817,7 @@ Suppose that $e_1 =_\alpha e_2$ in the surface language was \emph{defined} to me
 that $\Desugar{e_1} =_\alpha \Desugar{e_2}$ in the core language,
 where $\Desugar{}$ is a naive, scope-unaware desugaring. Then
 desugaring will preserve $\alpha$-equivalence, despite not being
-hygienic in any way!
+hygienic!
 
 It is therefore crucial that our binding language cannot express this
 (rather insane) notion of surface-language $\alpha$-equivalence. It
@@ -1829,15 +1829,16 @@ binding language will lead to a notion of $\alpha$-equivalence that is
 invariant under permuting variable names (that is, it is
 \emph{equivariant}~\cite{nominal-logic}):
 \begin{lemma}
-  If $\sigma$ is a variable permutation and
+  If $\sigma$ is a permutation of variable names and
   $\SaysScopeEqa[\Sigma]{e}{e'}$, then
   $\SaysScopeEqa[\Sigma]{\sigma(e)}{\sigma(e')}$.
 \end{lemma}
 \begin{proof}[Proof sketch]
   A formula $\phi(a_1, \dd, a_n)$ is \emph{equivariant} if for all
-  arguments $a_1, \dd, a_n$, and for all permuations of variable names
-  $\sigma$, $\phi(a_1, \dd, a_n) \text{ iff } \phi(\sigma(a_1), \dd,
-  \sigma(a_n))$.  The only parts of $\alpha$-equivalence
+  arguments $a_1, \dd, a_n$, and for all permuations $\sigma$ of variable names,
+  $\phi(a_1, \dd, a_n) \text{ iff } \phi(\sigma(a_1), \dd,
+  \sigma(a_n))$. We wish to show that $\alpha$-equivalence in our
+  binding language is equivariant. The only parts of $\alpha$-equivalence
   (\cref{def:rscope-eqa}) that inspect variable names are the various
   rules that implicitly check that two variables have the same name
   (such as S-Decl and S-WB). However, equality checking is
@@ -2864,7 +2865,7 @@ $\Desugar{}$ preserves $\alpha$-equivalence:
 
 \begin{theorem}[Fundamental Hygiene Theorem] \label{thm:rscope-hygiene}
 Let $\Desugar{}$ be a desugaring function over terms with respect to
-scoping rules $\Sigma$ that obeys the assumptions of \cref{sec:formal-reqs}.
+scoping rules $\Sigma$ that obeys the assumptions of \cref{sec:rscope-prelim}.
 Then $\Desugar{}$ respects $\alpha$-equivalence iff
 for every (well-bound) input term $e$ (numbering by property number):
 \begin{LongTable}
@@ -3024,10 +3025,10 @@ With that said, we can state and prove the lemma:
   We will apply the hygiene theorem in both directions: both forward
   (during expansion) and in reverse (during unexpansion). There are
   two sets of requirements for the theorem: the assumptions about
-  resugaring in \cref{sec:formal-reqs}, and properties
+  resugaring in \cref{sec:rscope-prelim}, and properties
   (1)--(3) in this section. We must show that both sets of
   requirements hold both forward and in reverse:
-  \subsubsection{Assumptions about desugaring (\cref{sec:formal-reqs})}
+  \subsubsection{Assumptions about desugaring (\cref{sec:rscope-prelim})}
   The three assumptions in \cref{sec:formal-reqs} are also assumed for
   evaluation resugaring (in \cref{sec:reval-wf}), so the
   \emph{forward} versions of them hold. Now consider the reverse versions:

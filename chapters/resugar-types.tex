@@ -513,7 +513,7 @@ Unsurprisingly, substitution distributes over pattern-based desugaring:
 
 We also assume that the \Sc{lhs}s of each desugaring rule are
 disjoint, so that there is never any ambiguity as to which resugaring
-rule to apply. That is:
+rule to apply (this is the last assumption of \cref{sec:formal-reqs}). That is:
 \begin{assumption}[Unique Desugaring]\label{assumption:rtype-unique-sugar}
   For every pair $p_1$ and $p_2$ of sugar \Sc{lhs}s, there are no
   substitutions $\gamma_1$ and $\gamma_2$ such that

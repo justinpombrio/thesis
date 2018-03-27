@@ -356,7 +356,7 @@ Since rules are applied both forward and in reverse, we represent their
 \Sc{lhs}s and \Sc{rhs}s uniformly as \emph{patterns}. We give a
 broader definition of patterns here than in \cref{sec:formal-term}:
 here we allow patterns to contain lists, ellipses, and (for the
-purposes of resugaring) tags.
+purposes of resugaring) tags:
 
 \begin{Table}
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
@@ -523,33 +523,37 @@ The definitions we have given for matching and substitution are not
 well-behaved for all patterns. Even the crucial property that
 $\Subs{(\Match{e}{p})}{e} = e$ whenever $\Match{e}{p}$ exists fails to hold in certain
 situations, such as when a pattern's ellipsis contains no pattern variables (e.g.,
-$(\Ell{3})$). For this reason and others, we require the following
-well-formedness criteria for the \Sc{lhs} and \Sc{rhs} of each rule:
-
+$(\Ell{3})$). For this reason and others, we require a number of criteria
+to hold for the \Sc{lhs} and \Sc{rhs} of each rule. Except for the
+last criterion about ellipses, these requirements were given in
+\cref{sec:formal-reqs}. We repeat them here for convenience:
 \begin{enumerate}
 \item \emph{Each pattern variable in the \Sc{rhs} also appears in the
-  \Sc{lhs}.} Otherwise the pattern variable would be unbound during expansion.
+  \Sc{lhs}.} Otherwise the pattern variable would be unbound during
+  expansion.
+\item The \Sc{lhs} pattern contains no references or declarations. Rather, these
+  should be contained in its pattern variables during expansion.
+\item \emph{Each transformation's \Sc{lhs} must have the form
+  $\Node{C}{e_1 \dd e_n}$.} We will rely on this fact when showing that
+  unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
+\item \emph{The transformations' \Sc{lhs}s must be disjoint.} We
+  explain the reason for this in \cref{sec:reval-overlapping}.
 \item \emph{Each pattern variable appears at most once in the \Sc{lhs} and at
   most once in the \Sc{rhs}.}
   Allowing duplicate pattern variables complicates matching, unification,
   and proofs of correctness. It also copies code
   and, in the worst case, can exponentially blow up programs.
   We therefore disallow duplication,
-  with the sole exception of pattern variables bound to atomic terms.
-\item \emph{An ellipsis of depth $n$ must contain at least one pattern variable
+  with the sole exception of variables bound to atomic terms.
+\item \emph{(New) An ellipsis of depth $n$ must contain at least one pattern variable
   that either appears at depth $n$ or greater on the other side of the
   rule, or does not appear on the other side of the rule.} Otherwise it is
   impossible to know how many times to repeat its pattern during
   substitution. (The \emph{depth} of an ellipsis measures how deeply nested
   it is within other ellipses; a top-level ellipsis has depth 1, an
   ellipsis within an ellipsis depth 2, and so forth.)
-\item \emph{Each transformation's \Sc{lhs} must have the form
-  $\Node{C}{e_1 \dd e_n}$.} We will rely on this fact when showing that
-  unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
-\item \emph{The transformations' \Sc{lhs}s must be disjoint.} We
-  explain the reason for this in \cref{sec:reval-overlapping}.
 \end{enumerate}
-The first two restrictions are further justified by our formalization of
+The first two restrictions were further justified by our formalization of
 expansion and unexpansion in Coq (\cref{sec:reval-coq}), 
 where they occurred naturally as pre-conditions
 for proofs.

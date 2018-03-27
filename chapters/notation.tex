@@ -117,8 +117,7 @@ to effectively resugar them.
   We therefore disallow duplication,
   with some exceptions for pattern variables bound to atomic terms.
 \item \emph{Each desugaring rule's \Sc{lhs} must have the form
-  $\Node{C}{e_1,\,...,\,e_n}$.} We will rely on this fact when showing that
-  unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
+  $\Node{C}{e_1,\,...,\,e_n}$.} We will need this fact in \cref{chap:resugar-eval}.
 %\item References and declarations in the \Sc{rhs} are given fresh names during
 %   expansion to ensure hygiene.
 % (Discussed, but not actually assumed in Chapter 5.)
