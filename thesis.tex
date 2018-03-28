@@ -673,7 +673,211 @@
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Brown Thesis Style
+%%  (brownthesis.cls, provided by the department)
 
+\makeatletter
+
+\newif\if@draft
+\newif\ifc@pyright
+\newif\ifl@fpage
+\newif\ifl@tpage
+\newif\ifl@epage
+\newif\ift@cpage
+\newif\if@sigpage
+
+\DeclareOption{draft}{\@drafttrue\PassOptionsToClass{draft,twoside}{book}}
+\DeclareOption{final}{\@draftfalse\PassOptionsToClass{final,oneside}{book}}
+\DeclareOption{twoside}{\PassOptionsToClass{twoside}{book}}
+\DeclareOption{oneside}{\PassOptionsToClass{oneside}{book}}
+\DeclareOption{contents}{\t@cpagetrue}
+\DeclareOption{nocontents}{\t@cpagefalse}
+\DeclareOption{figures}{\l@fpagetrue}
+\DeclareOption{nofigures}{\l@fpagefalse}
+\DeclareOption{tables}{\l@tpagetrue}
+\DeclareOption{notables}{\l@tpagefalse}
+\DeclareOption{examples}{\l@epagetrue}
+\DeclareOption{noexamples}{\l@epagefalse}
+\DeclareOption{copyright}{\c@pyrighttrue}
+\DeclareOption{nocopyright}{\c@pyrightfalse}
+\DeclareOption{signature}{\@sigpagetrue}
+\DeclareOption{nosignature}{\@sigpagefalse}
+\DeclareOption*{\PassOptionsToClass{\CurrentOption}{book}}
+\ExecuteOptions{11pt,final,copyright,contents,figures,tables,noexamples,signature}
+\ProcessOptions\relax
+
+\def\single@spacing{\def\baselinestretch{1}}
+\def\final@spacing{\def\baselinestretch{1.3}}
+\if@draft\single@spacing\else\final@spacing\fi
+
+% Redefine thebibliography to add an entry in the table of contents
+\let\@ldthebibliography=\thebibliography
+\def\thebibliography#1{\@ldthebibliography{#1}%
+  \addcontentsline{toc}{chapter}{\bibname}}
+ 
+% \author, \title are defined in book; here are the rest of the
+% front matter defining macros
+\def\dept#1{\gdef\@dept{#1}}
+\def\degrees#1{\gdef\@degrees{#1}}
+\def\principaladviser#1{\gdef\@principaladviser{#1, Director}}
+\def\advis@r{Adviser}
+\def\principaladvisor#1{\gdef\@principaladviser{#1, Director}%
+  \gdef\advis@r{Advisor}}
+\def\dean#1{\gdef\@dean{#1}}
+\def\submitdate#1{\gdef\@submitdate{#1}}
+\def\copyrightyear#1{\gdef\@copyrightyear{#1}}
+
+% --  Manos
+% A paragraph must be inserted after the toc, that gives the 
+% places where parts of the thesis have been published before
+\def\disclaimer#1{\gdef\@disclaimer{#1}}
+%the default, however, is nothing
+\let\@disclaimer\@empty
+
+\def\@dept{Computer Science}
+\def\@degrees{}
+\def\@principaladviser{}
+\def\@dean{}
+\def\@submitdate{\ifcase\the\month\or
+   January\or February\or March\or April\or May\or June\or
+   July\or August\or September\or October\or November\or December\fi
+   \space \number\the\year}
+\ifnum\month=12
+   \@tempcnta=\year \advance\@tempcnta by 1
+   \edef\@copyrightyear{\number\the\@tempcnta}
+\else
+   \def\@copyrightyear{\number\the\year}
+\fi
+
+% macros to deal with thesis readers.
+% Up to 3 readers are allowed and at least 2 must be supplied
+\newcount\@readers \@readers=1
+\def\reader@one{\@latex@error{No \noexpand\reader supplied}\@ehc}
+\def\reader@two{\@latex@error{At least two thesis readers are needed}\@ehc}
+\let\reader@three\@empty
+\let\@firstreaderfrom\@empty
+\let\@secondreaderfrom\@empty
+\let\@thirdreaderfrom\@empty
+\newcommand*{\reader}[2][\@empty]{\ifcase\the\@readers\or
+  \gdef\@firstreaderfrom{#1}  \gdef\reader@one{#2, Reader}\or
+  \gdef\@secondreaderfrom{#1} \gdef\reader@two{#2, Reader}\or
+  \gdef\@thirdreaderfrom{#1}  \gdef\reader@three{#2, Reader}\or
+  \@latex@error{Too many readers supplied (max 3)\@ehc}\fi
+  \ifnum\@readers < 4 \global\advance\@readers\@ne\fi}
+
+\def\titlep{%
+  \null\vskip 0.5in%
+  \begin{center}\@title\end{center}
+  \vfill
+  \begin{center}%
+    by\\
+    \@author\\
+    \@degrees%
+  \end{center}
+  \vfill
+  \begin{center}%
+    A dissertation submitted in partial fulfillment of the\\
+    requirements for the Degree of Doctor of Philosophy\\
+    in the Department of \@dept{} at Brown University%
+  \end{center}
+  \vfill
+  \begin{center}%
+    Providence, Rhode Island\\
+    \@submitdate%
+  \end{center}
+  \vskip.5in}
+ 
+\def\copyrightpage{%
+  \null\vfill
+  \begin{center}
+    \Large\copyright\ Copyright \@copyrightyear{} by \@author
+  \end{center}
+  \vspace{12cm}
+  \vfill}
+ 
+\def\signaturepage{%
+\if@sigpage
+  \setcounter{page}{3}
+  \evensidemargin 0.5in
+  \def\make@sigline##1##2{%
+    \begin{tabular}{lc}
+      Date \rule{1in}{.05mm}\hspace*{.75in} & \rule{3in}{.05mm}\\
+      & ##1\\ & ##2
+    \end{tabular}}%
+  \null\vskip.2in
+  \begin{center}
+    This dissertation by \@author{} is accepted in its present form by\\
+    the Department of \@dept{} as satisfying the dissertation requirement \\
+    for the degree of Doctor of Philosophy.
+  \end{center}
+  \vspace{.75in}
+  \let\old@stretch\baselinestretch \single@spacing\selectfont
+  \make@sigline{\@principaladviser}{\@empty}\\[.4in]
+  \centerline{Recommended to the Graduate Council}\\[.75in]
+  \make@sigline{\reader@one}{\@firstreaderfrom}\\[.40in]
+  \make@sigline{\reader@two}{\@secondreaderfrom}
+  \ifnum\@readers>3 \\[.40in]\make@sigline{\reader@three}{\@thirdreaderfrom}\fi
+  \\[.5in]\centerline{Approved by the Graduate Council}\\[.75in]
+  \make@sigline{\@dean}{Dean of the Graduate School}
+  \def\baselinestretch{\old@stretch}\selectfont
+  \clearpage
+  %\thispagestyle{empty}
+  \thispagestyle{plain} % [Justin]
+  \setcounter{page}{2}\cleardoublepage
+  \setcounter{page}{4}
+  \evensidemargin 0in
+\else
+  \setcounter{page}{1}
+\fi
+  }
+ 
+\def\abstract#1{\gdef\d@abstract{#1}}
+\def\d@abstract{}
+\def\abstractpage{%
+  %\thispagestyle{empty}
+  \thispagestyle{plain} % [Justin]
+  \noindent Abstract of ``\@title''
+  by \@author, Ph.D., Brown University, \@submitdate.\\[.5in]
+  \d@abstract\vfill\newpage}
+
+\def\beforepreface{
+  %\pagestyle{empty}
+  \pagestyle{plain} % [Justin]
+  \pagenumbering{roman}
+  \titlep\cleardoublepage
+  \ifc@pyright\copyrightpage\cleardoublepage\addtocounter{page}{-1}\fi
+  \pagestyle{plain}\signaturepage\cleardoublepage}
+ 
+%\def\prefacesection#1{\chapter*{#1}\addcontentsline{toc}{chapter}{#1}}
+% We don't really won't the preface sections to appear in the TOC
+\def\prefacesection#1{\cleardoublepage\chapter*{#1}}
+
+\long
+\def\afterpreface{\cleardoublepage
+  \ift@cpage
+  \tableofcontents
+  \ifx\@disclaimer\@empty
+      \else
+      \vspace{0.5cm}
+      \single@spacing
+      \noindent
+      \hangindent\parindent
+      \makebox[\parindent][l]{\raisebox{0.2ex}{\large{$\star$}} }\@disclaimer
+      \if@draft\single@spacing\else\final@spacing\fi
+    \fi
+% I don't have any tables
+%  \cleardoublepage\fi
+%  \ifl@tpage\addcontentsline{toc}{chapter}{List of Tables}\listoftables
+    \cleardoublepage\fi
+  \ifl@fpage\addcontentsline{toc}{chapter}{List of Figures}\listoffigures
+    \cleardoublepage\fi
+  \ifl@epage\addcontentsline{toc}{chapter}{List of Examples}\listofexamples
+    \cleardoublepage\fi
+  \pagenumbering{arabic}\pagestyle{myheadings}}
+
+
+\makeatother
 
 
 
@@ -682,74 +886,67 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  Thesis
 
-
 \begin{document}
 
 \pgfdeclarelayer{background}
 \pgfsetlayers{background,main}
 
+\title{Resugaring:\\Lifting Languages through Syntactic Sugar}
 \author{Justin Pombrio}
-\title{Resugaring: Lifting Languages through Syntactic Sugar}
-%\title{Resugaring: Restoring the Abstractions that Syntactic Sugar is Supposed to Provide}
-\maketitle
+\degrees{B.~S., Worcester Polytechnic Institute, 2011}
+\principaladvisor{Shriram Krishnamurthi}
+\reader[Northeastern Computer Science]{Mitchell Wand}
+\reader[TU Delft Computer Science]{Eelco Visser}
+\dean{}
+\abstract{
+  Syntactic sugar is pervasive in language technology. Programmers use
+  it to shrink the size of a core language; to define domain-specific
+  languages; and even to extend their language. Unfortunately, when
+  syntactic sugar is eliminated by transformation, it obscures the
+  relationship between the user's source program and the transformed
+  program.  First, it obscures the evaluation steps the program takes
+  when it runs, since these evaluation steps happen in the core
+  (desugared) language rather than the surface (pre-desugaring)
+  language the program was written in.  Second, it obscures the
+  scoping rules for the surface language, making it difficult for
+  \Sc{ide}s and other tools to obtain binding information.  And
+  finally, it obscures the types of surface programs, which can result
+  in type errors that reference terms the programmer did not write.  I
+  address these problems by showing how evaluation steps, scoping
+  rules, and type rules can all be lifted---or \emph{resugared}---from
+  core to surface languages, thus restoring the abstraction provided
+  by syntactic sugar.
+}
+\abstractpage
+\beforepreface
+\prefacesection{Acknowledgements}
+  I would like to thank my thesis committee---Mitchell Wand, Eelco
+  Visser, and Shriram Krishnamurthi---for overseeing this large and
+  technical body of work.
+  
+  I would like to thank Daniel J.~Dougherty and Matthias Felleisen for
+  their feedback on evaluation resugaring, and Joe Politz for providing
+  a language that offered an excellent proving ground for it
+  (\cref{chap:resugar-eval}).
+  
+  I would like to thank Paul Stansifer, Sebastian Erdweg, and Matthew
+  Flatt for their feedback on scope inference
+  (\cref{chap:resugar-scope}).
+  
+  I would like to thank Sorawee ``Oak'' Porncharoenwase for helping to
+  generalize this work and integrate it with Pyret, as part of his
+  Honors thesis.% (\cref{chap:implementation}).
+  
+  Some of the papers that led to this thesis were rough around the edges
+  when we initially submitted them. I would like to give many thanks to
+  the many reviewers who gave very thorough feedback on these
+  intial versions. This thesis owes much of its quality to these
+  anonymous individuals.
+  
+  Finally, I would like to thank the NSF, which partly funded all of this work.
 
-\paragraph{Thesis Statement}
-\begin{quote}
-Many aspects of programming languages---in particular evaluation
-steps, scope rules, and type rules---can be non-trivially
-\emph{resugared} from core to surface language, restoring the
-abstraction provided by syntactic sugar.
-\end{quote}
+\afterpreface
 
-\paragraph{Abstract}
-Syntactic sugar is pervasive in language technology. Programmers use
-it to shrink the size of a core language; to define domain-specific
-languages; and even to extend their language. Unfortunately, when
-syntactic sugar is eliminated by transformation, it obscures the
-relationship between the user's source program and the transformed
-program.  First, it obscures the evaluation steps the program takes
-when it runs, since these evaluation steps happen in the core
-(desugared) language rather than the surface (pre-desugaring) language
-the program was written in.  Second, it obscures the scoping
-rules for the surface language, making it difficult for \Sc{ide}s and
-other tools to obtain binding information.  And finally, it obscures the types of
-surface programs, which can result in type errors that reference
-terms the programmer did not write.  I address
-these problems by showing how evaluation steps, scoping rules, and
-type rules can all be lifted---or \emph{resugared}---from core to surface
-languages, thus restoring the abstraction provided by syntactic
-sugar.
-
-\tableofcontents
-
-
-
-\paragraph{Acknowledgements}. %[TODO]
-
-I would like to thank my thesis committee---Mitchell Wand, Eelco
-Visser, and Shriram Krishnamurthi---for overseeing this large and
-technical body of work.
-
-I would like to thank Daniel J.~Dougherty and Matthias Felleisen for
-their feedback on evaluation resugaring, and Joe Politz for providing
-a language that offered an excellent proving ground for it
-(\cref{chap:resugar-eval}).
-
-I would like to thank Paul Stansifer, Sebastian Erdweg, and Matthew
-Flatt for their feedback on scope inference
-(\cref{chap:resugar-scope}).
-
-I would like to thank Sorawee ``Oak'' Porncharoenwase for helping to
-generalize this work and integrate it with Pyret, as part of his
-Honors thesis.% (\cref{chap:implementation}).
-
-Some of the papers that led to this thesis were rough around the edges
-when we initially submitted them. I would like to give many thanks to
-the many reviewers who gave very thorough feedback on these
-intial versions. This thesis owes much of its quality to these
-anonymous individuals.
-
-Finally, I would like to thank the NSF, which partly funded all of this work.
 
 \part{Syntactic Sugar}
 \include{chapters/intro}
