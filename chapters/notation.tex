@@ -1,10 +1,10 @@
 \chapter{Notation}\label{chap:notation}
 
-In this chapter, we set the groundwork of notation and basic assumptions
+In this chapter, we define notation and set assumptions
 that will be used throughout the rest of the thesis.
 
 Most importantly, we assume that desugaring is given (externally to the
-language) as a set of pattern-based rewrite rules (a la Scheme's \Code{syntax-rules}~\cite{scheme5}.)
+language) as a set of pattern-based rewrite rules (a la Scheme's \Code{syntax-rules}~\cite{scheme5}).
 This is important because it will form an expressive limit on
 our techniques for resugaring evaluation sequences \cref{chap:resugar-eval},
 scope rules \cref{chap:resugar-scope}, and type systems \cref{chap:resugar-types}.
@@ -12,11 +12,13 @@ scope rules \cref{chap:resugar-scope}, and type systems \cref{chap:resugar-types
 
 \section{ASTs}\label{sec:formal-term}
 
-For the purposes of resugaring scope, we require \Sc{ast}s
+For the purposes of resugaring scope (\cref{chap:resugar-scope}), we require \Sc{ast}s
 (\emph{abstract syntax trees}) to explicitly distinguish between
 variable \emph{declarations} $\Decl{x}$ (i.e., binding sites), and
 variable \emph{references} $\Refn{x}$ (i.e., uses).
-This distinction will be important in \cref{chap:resugar-scope}, but
+We also require variables to have an \emph{\textsc{ast} position} $i$
+that uniquely distinguishes them.
+These distinctions will be important in \cref{chap:resugar-scope}, but
 can otherwise be ignored.
 
 We will refer to \Sc{ast}s (and parts of \Sc{ast}s)
@@ -32,16 +34,17 @@ term $e$ &$::=$& $\Value$ & primitive value \\
   &$|$& $\Refn[i]{x}$  & variable reference at position $i$ \\
   &$|$& $\Decl[i]{x}$  & variable declaration at position $i$ \\
 \end{Table}
-A ``constructor'' is the name of a syntactic construct, e.g. \Code{+}
-or \Code{if}. Thus $\NodeRm{+}{\Refn[i]{x}\ 1}$ is a term.
+By ``constructor'', we mean the name of a syntactic construct, such as
+\Code{Plus} or \Code{If}. Thus $\NodeRm{Plus}{\Refn[i]{x}\ 1}$ is a term.
 
-\section{Patterns}
+\section{Desugaring}\label{sec:formal-desugar}
 
-We require that desugaring be based on \emph{patterns}: it
-proceeds by \emph{matching} a \Sc{lhs} pattern against a term,
-and then \emph{substituting} into the \Sc{rhs} pattern.
+We require that desugaring be based on \emph{patterns}: it proceeds by
+\emph{matching} a \Sc{lhs} (left-hand-side) pattern against a term,
+and then \emph{substituting} into the \Sc{rhs} (right-hand-side)
+pattern.  We will describe how this works, piece by piece.
 
-Patterns $p$ are just terms that can contain pattern variables $\PVarA$:
+First, \emph{patterns} $p$ are terms that can contain pattern variables $\PVarA$:
 \begin{Table}
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
   &$|$& $\Value$ & primitive value \\
@@ -49,18 +52,30 @@ pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
   &$|$& $\Refn[i]{x}$  & variable reference at position $i$ \\
   &$|$& $\Decl[i]{x}$  & variable declaration at position $i$ \\
 \end{Table}
-Matching a term against a pattern produces an \emph{environment}, or a
-mapping from pattern variable to term:
+A term can then be \emph{matched} against a pattern---written
+$\Match{e}{p}$---to produce an \emph{environment} $\gamma$. An
+environment is a mapping from pattern variables to terms:
 \begin{Table}
   environment $\gamma$ &$::=$& $\{\PVarA \mapsto e, ...\}$
 \end{Table}
-We will write desugaring rules with a double arrow:
+Once an environment is obtained, it can be \emph{substituted} into a
+pattern---written $\Subs{\gamma}{p}$---to produce a term.
+
+We can now say how to \emph{expand} a single desugaring rule. Each
+rule has the form:
 \begin{Table}
   desugaring rule $r$ &$::=$& $p \To p'$
 \end{Table}
+where $p$ is the rule's \Sc{lhs}, and $p'$ is the rule's \Sc{rhs}.
+To expand a rule $p \To p'$ in a term $e$, match against the \Sc{lhs}
+and substitute into the \Sc{rhs}: $\Subs{(\Match{e}{p})}{p'}$.
 
-\section{Desugaring}\label{sec:formal-desugar}
+Finally, \emph{desugaring} is the recursive expansion of all of the
+sugars in a term. We will typically assume that desugaring happens in
+\Sc{oi} order (see \cref{sec:taxonomy-order}), although
+\cref{chap:resugar-scope} will be agnostic to desugaring order.
 
+\paragraph{An Example}
 Putting this all together, suppose we have the
 following sugar, which encodes Let using Lambda:
 \begin{Table}
@@ -82,11 +97,7 @@ and substitute into the \Sc{rhs}:
      {\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\PVarC}\;\PVarB}}
      = \NodeRm{Apply}{\NodeRm{Lambda}{\DeclX\;\RefnX}\;1}
 \]
-
-That was the \emph{expansion} of a single rule, a.k.a. a single
-\emph{rewrite}. \emph{Desugaring} is
-the expansion of all sugars in a term. We write it as $\Desugar{e}$,
-and assume that it is in \Sc{oi} order (see \cref{sec:taxonomy-order}).
+Since there are no more sugars in the term, we are done desugaring.
 
 
 \subsection{Restrictions on Desugaring}\label{sec:formal-reqs}
@@ -98,16 +109,28 @@ criteria on desugaring rules, without which they don't make semantic
 sense, and (ii) a set of restrictions on desugaring rules that we need
 to effectively resugar them.
 
-\paragraph{Well-formedness Criteria for Desugaring Rules}
+\paragraph{Well-formedness Criteria for Desugaring Rules}\WhitePhantom{.}\\ \noindent
+For every desugaring rule:
 \begin{enumerate}
 \item \emph{Each pattern variable in the \Sc{rhs} also appears in the
   \Sc{lhs}.} Otherwise the pattern variable would be unbound during
   expansion.
-\item The \Sc{lhs} pattern contains no references or declarations. Rather, these
+\item \emph{The \Sc{lhs} pattern contains no references or declarations.} Rather, these
   should be contained in its pattern variables during expansion.
+  For example, the Let sugar above \emph{could not} have been written as:
+\begin{Table}
+  $\NodeRm{Let}{\DeclX\;\PVarB\;\PVarC}$
+  &$\To$&
+  $\NodeRm{Apply}{\NodeRm{Lambda}{\DeclX\;\PVarC}\;\PVarB}$
+  & ``Let $\DeclX$ equal $\PVarB$ in $\PVarC$''
+\end{Table}
+\item \emph{Each desugaring rule's \Sc{lhs} must have the form
+  $\Node{C}{p_1,\,...,\,p_n}$.} Thus, for example, 
+  We will need this fact in \cref{chap:resugar-eval}.
 \end{enumerate}
 
-\paragraph{Restrictions on Desugaring Rules}
+\paragraph{Restrictions on Desugaring Rules}\WhitePhantom{.}\\ \noindent
+For every desugaring rule:
 \begin{enumerate}
 \item \emph{Each pattern variable appears at most once in the \Sc{lhs} and at
   most once in the \Sc{rhs}.}
@@ -116,17 +139,16 @@ to effectively resugar them.
   and, in the worst case, can exponentially blow up programs.
   We therefore disallow duplication,
   with some exceptions for pattern variables bound to atomic terms.
-\item \emph{Each desugaring rule's \Sc{lhs} must have the form
-  $\Node{C}{e_1,\,...,\,e_n}$.} We will need this fact in \cref{chap:resugar-eval}.
 %\item References and declarations in the \Sc{rhs} are given fresh names during
 %   expansion to ensure hygiene.
 % (Discussed, but not actually assumed in Chapter 5.)
 \item \emph{The rules' \Sc{lhs}s must be disjoint.} If they
   are not, it presents issues both for resugaring evaluation sequences,
-  and resugaring type systems.
+  and resugaring type systems (see \cref{sec:reval-disjoint} and
+  \cref{sec:rtype-req-desugar}, respectively).
 \end{enumerate}
 
-Some of the resugaring chapters go beyond the assumptions shown here: for instance, the
+Some of the resugaring chapters relax these assumptions. For instance, the
 evaluation resugaring chapter (\cref{chap:resugar-eval}) formally
 supports ellipses (which allow matching zero or more repetitions of a
 pattern), and the scope resugaring chapter is agnostic to the order of

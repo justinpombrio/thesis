@@ -363,8 +363,14 @@ rely on, and then prove that it obeys
 \cref{goal:rtype-faithful} and \cref{goal:rtype-abstraction} given these assumptions.
 Roughly speaking, these assumptions are:
 \begin{itemize}
+  \item Desugaring rules must obey the basic ``Well-Formedness
+    Criteria'' of \cref{sec:formal-reqs}.
   \item Desugaring rules must be defined using pattern-based rules,
     and their \Sc{lhs}s must be disjoint (\cref{sec:rtype-req-desugar}).
+
+    (This is the second ``Restriction on Desugaring Rules'' from
+    \cref{sec:formal-reqs}. We relax the first restriction given
+    there: pattern variables may be used more than once in a pattern.)
   \item The type system used
     to resugar must support pattern variables and partial
     derivations, and they must obey obvious laws (\cref{sec:rtype-req-type}).
@@ -387,14 +393,14 @@ notation we will use throughout the chapter.
   \begin{Table}
     $e$ &$::=$& $\Value$
     & (primitive value) \\
-    &$|$& $x$ & (variable) \\
     &$|$& $\Node{C}{e_1 \dd e_n}$
     & (\Sc{ast} node) \\
-    $p$ &$::=$& $\Value$ \\
-    &$|$& $x$ \\
-    &$|$& $\Node{C}{p_1 \dd p_n}$ \\
-        &$|$&   $\alpha$
+    &$|$& $x$ & (variable) \\
+    $p$ &$::=$& $\alpha$
     & (pattern variable) \\
+    &$|$& $\Value$ \\
+    &$|$& $\Node{C}{p_1 \dd p_n}$ \\
+    &$|$& $x$ \\
     $t$ &$::=$& $type$
     & (type) \\
     $\Gamma$ &$::=$& $\cdot$ $|$ $\Gamma,\,x:t$

@@ -822,8 +822,8 @@
   \make@sigline{\@dean}{Dean of the Graduate School}
   \def\baselinestretch{\old@stretch}\selectfont
   \clearpage
-  %\thispagestyle{empty}
-  \thispagestyle{plain} % [Justin]
+  \thispagestyle{empty}
+  %\thispagestyle{plain} % [Justin]
   \setcounter{page}{2}\cleardoublepage
   \setcounter{page}{4}
   \evensidemargin 0in
@@ -835,19 +835,23 @@
 \def\abstract#1{\gdef\d@abstract{#1}}
 \def\d@abstract{}
 \def\abstractpage{%
-  %\thispagestyle{empty}
-  \thispagestyle{plain} % [Justin]
+  \thispagestyle{empty}
+  %\thispagestyle{plain} % [Justin]
   \noindent Abstract of ``\@title''
   by \@author, Ph.D., Brown University, \@submitdate.\\[.5in]
   \d@abstract\vfill\newpage}
 
 \def\beforepreface{
-  %\pagestyle{empty}
-  \pagestyle{plain} % [Justin]
-  \pagenumbering{roman}
+  \thispagestyle{empty}
   \titlep\cleardoublepage
-  \ifc@pyright\copyrightpage\cleardoublepage\addtocounter{page}{-1}\fi
-  \pagestyle{plain}\signaturepage\cleardoublepage}
+  \ifc@pyright
+    \thispagestyle{empty} % [Justin]
+    \copyrightpage
+    \cleardoublepage
+    \addtocounter{page}{-1}
+  \fi
+  %\pagestyle{plain}
+  \signaturepage\cleardoublepage}
  
 %\def\prefacesection#1{\chapter*{#1}\addcontentsline{toc}{chapter}{#1}}
 % We don't really won't the preface sections to appear in the TOC
@@ -873,8 +877,7 @@
   \ifl@fpage\addcontentsline{toc}{chapter}{List of Figures}\listoffigures
     \cleardoublepage\fi
   \ifl@epage\addcontentsline{toc}{chapter}{List of Examples}\listofexamples
-    \cleardoublepage\fi
-  \pagenumbering{arabic}\pagestyle{myheadings}}
+    \cleardoublepage\fi}
 
 
 \makeatother
@@ -890,6 +893,13 @@
 
 \pgfdeclarelayer{background}
 \pgfsetlayers{background,main}
+
+% Roman page numbering for introduction
+\pagenumbering{roman}
+%\clearscrheadfoot
+%\cefoot[]{\hfil\pagemark\pagemark\hfil}
+%\cofoot[]{\hfil\pagemark\pagemark\hfil}
+%\pagestyle{myheadings}
 
 \title{Resugaring:\\Lifting Languages through Syntactic Sugar}
 \author{Justin Pombrio}
@@ -946,6 +956,12 @@
   Finally, I would like to thank the NSF, which partly funded all of this work.
 
 \afterpreface
+
+% Arabic numbering thereafter
+\pagestyle{scrheadings}
+\pagenumbering{arabic}
+
+
 
 
 \part{Syntactic Sugar}

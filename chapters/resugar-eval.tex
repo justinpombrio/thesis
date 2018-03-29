@@ -256,14 +256,10 @@ an ordinary trace in the core, ignoring all sugar.
 
 The implementation discussed in this
 chapter---{\Resugarer}---represents variables as strings and is not
-hygienic. The next chapter, \cref{sec:rscope-eval-hygiene}, shows how
-to fix this. Three changes must be made: (i) sugars must pass that
-chapter's \emph{scope inference} algorithm; (ii) introduced variables
-must (unsurprisingly) be given fresh names, and resugaring must allow
-introduced variables to match against any name; and (iii) sugars must
-not drop pattern variables. Given these changes,
-\cref{sec:rscope-eval-hygiene} proves that both desugaring and
-resugaring will be hygienic.
+hygienic (e.g., sugar-introduced variables could accidentally capture
+user-defined variables). However, in \cref{sec:reval-hygiene}, we
+provide a sketch of how it could be made hygienic.
+
 
 \section{{\Resugarer} at Work}
 \label{sec:reval-pyret-example}
@@ -360,10 +356,10 @@ purposes of resugaring) tags:
 
 \begin{Table}
 pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
+  &$|$& $\Value$ & primitive value \\
   &$|$& $\Node{C}{p_1 ... p_n}$ & \Sc{ast} node \\
   &$|$& $[p_1 \dd p_n]$ & list of length $n$ \\
   &$|$& $[p_1 \dd p_n\,\Ell{p}]$ & list of length $\geq n$ (ellipses) \\
-  &$|$& $\Value$ & primitive value \\
   &$|$& $\VarX$  & variable \\
   &$|$& $\Tag{o}{p}$ & origin tag \\ \\
 term $e$ &$::=$& $p$ & pattern w/o pattern variables or ellipses \\ \\
@@ -374,7 +370,7 @@ origin tag $o$ &$::=$&
 
 Variables are denoted by a lowercase
 identifier (we omit the reference/declaration distinction, and the
-identity $i$, because they are not relevant in this chapter);
+position $i$, because they are not relevant in this chapter);
 compound nodes are written in s-expression form;
 and lists are denoted by a
 bracketed list of subpatterns. Nodes must have fixed arity, so lists are
@@ -386,8 +382,6 @@ they follow.
 
 A \emph{term} $e$ is simply a pattern without pattern variables or
 ellipses. Tags and origins ($o$) are described in \cref{sec:reval-tagging}.
-We do \emph{not} address hygiene in this chapter, but rather discuss
-it in \cref{sec:rscope-eval-hygiene}.
 
 Our definition of patterns determines both the expressiveness of the
 resulting transformation system and the ability to formally reason about
@@ -413,7 +407,7 @@ requirements for the transformation language are given in
 
 
 
-\section{Matching, Substitution, and Unification}
+\subsubsection{Matching, Substitution, and Unification}
 
 Our transformations are implemented with simpler operations on patterns:
 matching and substitution.
@@ -531,13 +525,11 @@ last criterion about ellipses, these requirements were given in
 \item \emph{Each pattern variable in the \Sc{rhs} also appears in the
   \Sc{lhs}.} Otherwise the pattern variable would be unbound during
   expansion.
-\item The \Sc{lhs} pattern contains no references or declarations. Rather, these
+\item \emph{The \Sc{lhs} pattern contains no references or declarations.} Rather, these
   should be contained in its pattern variables during expansion.
 \item \emph{Each transformation's \Sc{lhs} must have the form
-  $\Node{C}{e_1 \dd e_n}$.} We will rely on this fact when showing that
+  $\Node{C}{p_1 \dd p_n}$.} We will rely on this fact when showing that
   unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
-\item \emph{The transformations' \Sc{lhs}s must be disjoint.} We
-  explain the reason for this in \cref{sec:reval-overlapping}.
 \item \emph{Each pattern variable appears at most once in the \Sc{lhs} and at
   most once in the \Sc{rhs}.}
   Allowing duplicate pattern variables complicates matching, unification,
@@ -545,6 +537,8 @@ last criterion about ellipses, these requirements were given in
   and, in the worst case, can exponentially blow up programs.
   We therefore disallow duplication,
   with the sole exception of variables bound to atomic terms.
+\item \emph{The transformations' \Sc{lhs}s must be disjoint.} We
+  explain the reason for this in \cref{sec:reval-overlapping}.
 \item \emph{(New) An ellipsis of depth $n$ must contain at least one pattern variable
   that either appears at depth $n$ or greater on the other side of the
   rule, or does not appear on the other side of the rule.} Otherwise it is
@@ -1417,8 +1411,72 @@ expected surface evaluation sequence:
 \end{Codes}
 
 
+\section{Obtaining Hygiene}
+\label{sec:reval-hygiene}
 
+The implementation discussed in this chapter---{\Resugarer}---is not
+hygienic. (For a quick introduction to hygiene, see
+\cref{sec:taxonomy-safety}). In this section, we sketch out how {\Resugarer}
+could be modified to be hygienic. More specifically, we show how it
+can be modified such that variables defined by users are never bound
+by variables defined by sugars, and vice-versa.\marginpar{The version
+  of hygiene we are discussing here is the typical
+  definition~\cite{hygienic-macros}.  In the next chapter, we will
+  give a stronger definition.}
 
+The required modification is simple. Suppose that:
+\begin{itemize}[noitemsep]
+  \item $\ExpandRecf$ gives fresh names to introduced variables (that
+    is, variables on the \Sc{rhs}).
+  \item $\UnexpandRecf$ allows any variable name to match against an
+    introduced variable.
+\end{itemize}
+Then both $\ExpandRecf$ and $\UnexpandRecf$ will be hygienic:
+user-defined variables and sugar-introduced variables will never be
+bound by one another.
+
+During \emph{desugaring}, sugar-introduced variables are those that
+appeared as variables in the \Sc{rhs} of a sugar. By assumption, all
+of these variables are given fresh names; thus no user-defined
+variable can be bound by them, and vice-versa. Why is this proof so
+easy, when significant effort has gone into defining hygienic macro
+expansion algorithms? It is because we are assuming that sugars are
+defined externally to the language, so they aren't intermingled with
+user-defined code.
+
+During \emph{resugaring}, it may look like there are no
+sugar-introduced variables, since the \Sc{lhs}s of desugaring rules
+cannot contain variables. However, the \Sc{lhs} of a rule \emph{can}
+contain a pattern variable with a variable in it, and that pattern
+variable \emph{can} be dropped on the \Sc{rhs}. In this case,
+resugaring will restore that pattern variable, thereby re-introducing
+its variables. For example, if \Code{(Lambda x. x * 0)} desugars into
+\Code{(Lambda x. 0)}, then the \Code{x} in \Code{x * 0} will be
+re-introduced by resugaring.
+
+Is this re-introduced variable bound by the outer \Code{x}?
+Surprisingly, it is not. The key point is that \emph{in the absense of
+  surface-language scoping rules, where a variable is bound in a
+  surface term is \emph{defined} by the desugaring of that term.}
+Since the inner \Code{x} is dropped during desugaring, it has no
+binding site. Thus unexpansion is hygienic: every variable that is
+re-introduced during resugaring has no binding site, so there can be
+no accidental variable capture.
+
+This may seem like a cop-out, but it is the best that we can do when
+the scope of the surface language is defined only implicitly through
+desugaring. In the next chapter, we will show how to \emph{resugar
+  core language scope rules} to obtain scope rules for the surface
+language, which will lead to a stronger notion of hygiene.
+
+% NOTE (from the perspective of the next chapter):
+% If you allow a desugaring rule to delete a pattern variable,
+% then resugaring will not technically be hygienic. For example,
+% suppose that (lambda x. x) => (lambda x. 3). This is a legit
+% desugaring, but during resugaring 'x' will be captured! So I think
+% this hygiene violation is OK. HOWEVER, we don't seem to need/want to
+% drop pattern variables ANYWAYS, so I'm just stating the stronger
+% property.
 
 \section{Related Work}
 
