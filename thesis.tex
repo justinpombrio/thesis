@@ -279,9 +279,9 @@
 \newcommand{\ASTNode}[4]{(\Variable{#3}{}{#2}{#1}\;#4)}
 %\newcommandx*{\Node}[3][2=\empty]{({#1}_{#2}\;#3)}
 \newcommandx*{\Node}[2]{({#1}\;#2)}
-%\newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
-%\newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
-%\newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
+\newcommandx*{\Core}[3][2=\empty]{\ASTNode{Core}{#1}{#2}{#3}}
+\newcommandx*{\Aux}[3][2=\empty]{\ASTNode{Aux}{#1}{#2}{#3}}
+\newcommandx*{\Surf}[3][2=\empty]{\ASTNode{Surf}{#1}{#2}{#3}}
 %\newcommand{\CoreLabel}{\Variable{Core}{}{}{C}}
 %\newcommand{\AuxLabel}{\Variable{Aux}{}{}{C}}
 %\newcommand{\SurfLabel}{\Variable{Surf}{}{}{C}}
@@ -353,10 +353,27 @@
 % Hacks
 \newcommand{\WhitePhantom}[1]{{\color{white}#1}}
 \newcommand{\tall}{\phantom{Q}\!\!\!\!}
-\newenvironment{CorrectlyIndentedCodes}
-               {\newline\begin{minipage}{\linewidth}\vspace{0.75em}\begin{Codes}}
-               {\end{Codes}\end{minipage}\vspace{0.75em}}
-               
+\newenvironment{CorrectlyIndentedCodes}{
+  \newline\begin{minipage}{\linewidth}\vspace{0.75em}\begin{Codes}
+}{
+  \end{Codes}\end{minipage}\vspace{0.75em}
+}
+\newcommand{\RomanNumbering}{
+  \clearscrheadfoot
+  \pagenumbering{roman}
+  \cfoot[]{\pagemark}
+}
+\newcommand{\ArabicNumbering}{
+  \clearscrheadfoot
+  \pagenumbering{arabic}
+  % Taken from classicthesis. The only way I see to restore this is to duplicate the code:
+  \lehead{\mbox{\llap{\small\pagemark\kern2em}\headmark\hfil}}
+  \rohead{\mbox{\hfil{\headmark}\rlap{\small\kern2em\pagemark}}}
+}
+
+
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -894,12 +911,7 @@
 \pgfdeclarelayer{background}
 \pgfsetlayers{background,main}
 
-% Roman page numbering for introduction
-\pagenumbering{roman}
-%\clearscrheadfoot
-%\cefoot[]{\hfil\pagemark\pagemark\hfil}
-%\cofoot[]{\hfil\pagemark\pagemark\hfil}
-%\pagestyle{myheadings}
+\RomanNumbering
 
 \title{Resugaring:\\Lifting Languages through Syntactic Sugar}
 \author{Justin Pombrio}
@@ -957,11 +969,7 @@
 
 \afterpreface
 
-% Arabic numbering thereafter
-\pagestyle{scrheadings}
-\pagenumbering{arabic}
-
-
+\ArabicNumbering
 
 
 \part{Syntactic Sugar}
