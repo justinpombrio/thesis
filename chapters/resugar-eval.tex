@@ -526,7 +526,7 @@ last criterion about ellipses, these requirements were given in
   \Sc{lhs}.} Otherwise the pattern variable would be unbound during
   expansion.
 \item \emph{The \Sc{lhs} pattern contains no references or declarations.} Rather, these
-  should be contained in its pattern variables during expansion.
+  should be bound to its pattern variables during expansion.
 \item \emph{Each transformation's \Sc{lhs} must have the form
   $\Node{C}{p_1 \dd p_n}$.} We will rely on this fact when showing that
   unexpansion is an inverse of expansion in \cref{sec:reval-inverses}.
@@ -1416,7 +1416,7 @@ expected surface evaluation sequence:
 
 The implementation discussed in this chapter---{\Resugarer}---is not
 hygienic. (For a quick introduction to hygiene, see
-\cref{sec:taxonomy-safety}). In this section, we sketch out how {\Resugarer}
+\cref{sec:taxonomy-safety}.) In this section, we sketch out how {\Resugarer}
 could be modified to be hygienic. More specifically, we show how it
 can be modified such that variables defined by users are never bound
 by variables defined by sugars, and vice-versa.\marginpar{The version
@@ -1450,18 +1450,22 @@ cannot contain variables. However, the \Sc{lhs} of a rule \emph{can}
 contain a pattern variable with a variable in it, and that pattern
 variable \emph{can} be dropped on the \Sc{rhs}. In this case,
 resugaring will restore that pattern variable, thereby re-introducing
-its variables. For example, if \Code{(Lambda x. x * 0)} desugars into
-\Code{(Lambda x. 0)}, then the \Code{x} in \Code{x * 0} will be
+its variables. For example, if \Code{(Lambda x.\ x * 0)} desugars into
+\Code{(Lambda x.\ 0)}, then the \Code{x} in \Code{x * 0} will be
 re-introduced by resugaring.
 
 Is this re-introduced variable bound by the outer \Code{x}?
 Surprisingly, it is not. The key point is that \emph{in the absense of
   surface-language scoping rules, where a variable is bound in a
-  surface term is \emph{defined} by the desugaring of that term.}
+  surface term is defined by the desugaring of that term.}
 Since the inner \Code{x} is dropped during desugaring, it has no
 binding site. Thus unexpansion is hygienic: every variable that is
 re-introduced during resugaring has no binding site, so there can be
-no accidental variable capture.
+no accidental variable capture. The textual representation of the
+surface term is misleading in this case. If {\Resugarer} made the
+binding structure of the surface term explicit by, e.g., drawing
+arrows to show where variables were bound, then it would be visibly
+clear that the inner \Code{x} was not bound by the outer \Code{x}.
 
 This may seem like a cop-out, but it is the best that we can do when
 the scope of the surface language is defined only implicitly through

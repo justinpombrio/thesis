@@ -6,8 +6,8 @@ that will be used throughout the rest of the thesis.
 Most importantly, we assume that desugaring is given (externally to the
 language) as a set of pattern-based rewrite rules (a la Scheme's \Code{syntax-rules}~\cite{scheme5}).
 This is important because it will form an expressive limit on
-our techniques for resugaring evaluation sequences \cref{chap:resugar-eval},
-scope rules \cref{chap:resugar-scope}, and type systems \cref{chap:resugar-types}.
+our techniques for resugaring evaluation sequences (\cref{chap:resugar-eval}),
+scope rules (\cref{chap:resugar-scope}), and type systems (\cref{chap:resugar-types}).
 
 
 \section{ASTs}\label{sec:formal-term}
@@ -107,7 +107,8 @@ sensible, and not every semantically sensible desugaring rule is
 feasible to resugar. Here we give (i) a set of well-formedness
 criteria on desugaring rules, without which they don't make semantic
 sense, and (ii) a set of restrictions on desugaring rules that we need
-to effectively resugar them.
+to effectively resugar them. These restrictions are sufficient for all
+of the resugaring methods presented in this thesis.
 
 \paragraph{Well-formedness Criteria for Desugaring Rules}\WhitePhantom{.}\\ \noindent
 For every desugaring rule:
@@ -116,7 +117,7 @@ For every desugaring rule:
   \Sc{lhs}.} Otherwise the pattern variable would be unbound during
   expansion.
 \item \emph{The \Sc{lhs} pattern contains no references or declarations.} Rather, these
-  should be contained in its pattern variables during expansion.
+  should be bound to its pattern variables during expansion.
   For example, the Let sugar above \emph{could not} have been written as:
 \begin{Table}
   $\NodeRm{Let}{\DeclX\;\PVarB\;\PVarC}$
@@ -125,7 +126,7 @@ For every desugaring rule:
   & ``Let $\DeclX$ equal $\PVarB$ in $\PVarC$''
 \end{Table}
 \item \emph{Each desugaring rule's \Sc{lhs} must have the form
-  $\Node{C}{p_1,\,...,\,p_n}$.} Thus, for example, 
+  $\Node{C}{p_1,\,...,\,p_n}$.}
   We will need this fact in \cref{chap:resugar-eval}.
 \end{enumerate}
 
@@ -143,9 +144,9 @@ For every desugaring rule:
 %   expansion to ensure hygiene.
 % (Discussed, but not actually assumed in Chapter 5.)
 \item \emph{The rules' \Sc{lhs}s must be disjoint.} If they
-  are not, it presents issues both for resugaring evaluation sequences,
-  and resugaring type systems (see \cref{sec:reval-disjoint} and
-  \cref{sec:rtype-req-desugar}, respectively).
+  are not, it presents issues both for resugaring evaluation sequences
+  (\cref{sec:reval-disjoint}), and resugaring type systems
+  (\cref{sec:rtype-req-desugar}).
 \end{enumerate}
 
 Some of the resugaring chapters relax these assumptions. For instance, the
