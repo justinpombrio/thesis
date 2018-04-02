@@ -1,51 +1,30 @@
 #![feature(log_syntax)]
+#![allow(unused_macros)]
+#![allow(unused_variables)]
 
-macro_rules! use_list {
-    (5) => ({
-        println!("five");
-    });
-    ($other:expr) => ({
-        println!("other");
-    })
-}
+#[macro_use]
+mod example;
+mod eval_order;
+mod safety;
+mod power;
 
-// Notice that this macro is never invoked!
-macro_rules! list {
-    () => (5)
-}
-
-macro_rules! outer {
-    ($arg:expr) => ({
-        log_syntax!("Begin outer call");
-        let answer = $arg;
-        log_syntax!("Argument to outer is:" $arg);
-        log_syntax!("End outer call");
-        answer
-    })
-}
-
-macro_rules! inner {
-    ($arg:expr) => ({
-        log_syntax!("Begin inner call");
-        let answer = $arg;
-        log_syntax!("End inner call");
-        answer
-    })
-}
-
-fn outer(_arg: ()) -> () {
-    println!("Begin runtime outer call");
-    println!("End runtime outer call");
-}
-
-fn inner(_arg: usize) -> () {
-    println!("Begin runtime inner call");
-    println!("End runtime inner call");
-}
+use eval_order::eval_order;
+use safety::safety;
+use power::power;
 
 fn main() {
-    outer!(inner!(5)); // OI* macro expansion order.
-    outer(inner(5)); // IO runtime evaluation order.
-    use_list!(list!(5)); // Notice that 'list!' is never invoked.
-    println!("ok");
+    println!("# Example #");
+    foreach!(x, &[1, 2, 3], {
+        println!("{}", x);
+    });
+    println!();
+    println!("# Order of evaluation #");
+    eval_order();
+    println!();
+    println!("# Safety #");
+    safety();
+    println!();
+    println!("# Power #");
+    power();
+    println!();
 }

@@ -28,6 +28,7 @@
 *.class
 texput.log
 sugars/haskell/main
+sugars/rust/target
 examples
 img/*.pdf
 thesis.pdf

@@ -1,0 +1,25 @@
+# Rust Desugaring #
+
+Representation: concrete surface syntax
+Authorship: user-defined
+Metalanguage: DSL
+Desugaring Order: OI
+Phase: compile-time
+Expressiveness:
+  Arguments: any sort* (more specifically: expressions, statements, items, and patterns)
+  Result: any sort* (likewise)
+  Deconstruction: yes
+  Macro-defining Macros: yes
+Safety:
+  Syntax Safe: no
+  Hygienic: yes
+  Scope Safe: no
+  Type Safe: no
+
+
+# Installation Notes #
+
+0. Install Rust `curl https://sh.rustup.rs -sSf | sh`
+1. Switch to the nightly version of Rust `rustup install nightly`
+   (this is so that the examples can use `log_syntax!`, which is currently an unstable feature.
+2. In the `rust` directory, run `cargo run`.
