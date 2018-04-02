@@ -18,7 +18,8 @@
      #'(let [(x "macro")]
          (let [(v "user")]
            (printf "macro->~a\n" x)
-           body))]))
+           (let [(x "macro")]
+             body)))]))
 
 (hygienic x (printf "user->~a\n" x))
 ; Hygienic -- user vars and macro vars don't clash.
