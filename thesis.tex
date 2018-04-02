@@ -78,6 +78,9 @@
 \usepackage{rotating}
 \usepackage{multirow}
 \usepackage{enumitem}
+\usepackage{adjustbox}
+\usepackage{booktabs}
+\usepackage{array}
 % More nice things
 \usepackage{cleveref}
 \usepackage{color}
@@ -179,11 +182,25 @@
 }
 \newcommand{\BoxedHeading}[1]{\vspace{1em}\framebox{\textbf{#1}}\newline}
 \newcommand{\TinyHeading}[1]{\textsc{#1}}
-\newenvironment{SidewaysFigure}
-  {\begin{figure*}[h!]\begin{turn}{270}\begin{minipage}{18cm}
-          \bgroup\def\arraystretch{4}}
-  {\egroup\end{minipage}\end{turn}\end{figure*}}
-
+\newenvironment{SidewaysFigure}{
+  \begin{figure*}[h!]\begin{turn}{270}\begin{minipage}{18cm}
+        \bgroup\def\arraystretch{4}
+}{
+  \egroup\end{minipage}\end{turn}\end{figure*}
+}
+\newenvironment{SidewaysTable}{
+  \begin{table*}[h!]\begin{turn}{270}\begin{minipage}{18cm}
+        \bgroup
+}{
+  \egroup\end{minipage}\end{turn}\end{table*}
+}
+% Rotate table headers: https://tex.stackexchange.com/questions/98388/how-to-make-table-with-rotated-table-headers-in-latex
+\newcolumntype{R}[2]{%
+  >{\adjustbox{angle=#1,lap=\width-(#2)}\bgroup}%
+  l%
+  <{\egroup}%
+}
+\newcommand*\rot{\multicolumn{1}{R{90}{1em}}}
 
 % Math Notation
 \newcommand{\ddd}{\;\dots\;}

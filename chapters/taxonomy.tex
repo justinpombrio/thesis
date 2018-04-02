@@ -5,9 +5,9 @@
 TODO
 \begin{itemize}
 \item State version of each system discussed
-\item mention macro-defining-macros in expressiveness?
 \item More examples
 \item Define 'metalanguage' before it is used.
+\item Update all languages to the latest testing methods. Done for: Rust.
 \end{itemize}
 
 There are a bewildering variety of desugaring systems.  In this
@@ -42,7 +42,7 @@ There are many dimensions by which desugaring mechanisms vary:
   \item[Phase] \emph{When} does desugaring occur? Is it at compilation time,
     or at evaluation time (as in staged metaprogramming systems)?
 \end{description}
-We will consider three dimensions related to the \emph{expressiveness}
+We will consider four dimensions related to the \emph{expressiveness}
 of desugaring systems:
 \begin{description}
   \item[Parameter] Can a sugar take an
@@ -51,6 +51,7 @@ of desugaring systems:
     deconstruct it, or only use it parametrically?
   \item[Result] Do sugars exclusively produce expressions, or can they
     produce any kind of syntax?
+  \item[Sugar-defining Sugars] Can sugars define other sugars?
 \end{description}
 We will also consider four dimensions related to \emph{safety}:
 \begin{description}
@@ -223,7 +224,7 @@ arbitrary number of different phases [REF].
 
 \subsection{Expressiveness}
 
-We will examine three measures of expressiveness of each desugaring
+We will examine four measures of expressiveness of each desugaring
 system:
 \begin{description}
 \item[Parameters] What kind of parameters can be passed to a sugar? In
@@ -245,6 +246,8 @@ system:
   they haven't been desugared yet. Under IO order, however, the
   parameters are in the core language, because they \emph{have} been
   desugared.
+\item[Sugar-defining Sugars] Can sugars define sugars? That is, can a
+  sugar expand into the definition of another sugar?
 \end{description}
 Of course, three measures isn't enough to fully capture how expressive
 a desugaring system is! However, it should give a rough idea of the
@@ -336,6 +339,104 @@ let sugar() = .<3 + "four">.;;
 \section{Applying the Taxonomy to Desugaring Systems}
 
 In this section, we apply the taxonomy to a number of desugaring systems.
+
+[FILL]
+
+\begin{SidewaysTable}
+  \hspace{-4em}
+  \begin{tabular}{l|cccccccccccccc}
+    & \rot{Representation}
+    & \rot{Authorship}
+    & \rot{Metalanguage}
+    & \rot{Desugaring Order}
+    & \rot{Time of Expansion}
+    & \rot{Number of Phases}
+    & \rot{Arguments} & \rot{Result} & \rot{Deconstruction} & \rot{Macro-defining Macros}
+    & \rot{Syntax Safe} & \rot{Hygienic} & \rot{Scope Safe} & \rot{Type Safe}
+    \\ \hline
+    C Preprocessor
+    & token stream
+    & user
+    & DSL
+    & IO
+    & compile
+    & one
+    & any & any & no & FILL
+    & no & no & no & no
+    \\
+    C++ Templates
+    & concrete
+    & user
+    & DSL
+    & IO
+    & compile
+    & one
+    & type* & declaration* & yes* & FILL
+    & yes & NA & NA & NA
+    \\
+    MetaOCaml
+    & concrete
+    & user
+    & OCaml
+    & IO
+    & run
+    & many
+    & expr & expr & no & FILL
+    & yes & yes & yes & yes
+    \\
+    Haskell Templates
+    & concrete/abstract
+    & user
+    & Haskell
+    & IO
+    & compile
+    & many
+    & any & any & yes & FILL
+    & yes & TODO & no & no
+    \\
+    Julia Macros
+    & concrete/abstract
+    & user
+    & Julia
+    & OI
+    & compile
+    & many*
+    & any & any & yes & FILL
+    & yes & no & no & no
+    \\
+    Rust Macros
+    & concrete
+    & user
+    & DSL
+    & OI
+    & compile
+    & any & any & yes & yes
+    & no & yes & no & no
+    \\
+    Racket Macros
+    & concrete
+    & user
+    & Racket
+    & OI
+    & compile*
+    & many
+    & any & any & yes & FILL
+    & partly* & yes & no & no
+    \\ Scheme Macros
+    & concrete
+    & user
+    & Scheme
+    & OI
+    & compile
+    & many
+    & any & any & yes & FILL
+    & partly* & yes & no & no
+  \end{tabular}
+  \caption{Taxonomization of Desugaring Systems}
+  \label{table:taxonomy-table}
+\end{SidewaysTable}
+\clearpage
+
 
 \subsection{C Preprocessor} \label{sec:cpre}
 
