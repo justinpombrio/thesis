@@ -12,7 +12,8 @@
      (let ((x "macro"))
        (let ((v "user"))
          (display "macro->") (display x) (newline)
-         body)))))
+         (let ((x "macro"))
+           body))))))
 
 (hygienic x (begin (display "user->") (display x) (newline)))
 ; Hygienic -- user vars and macro vars don't clash.
