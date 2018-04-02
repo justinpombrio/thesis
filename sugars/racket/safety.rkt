@@ -12,15 +12,15 @@
      #'x]))
 ; No unbound id error - not scope safe!
 
-(define-syntax (scope-safe stx)
+(define-syntax (hygienic stx)
   (syntax-case stx ()
-    [(scope-safe v body)
+    [(hygienic v body)
      #'(let [(x "macro")]
          (let [(v "user")]
            (printf "macro->~a\n" x)
            body))]))
 
-(scope-safe x (printf "user->~a\n" x))
+(hygienic x (printf "user->~a\n" x))
 ; Hygienic -- user vars and macro vars don't clash.
 ; (This only scratches the surface of the kinds of nonsense
 ;  that Racket macros deal with hygienically.)
@@ -32,3 +32,4 @@
 ; Oops, forgot a set of parens.
 ; Won't find out until running the macro.
 ; Syntax unsafe. (It is paren-safe, though.)
+#;(syntax-unsafe)
