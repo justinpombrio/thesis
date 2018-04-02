@@ -16,8 +16,9 @@ chapter, we categorize them into a taxonomy.
 We stretch this taxonomy to include systems that aren't quite
 desugaring systems, but that are closely associated with
 them. Notably, we discuss staged metaprogramming systems, which (i)
-operate on code at run-time, rather than compile-time, and (ii) have
-to explicitly, rather than implicitly, desugar code.
+operate on code at run-time, rather than compile-time; (ii) have
+to explicitly, rather than implicitly, desugar code; and (iii)
+cannot deconstruct (e.g., perform case analysis on) syntax.
 
 \section{A Sugar Taxonomy}
 
@@ -40,38 +41,45 @@ There are many dimensions by which desugaring mechanisms vary:
     (\Sc{oi})?
   \item[Phase] \emph{When} does desugaring occur? Is it at compilation time,
     or at evaluation time (as in staged metaprogramming systems)?
-  \item[Expressiveness] How expressive is it? Can a sugar take an
-    arbitrary expression as a parameter, or only a primitive type
-    (\Sc{Parameter})? If it can take an expression, can it
-    deconstruct it, or only use it parametrically (\Sc{Deconstruction})?
-    Do sugars exclusively produce expressions, or can they produce any
-    kind of syntax (\Sc{Result})?
-  \item[Safety] How \emph{safe} is it? Can desugaring produce
-    syntactically invalid code (\Sc{Syntax Safety})? Can it produce an
-    unbound variable (\Sc{Scope Safety}), or accidentally capture a
-    variable (\Sc{Hygiene})? Can it produce code that contains a type
-    error (\Sc{Type Safety})?
+\end{description}
+We will consider three dimensions related to the \emph{expressiveness}
+of desugaring systems:
+\begin{description}
+  \item[Parameter] Can a sugar take an
+    arbitrary expression as a parameter, or only a primitive type?
+  \item[Deconstruction] If it can take an expression, can it
+    deconstruct it, or only use it parametrically?
+  \item[Result] Do sugars exclusively produce expressions, or can they
+    produce any kind of syntax?
+\end{description}
+We will also consider four dimensions related to \emph{safety}:
+\begin{description}
+  \item[Syntax Safety] Can desugaring produce syntactically invalid
+    code?
+  \item[Scope Safety] Can a sugar produce an unbound variable?
+  \item[Hygiene] Can a sugar accidentally capture a variable?
+  \item[Type Safety] Can a sugar produce code that contains a type
+    error?
 \end{description}
 
+%% There are two big clusters of desugaring systems that are worth calling
+%% out by name: macros and staged metaprogramming. Racket [CITE] is a
+%% prototypical language with macros: they are user-defined, the
+%% metalanguage is either a \Sc{dsl} or the Racket language itself, its
+%% macros are expanded (primarily) during compilation, and the desugaring
+%% order is outside-in.
 
+%% Staged metaprogramming also involves user-defined sugars, but instead
+%% of desugaring as a separate phase, code is constructed, composed, and
+%% eventually \Code{eval}'ed at runtime. MetaOCaml is a prototypical
+%% staged metaprogramming language: the metalanguage is MetaOCaml itself,
+%% the desugaring order is inside-out (reflecting the evaluation
+%% order of OCaml), and its sugars are user-defined and are expanded at runtime.
+%% This thesis is really about sugars that are expanded
+%% at compile time---so staged metaprogramming systems are technically out of scope---but
+%% they are closely enough related that we include them in the taxonomy.
 
-There are two big clusters of desugaring systems that are worth calling
-out by name: macros and staged metaprogramming. Racket [CITE] is a
-prototypical language with macros: they are user-defined, the
-metalanguage is either a \Sc{dsl} or the Racket language itself, its
-macros are expanded (primarily) during compilation, and the desugaring
-order is outside-in.
-
-Staged metaprogramming also involves user-defined sugars, but instead
-of desugaring as a separate phase, code is constructed, composed, and
-eventually \Code{eval}'ed at runtime. MetaOCaml is a prototypical
-metaprogramming language: the metalanguage is MetaOCaml itself,
-the desugaring order is inside-out (reflecting the evaluation
-order of OCaml), and its sugars are user-defined and are expanded at runtime.
-This thesis is really about sugars that are expanded
-at compile time---so staged metaprogramming systems are technically out of scope---but
-they are closely enough related that we include them in the taxonomy.
-
+We now discuss each of these dimensions in more detail.
 
 \subsection{Representation}
 
