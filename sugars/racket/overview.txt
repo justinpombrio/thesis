@@ -3,15 +3,17 @@
 Representation: concrete surface syntax
 Authorship: user-defined
 Metalanguage: Racket
-Arguments: any sort (really, any *syntax*)
-Result: any sort
-Deconstruction: yes
 Desugaring Order: OI
 Phase: compile-time (& more)
-Syntax Safe: partly (paren safe only)
-Hygienic: yes
-Scope Safe: no
-Type Safe: no
+Expressiveness:
+  Arguments: any sort (really, any *syntax*)
+  Result: any sort
+  Deconstruction: yes
+Safety:
+  Syntax Safe: partly (paren safe only)
+  Hygienic: yes
+  Scope Safe: no
+  Type Safe: no
 
 
 # Installation Notes #

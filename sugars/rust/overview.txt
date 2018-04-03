@@ -9,7 +9,7 @@ Expressiveness:
   Arguments: any sort* (more specifically: expressions, statements, items, and patterns)
   Result: any sort* (likewise)
   Deconstruction: yes
-  Macro-defining Macros: yes
+  Sugar-defining Sugars: yes
 Safety:
   Syntax Safe: no
   Hygienic: yes

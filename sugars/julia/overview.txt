@@ -8,7 +8,7 @@ Result: any
 Deconstruction: yes
 Desugaring Order: OI
 Phases: one (with "macro"), or many (with metaprogramming)
-Syntax Safe: yes
+Syntax Safe: no
 Hygienic: no
 Scope Safe: no
 Type Safe: no

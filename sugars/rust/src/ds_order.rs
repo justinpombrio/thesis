@@ -41,7 +41,7 @@ fn inner(_arg: usize) -> () {
     println!("End runtime inner call");
 }
 
-pub fn eval_order() {
+pub fn ds_order() {
     log_syntax!("# Order of desugaring #");
     outer!(inner!(5)); // OI* macro expansion order.
     outer(inner(5)); // IO runtime evaluation order.

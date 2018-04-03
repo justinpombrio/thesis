@@ -4,11 +4,11 @@
 
 #[macro_use]
 mod example;
-mod eval_order;
+mod ds_order;
 mod safety;
 mod power;
 
-use eval_order::eval_order;
+use ds_order::ds_order;
 use safety::safety;
 use power::power;
 
@@ -19,7 +19,7 @@ fn main() {
     });
     println!();
     println!("# Order of evaluation #");
-    eval_order();
+    ds_order();
     println!();
     println!("# Safety #");
     safety();

@@ -1,15 +1,31 @@
+# [n] hygiene
+# [ ] syntax safe?
+# [n] scope safe?
+# [n] type safe?
+
 # Julia is not hygienic
-  macro unbound_x()
-    return :(println(x))
+macro unhygienic(i, body)
+  quote
+    x = "macro"
+    $(i) = "user"
+    println("macro->", x)
+    x = "macro"
+    $(body)
   end
-  
-  call_unbound_x() = begin
-    x = 5
-    @unbound_x()
-  end
-  
-  # No error! Not hygienic
-  call_unbound_x()
+end
+@unhygienic(x, println("user->", x)) # user/macro get swapped!
+
+# Not hygienic in another way too
+macro unbound_x()
+  return :(println(x))
+end
+
+call_unbound_x() = begin
+  x = 5
+  @unbound_x()
+end
+
+call_unbound_x()
 
 
 # Julia is not scope safe
@@ -26,7 +42,11 @@
   c = :($a + $b) # No error! Not type safe.
 
 
-# Julia macros are syntax-safe, though.
-  macro inner(x) :($x + 1) end
-  macro outer(x) :($x * 2) end
-  println("(10 + 1) * 2 = ", @outer(@inner(10)))
+# Julia macros are not syntax safe.
+macro syntax_unsafe(x)
+  quote
+    $(x) = 0
+    "ok"
+  end
+end
+# println(@syntax_unsafe(1 + 2)) # syntax error only on use

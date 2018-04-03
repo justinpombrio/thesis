@@ -22,5 +22,5 @@ Output:
   End inner call
   (10 + 1) * 2 = 22
 Evaluation order: OI*
-Syntax safe: yes
+The answer 22 is consistent with syntax safety.
 =#
