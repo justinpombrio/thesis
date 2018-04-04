@@ -3,15 +3,18 @@
 Representation: tokens
 Authorship: user-defined
 Metalanguage: C preprocessor
-Arguments: any
-Result: any
-Deconstruction: no
 Desugaring Order: IO
-Phases: One
-Syntax safe: No
-Hygienic: No
-Scope safe: No
-Type safe: No
+Phases: Compile-time
+Expressiveness:
+  Arguments: any
+  Result: any
+  Deconstruction: no
+  Sugar-defining Sugars: no
+Safety:
+  Syntax safe: No
+  Hygienic: No
+  Scope safe: No
+  Type safe: No
 
 
 # Installation Notes (gcc version 6.3.0) #
