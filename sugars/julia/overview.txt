@@ -3,15 +3,18 @@
 Representation: concrete or abstract surface syntax
 Authorship: user-defined
 Metalanguage: Julia
-Arguments: any
-Result: any
-Deconstruction: yes
 Desugaring Order: OI
 Phases: one (with "macro"), or many (with metaprogramming)
-Syntax Safe: no
-Hygienic: no
-Scope Safe: no
-Type Safe: no
+Expressiveness:
+  Arguments: expr
+  Result: any?
+  Deconstruction: yes
+  Sugar-defining Sugars: yes
+Safety:
+  Syntax Safe: no
+  Hygienic: no
+  Scope Safe: no
+  Type Safe: no
 
 # Installation Notes #
 

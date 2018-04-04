@@ -1,8 +1,3 @@
-# [n] hygiene
-# [ ] syntax safe?
-# [n] scope safe?
-# [n] type safe?
-
 # Julia is not hygienic
 macro unhygienic(i, body)
   quote
