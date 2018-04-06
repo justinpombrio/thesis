@@ -624,7 +624,7 @@ a normalization.
 
 \begin{lemma}[Shadowing]
   If one declaration shadows another, then a reference in scope of the
-  shadowing declaration cannot be bound by the shadowed declaration.
+  shadowing declaration cannot be unambiguously bound by the shadowed declaration.
 \end{lemma}
 \begin{proof}
   Suppose that $\DeclXj$ shadows $\DeclXi$ ($\DeclXj$ is the shadowing
@@ -632,7 +632,8 @@ a normalization.
   $\RefnXk$ is in scope of $\DeclXj$.
   By definition, $\RefnXk$ will be bound by
   $\min \St{\DeclXl}{\RefnXk \< \DeclXl}$.  But $\RefnXk \<
-  \DeclXj \< \DeclXi$, so $\DeclXi$ cannot be in this set, and $\RefnXk$
+  \DeclXj \< \DeclXi$, so $\DeclXi$ cannot be in this set (assuming
+  that $\RefnXk$ is not ambiguously bound), and $\RefnXk$
   cannot be bound by $\DeclXi$.
 \end{proof}
 
