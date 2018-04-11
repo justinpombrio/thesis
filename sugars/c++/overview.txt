@@ -4,17 +4,18 @@ Representation: concrete surface syntax
 Authorship: user-defined
 Metalanguage: C++ templates (pattern based)
 Desugaring Order: IO
-Phase: compile-time
+Time of Expansion: compile-time
+Number of Phases: one
 Expressiveness:
   Arguments: types and primitive values
   Result: function/method definition, struct/class definition, or type alias
   Deconstruction: yes (although this is mostly case analysis on primitive values)
   Sugar-defining Sugars: no
 Safety:
-  Syntax safe: ?
+  Syntax safe: yes
   Hygienic: NA
   Scope safe: NA
-  Type safe: NA
+  Type safe: no
 
 
 # Installation Notes (C++11) #

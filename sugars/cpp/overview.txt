@@ -4,7 +4,8 @@ Representation: tokens
 Authorship: user-defined
 Metalanguage: C preprocessor
 Desugaring Order: IO
-Phases: Compile-time
+Time of Expansion: Compile-time
+Number of Phases: One
 Expressiveness:
   Arguments: any
   Result: any

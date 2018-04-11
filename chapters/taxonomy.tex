@@ -100,7 +100,7 @@ is forced to think of their program as text rather
 than as a tree, they are being distracted from its semantics. There
 are well-known examples of bugs that arise in text-based desugaring
 rules unless they are written in a very defensive style: we discuss
-these in \ref{sec:cpre}.
+these in \ref{sec:taxonomy-cpre}.
 
 There are variations among tree representations as well: desugaring
 rules may work over the concrete syntax of the language, or over its
@@ -265,7 +265,7 @@ Safety and expressiveness are counterpoints. Safety comes from the
 }
 \begin{description}
   \item[Syntactic Safety] Can a sugar expand to syntactically invalid
-    code? For example, in the C Preprocessor (\cref{sec:cpre}), this
+    code? For example, in the C Preprocessor (\cref{sec:taxonomy-cpre}), this
     (textual) macro:
 \begin{CorrectlyIndentedCodes}
 #define discriminant(a,b,c) ((b) * (b) - (4 * (a) * (c))
@@ -344,7 +344,9 @@ In this section, we apply the taxonomy to a number of desugaring systems.
 
 \begin{SidewaysTable}
   \hspace{-4em}
-  \begin{tabular}{l|cccccccccccccc}
+  \begin{tabular}{l|c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c
+      @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c
+      @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c}
     & \rot{Representation}
     & \rot{Authorship}
     & \rot{Metalanguage}
@@ -361,7 +363,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & IO
     & compile
     & one
-    & any & any & no & FILL
+    & any & any & no & no
     & no & no & no & no
     \\
     C++ Templates
@@ -371,8 +373,8 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & IO
     & compile
     & one
-    & type* & declaration* & yes* & FILL
-    & yes & NA & NA & NA
+    & type* & declaration* & yes* & no
+    & yes & NA & NA & no
     \\
     MetaOCaml
     & concrete
@@ -402,7 +404,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & compile
     & many*
     & any & any & yes & FILL
-    & yes & no & no & no
+    & yes & no & no & NA
     \\
     Rust Macros
     & concrete
@@ -410,6 +412,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & DSL
     & OI
     & compile
+    & one
     & any & any & yes & yes
     & no & yes & no & no
     \\
@@ -430,7 +433,16 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & compile
     & many
     & any & any & yes & FILL
-    & partly* & yes & no & no
+    & partly* & yes & no & NA
+    \\ McMicMac
+    & %concrete$\to$\Sc{ir}
+    & %user
+    & %DSL
+    & %OI
+    & %compile
+    & %one?
+    & %any & yes & any & no
+    & %no & no & yes & NA
   \end{tabular}
   \caption{Taxonomization of Desugaring Systems}
   \label{table:taxonomy-table}
@@ -438,21 +450,13 @@ In this section, we apply the taxonomy to a number of desugaring systems.
 \clearpage
 
 
-\subsection{C Preprocessor} \label{sec:cpre}
-
-\Desc{Desugaring Order} IO
-
-\Desc{Authorship} User-defined
-
-\Desc{Representation} Token stream
-
-\Desc{Safety} [FILL]
+\subsection{C Preprocessor} \label{sec:taxonomy-cpre}
+\Desc{Version: gcc v6.3.0}
 
 % https://gcc.gnu.org/onlinedocs/cpp/
 % Not Turing complete: https://gcc.gnu.org/onlinedocs/cpp/Self-Referential-Macros.html
 % desugaring order: https://gcc.gnu.org/onlinedocs/cpp/Macro-Arguments.html
 %   also section 6.10.3.1: http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1124.pdf
-\Desc{Discussion}
 The C Preprocessor (hereafter \Sc{cpp}) [CITE] is a \emph{text
   preprocessor}: a source-to-source transformation that operates at
 the level of text. (More precisely, it operates on a token stream, in
@@ -496,27 +500,17 @@ the sugar is used in expression position, as in the \Code{SUB}
 example, this can be done with parentheses. In other positions,
 different tricks must be used: e.g., a rule meant to be used in
 statement position can be wrapped in \Code{do \{...\} while(0)}.
-Software developers should not need to know this. % TODO: not clear enough
+This is a poor state of affairs: software developers should not need
+to learn and remember to use tricks like this simply to write working
+macros.
 
 There are other issues that arise with text-based transformations as
 well, such as variable capture. Furthermore, all of these issues are
-inherent to text-based transformations, and essentially cannot be
+inherent to text-based transformations, and cannot be
 fixed from within the paradigm. \emph{Overall, code transformations
-  should never operate at the level of text.}
+  should never operate at the level of text (or token streams).}
 
-\subsection{C++ Templates} \label{sec:cpp}
-
-\Desc{Representation} Concrete syntax
-\Desc{Authorship} User-defined
-\Desc{Metalanguage} C++ templates (pattern based)
-\Desc{Parameters} Types and primitive values
-\Desc{Result} Function/method definition, struct/class definition, or type alias
-\Desc{Deconstruction} Yes (although the parameters are limited)
-\Desc{Desugaring Order} IO
-\Desc{Phases} One
-\Desc{Syntax safe} Yes
-\Desc{Scope safe} Not Applicable
-\Desc{Type safe} Not Applicable
+\subsection{C++ Templates} \label{sec:taxonomy-cpp}
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
 C++ templates [CITE] are not general-purpose sugars,
@@ -580,34 +574,13 @@ a template see the concrete type (e.g. \Code{int}) that is passed to
 it, even if this type is the result of another template expansion.
 
 
-\subsection{Rust Macros} \label{sec:rust}
-
-\Desc{Representation} Concrete Syntax
-
-\Desc{Authorship} User-defined
-
-\Desc{Desugaring Order} OI
-
-\Desc{Safety} [FILL]
+\subsection{Rust Macros} \label{sec:taxonomy-rust}
 
 %https://doc.rust-lang.org/1.2.0/book/macros.html
-\Desc{Discussion}
 NOTE: This is about Rust's regular macros, not Rust's ``procedural'' macros.
 
 
-\subsection{Haskell Templates} \label{sec:haskell}
-
-\Desc{Representation} Concrete or abstract syntax
-\Desc{Authorship} User-defined
-\Desc{Metalanguage} Haskell
-\Desc{Parameters} Any
-\Desc{Result} Any
-\Desc{Deconstruction} Yes
-\Desc{Desugaring Order} IO
-\Desc{Phases} One
-\Desc{Syntax Safe} Yes
-\Desc{Scope Safe} No
-\Desc{Type Safe} No
+\subsection{Haskell Templates} \label{sec:taxonomy-haskell}
 
 %https://hackage.haskell.org/package/template-haskell-2.10.0.0/docs/Language-Haskell-TH-Syntax.html#t:Lit
 %https://stackoverflow.com/questions/10857030/whats-so-bad-about-template-haskell
@@ -617,16 +590,63 @@ NOTES:
 \end{itemize}
 
 
-\subsection{MetaOCaml} \label{sec:metaocaml}
+\subsection{MetaOCaml} \label{sec:taxonomy-metaocaml}
 
-\Desc{Representation} Concrete syntax
-\Desc{Authorship} User-defined
-\Desc{Metalanguage} OCaml
-\Desc{Parameters} Expressions (+ OCaml values)
-\Desc{Result} Expressions (+ OCaml values)
-\Desc{Deconstruction} No
-\Desc{Desugaring Order} IO
-\Desc{Phases} Many
-\Desc{Syntax Safe} Yes
-\Desc{Scope Safe} Yes
-\Desc{Type Safe} Yes
+MetaOCaml is a \emph{multi-stage programming} extension to OCaml. This
+means that it provides three new constructs to the language:
+\begin{description}
+\item[Brakcets] (written \Code{.< $\cdots$ >.}) Quote an expression,
+  producing a syntax value at runtime.
+\item[Escape] (written \Code{.$\sim$}) Splice values into a quotation.
+\item[Run] (written \Code{.!}, or \Code{run}) Given a syntax value at
+  runtime, evaluate it.
+\end{description}
+Thus this code:
+\begin{Codes}
+open Runcode;;
+open Printf;;
+let x = .<printf(``k'')>. in !. .<(.~x; .~x)>.;;
+\end{Codes}
+prints \Code{kk}. This method of programming is called
+\emph{multi-stage} because these quotations can be arbitrarily
+nested. An expression under $n$ quotations is said to run in stage
+$n$.
+
+The \emph{upside} to multi-stage programming is that it can provide
+very strong safety guarantees. MetaOCaml guarantees that staged
+functions (i.e., functions that produce quoted code) cannot produce
+ill-formed, ill-scoped, or ill-typed code. This is checked at
+compile-time, before the staged function is even invoked. This is
+vastly safer than the other desugaring systems we surveyed.
+
+The \emph{downside} to multi-stage programming is that it is not a
+full-fledged desugaring system. It cannot introduce new syntax, it
+cannot deconstruct syntax, and its ``desugaring'' happens explicitly
+at runtime via calls to \Code{run}. For all of these reasons,
+multi-staged programming is best viewed as a way of more efficiently
+organizing computation rather than as a means of extending a language.
+
+
+\subsection{McMicMac} \label{sec:taxonomy-mcmicmac}
+
+Krishnamurthi describes a desugaring system called
+McMicMac~\cite{sk:mcmicmac} that is based on a combination of macros
+and \emph{micros}, and built on top of Scheme. While macros perform a
+source-to-source transformations, \emph{macros} transform source code
+to \Sc{ir} (an ``intermediate representation'' used by the compiler).
+Relevantly, the \Sc{ir} is treated as data and cannot contain macros
+or micros, and is thus not recursively desugared.
+
+Micros extend macros in a couple of ways:
+\begin{itemize}
+  \item Micros can take as arguments and produce as results values
+    that aren't just syntax. For example, a set of micros can keep
+    track of the lexical environment, and use it to compute the set of
+    free variables of a term.
+  \item Micros can be grouped into \emph{vocabularies}, with each
+    vocabulary repreesenting a different kind of transformation, and
+    these vocabularies can be composed.
+\end{itemize}
+
+Overall, McMicMac aims to make it easier to write programs that
+operate on source code, but are not well-suited for macros.

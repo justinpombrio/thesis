@@ -14,9 +14,11 @@ use power::power;
 
 fn main() {
     println!("# Example #");
-    foreach!(x, &[1, 2, 3], {
-        println!("{}", x);
-    });
+    for x in &[Some(1), None, Some(2), Some(3), None] {
+        if_let!(Some(y), x, {
+            println!("{}", y)
+        });
+    }
     println!();
     println!("# Order of evaluation #");
     ds_order();
