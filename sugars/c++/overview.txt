@@ -10,7 +10,7 @@ Expressiveness:
   Arguments: types and primitive values
   Result: function/method definition, struct/class definition, or type alias
   Deconstruction: yes (although this is mostly case analysis on primitive values)
-  Sugar-defining Sugars: no
+  Sugar-defining Sugars: yes
 Safety:
   Syntax safe: yes
   Hygienic: NA
