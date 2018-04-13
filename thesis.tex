@@ -140,6 +140,9 @@
 \newenvironment{Table}
   {\begin{center}\begin{tabular}{l l l @{\quad}l}}
   {\end{tabular}\end{center}}
+\newenvironment{TableForMitch}
+  {\begin{center}\begin{tabular}{r l l @{\quad}l}}
+  {\end{tabular}\end{center}}
 \newenvironment{ProofTable}
   {~\\\begin{tabular}{r l @{\quad} l}}
   {\end{tabular}~\\}
@@ -339,8 +342,8 @@
 \newcommand{\PVar}{\alpha}
 \newcommand{\PVarA}{\alpha}
 \newcommand{\PVarB}{\beta}
-\newcommand{\PVarC}{\gamma}
-\newcommand{\PVarD}{\delta}
+\newcommand{\PVarC}{\delta}
+\newcommand{\PVarD}{\epsilon}
 % SeqPatterns
 \newcommand{\Cons}[2]{#1, #2}
 \newcommand{\Rep}[2]{#1\ {*}_{#2}}
@@ -833,7 +836,7 @@
 \def\signaturepage{%
 \if@sigpage
   \setcounter{page}{3}
-  \evensidemargin 0.5in
+  %\evensidemargin 0.5in % [Justin]
   \def\make@sigline##1##2{%
     \begin{tabular}{lc}
       Date \rule{1in}{.05mm}\hspace*{.75in} & \rule{3in}{.05mm}\\
@@ -860,7 +863,7 @@
   %\thispagestyle{plain} % [Justin]
   \setcounter{page}{2}\cleardoublepage
   \setcounter{page}{4}
-  \evensidemargin 0in
+  %\evensidemargin 0in % [Justin]
 \else
   \setcounter{page}{1}
 \fi
@@ -972,7 +975,7 @@
   \noindent To Evan, for all the hugs.\\\\\\
 
   %\noindent\rule{\textwidth}{.4pt}\\
-  
+
   \noindent To Roberta Thompson, Dan Dougherty, and Joshua Guttman,
   for teaching me how to reason.\\
 

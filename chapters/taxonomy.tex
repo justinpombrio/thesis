@@ -40,13 +40,17 @@ There are many dimensions by which desugaring mechanisms vary:
       to outermost} (\Sc{io}), or from \emph{outermost to innermost}
     (\Sc{oi})?
   \item[Phase] \emph{When} does desugaring occur? Is it at compilation time,
-    or at evaluation time (as in staged metaprogramming systems)?
+    or at evaluation time (as in staged metaprogramming
+    systems)?\marginpar{%
+    As previously noted, if the ``phase'' at which desugaring happens
+    is evaluation time, then the system isn't really a desugaring system,
+    though it may be similar enough to warrent our classification of it.}
 \end{description}
 We will consider four dimensions related to the \emph{expressiveness}
 of desugaring systems:
 \begin{description}
   \item[Parameter] Can a sugar take an
-    arbitrary expression as a parameter, or only a primitive type?
+    arbitrary expression as a parameter, or only a primitive value?
   \item[Deconstruction] If it can take an expression, can it
     deconstruct it, or only use it parametrically?
   \item[Result] Do sugars exclusively produce expressions, or can they
@@ -116,7 +120,7 @@ sugars [CITE], on the other hand, can be defined (and used) in any
 Haskell program; thus they are user-defined.
 
 Language-defined sugars are a convenient method of simplifying
-language design, and they are largely invisible: if done correctly,
+language design, and they are largely invisible: ideally,
 users of the language should not be able to tell which syntactic
 constructs were implemented as sugar and which were built in.
 In contrast, user-defined sugars are much more visible. They give
@@ -318,7 +322,7 @@ Safety and expressiveness are counterpoints. Safety comes from the
     examples where a sugar-introduced variable gets captured by a
     user-written variable). There is more to say about hygiene, and we
     will discuss it further in [REF], but this is sufficient for our
-    present taxometric purposes. % TODO: long sentence. Rewrite.
+    present taxonomic purposes. % TODO: long sentence. Rewrite.
     
   \item[Scope Safety] Can a sugar \emph{introduce} scope errors?  We
     will say that a desugaring system is \emph{scope safe} if sugars
@@ -359,7 +363,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     C Preprocessor
     & token stream
     & user
-    & DSL
+    & rules
     & IO
     & compile
     & one
@@ -369,7 +373,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     C++ Templates
     & concrete
     & user
-    & DSL
+    & rules
     & IO
     & compile
     & one
@@ -409,7 +413,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     Rust Macros
     & concrete
     & user
-    & DSL
+    & rules
     & OI
     & compile
     & one
@@ -437,14 +441,17 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     \\ McMicMac
     & %concrete$\to$\Sc{ir}
     & %user
-    & %DSL
+    & %rules
     & %OI
     & %compile
     & %one?
     & %any & yes & any & no
     & %no & no & yes & NA
   \end{tabular}
-  \caption{Taxonomization of Desugaring Systems}
+  \caption{Taxonomization of Desugaring Systems. (Categories with
+    asterisks are described further in that desugaring system's
+    subsection. Under Metalanguage, ``rules'' means
+    ``pattern-based desugaring rules'', a la \Code{syntax-rules}.)}
   \label{table:taxonomy-table}
 \end{SidewaysTable}
 \clearpage
@@ -520,16 +527,23 @@ it to \Code{e + 1}.
 
 Instead, C++ templates are used
 primarily to instantiate polymorphic code by replacing type parameters
-with concrete types.  Let's use the following template declaration,
-taken from [CITE: pg344], as a running example. It declares a function
-to compute the area of a circle, that can be instantiated with
-different (presumably numeric) types \Code{T}: % TODO: describe pi
+with concrete types.  For example, take the following template declarations
+from [CITE: pg344]:
 \begin{Codes}
+template<class T>
+constexpr T pi = T(3.1415926535897932385L);
+
 template<class T>
 T circular_area(T r) \{
   return pi<T> * r * r;
 \}
 \end{Codes}
+The first template declares a constant \Code{pi}, which can be
+instantiated with different (presumably numeric) types \Code{T}.
+The second template declares a function \Code{circular\_area}, which
+can also be parameterized over different types \Code{T}, and uses
+\Code{T} both for its radius argument and for its \Code{pi} constant.
+We'll use this function template as a running example.
 
 Besides function definitions, several other kinds of declarations can
 be templated, including methods, classes, structs, and type aliases.
@@ -627,7 +641,7 @@ multi-staged programming is best viewed as a way of more efficiently
 organizing computation rather than as a means of extending a language.
 
 
-\subsection{McMicMac} \label{sec:taxonomy-mcmicmac}
+\subsection{McMicMac Micros} \label{sec:taxonomy-mcmicmac}
 
 Krishnamurthi describes a desugaring system called
 McMicMac~\cite{sk:mcmicmac} that is based on a combination of macros
@@ -650,3 +664,48 @@ Micros extend macros in a couple of ways:
 
 Overall, McMicMac aims to make it easier to write programs that
 operate on source code, but are not well-suited for macros.
+
+\subsection{Scheme Macros}
+
+Scheme had one of the first macro systems [CITE]. Its
+\Code{syntax-rules} macros introduced pattern-based desugaring
+[CHECK,CITE], started the research into macro hygiene [TODO: lisps in
+  general, not Scheme specifically, rephrase][CITE], and set
+the tone for desugaring systems to come, including all of this work.
+
+\subsection{Racket Macros}
+
+Racket [CITE] has an extremely powerful and heavily used macro
+system. It is part and parcel of the language: Racket is meant to be a
+language for defining languages, and does so with its macro system.
+Dozens of languages have been defined this way, including:
+\begin{itemize}
+\item The Racket language itself, most of which is defined by macros
+  (including most of its mechanisms for defining macros).
+\item The Typed Racket language, whose type system is defined entirely
+  by macros [CITE].
+\item A number of non-programming languages, such as the Scribble
+  document templating system [CITE].
+\end{itemize}
+Given the way Racket's macros are used, they are best viewed as
+compiler extensions more than simply syntactic sugar.
+
+\subsection{Rust Macros}
+
+Rust has a hygienic macro system with pattern-based rules similar to
+Scheme's \Code{syntax-rules}. Rust also has a second
+``\emph{procedural}'' macro system. This secondary macro system allows
+macros to be written as arbitrary Rust functions. However, it is only
+used in very specific circumstances---at the time of this writing,
+only to add custom \Code{derive} traits---so we do not discuss it
+further.
+
+\subsection{Julia Macros}
+
+Julia macros are written as Julia functions, and can construct and
+deconstruct arbitrary syntax. They are mostly unhygienic. (The user
+guide discusses hygiene, but in testing the macro system is unhygienic
+outside of the specific situations described.) Beyond this, Julia also
+allows arbitrary runtime metaprogramming: constructing,
+deconstructing, and evaluating code at runtime.
+\Cref{table:taxonomy-table} describes only Julia's macro system.

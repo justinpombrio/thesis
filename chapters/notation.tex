@@ -27,13 +27,13 @@ as \emph{terms}, and write them as $e$.\marginpar{%
   to refer to types in \cref{chap:resugar-types}.
 }
 Terms can be inductively defined as:
-\begin{Table}
+\begin{TableForMitch}
 constructor $C$ &$::=$& \textit{name} & syntactic construct name \\
 term $e$ &$::=$& $\Value$ & primitive value \\
   &$|$& $\Node{C}{e_1 \dd e_n}$ & \Sc{ast} node \\
   &$|$& $\Refn[i]{x}$  & variable reference at position $i$ \\
   &$|$& $\Decl[i]{x}$  & variable declaration at position $i$ \\
-\end{Table}
+\end{TableForMitch}
 By ``constructor'', we mean the name of a syntactic construct, such as
 \Code{Plus} or \Code{If}. Thus $\NodeRm{Plus}{\Refn[i]{x}\ 1}$ is a term.
 

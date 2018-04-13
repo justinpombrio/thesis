@@ -1,0 +1,64 @@
+# Changelog #
+
+viii. "Resugaring Scope Rules". done.
+
+4. "subset" -> "part". done.
+
+6. "is sweetest". done :-).
+
+[ ] 11. QUESTION: marks around concrete and abstract surface syntax: I
+bet this is some basic edit, but I don't follow the symbols.
+
+[ ] 11. TODO: "or a specialized dsl, or the impl language of the
+compiler." I'm putting this in the extended prose on Metalanguages,
+because I want to keep this initial list very brief.
+
+12. "In the prec chapter, you said [that desugaring must happen] at
+compile time". done: I added the margin par "As previously noted, if
+the ``phase'' at which desugaring happens is evaluation time, then the
+system isn't really a desugaring system, though it may be similar
+enough to warrent our classification of it."
+
+[ ] 12. QUESTION: I wrote "Can a sugar take an arbitrary expr as a
+param, or only a prim type?" You said "not a clean dichotomy". Why
+not? C++ templates, for example, can take primitive vals like 3 as
+arguments, but not compound exprs like 1+2, and this is an important
+distinction. Is there a better way to state this briefly? (I also
+changed "prim type" to "prim value".)
+
+13. Fixed the grammar. I'm mildly concerned that you thought it
+necessary to label "bake the user at 350F until crispy" as a joke.
+^--- humerous remark.
+
+[ ] 15. QUESTION: "Racket macros can run at an arbitrary number of
+different phases." "No". Racket allows you to import things at "phase
+level" 0 (for use at runtime), at phase level 1 (for use at
+compile-time), and also at phase level 2 or above and at phase level
+-1 or below. How should I interpret "phase level 2", if not as a phase
+that occurs before compile-time?
+https://docs.racket-lang.org/guide/stx-phases.html
+
+17. "Put hygiene here". done.
+
+18. "ambiguous referent". done (albeit by changing the example).
+
+[ ] 16. QUESTION: Hygiene section. "Move this to end." Why? As is,
+I've lined the safety properties up in order of "difficulty". Each
+safety property implies the previous ones. (Or at least, you can't
+talk about a safety property unless the previous ones are satisfied.)
+
+16. "taxonomic". My office mate told me taxometric was a word. I think
+he lied to me. done.
+
+20. (Common) Lisp, Scheme, Racket writeups missing. done. Although I
+don't currently discuss Lisps outside of Scheme.
+
+21. You wanted these right aligned, I take it? If so, done.
+
+22. \gamma overloaded. Thanks. I've changed all uses of \gamma as a
+pattern variable into \delta, and \delta into \epsilon. Technically,
+\epsilon is used as an empty list in chapter 6, but only in one place,
+and \epsilon it only appears as a pattern variable in chapter 5. So I
+think this conflict is preferrable to using some more obscure greek
+letter than people don't recognize. done.
+
