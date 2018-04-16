@@ -118,7 +118,8 @@ says $t$, rather than $\Desugar{t}$. We are handling desugaring of
 expressions, but not of types. It is sometimes desirable to introduce
 a new type by way of translation into an existing type: for instance,
 introducing Booleans and implementing them in terms of Integers.
-We leave this to future work.
+We leave this more general problem---resugaring type
+rules, when types can contain sugars---to future work.
 
 To see how type resugaring might proceed, let us work through an
 example. Take a simple \Code{and} sugar, defined by:
@@ -451,14 +452,16 @@ Each desugaring rule has a \Sc{lhs} and a \Sc{rhs}, which
 are terms $p$ that may contain pattern variables. Desugaring proceeds
 by recursively expanding these rules, replacing the \Sc{lhs}
 with the \Sc{rhs}. Formally:
+
 \begin{Table}
+  \TypeLabel{\Desugar{e} = e}
   $\Desugar{\Value}$
   &$=$& $\Value$ \\
   $\Desugar{x}$
   &$=$& $x$ \\
   $\Desugar{\Subs{\gamma}{p}}$
   &$=$& $\Subs{(\Desugar{\gamma})}{(\Lang[p])}$ \\
-  && if $p$ is in the surface language \\
+  && if $p = (C\,p_1\dots p_n)$ and $C$ is in the surface langauge \\
   $\Desugar{C\,\seq{e}}$
   &$=$& $(C\,\Desugar{e_1}\dots\Desugar{e_n})$ \\
   && if $C$ is in the core language \\
@@ -470,7 +473,7 @@ $\gamma$ means desugaring its expressions: $\Desugar{\{\alpha \mapsto
   e, ...\}} = \{\alpha \mapsto \Desugar{e}, ...\}$.
 
 Likewise, desugaring can be extended in the obvious way to desugar
-judgements and type environments:
+judgments and type environments:
 \begin{Table}
   $\Desugar{\saysT{\Gamma}{p}{t}}$
   &$=$& $\saysT{\Gamma}{\Desugar{p}}{t}$ \\
@@ -685,6 +688,8 @@ Resugaring will search for a partial derivation of the sugar's \Sc{rhs}:
 \[ \saysVD{\overline{\Icore}}{\seq{J}}{J_\Sc{rhs}} \]
 where $\seq{J}$ are provable using the \Code{t-premise} rule and
 $J_\Sc{rhs}$ has the form $J_\Sc{rhs} = \saysT{\Gamma}{p_\Sc{rhs}}{t}$.
+(Our implementation uses Redex's \Code{build-derivations} function to
+perform this search.)
 If such a derivation is found, and is unique, then we will write:
 \[ \ResugarTy{\overline{\Icore}}{p_\Sc{lhs} \To p_\Sc{rhs}}
  = \seq{J} / J_\Sc{lhs} \]
@@ -739,9 +744,10 @@ Given the requirements of this section, type resugaring obeys
   Grant assumptions 1--5 from this section,
   let $\Lang = p_\Sc{lhs}\To_\Sc{rhs}\dots$,
   and suppose that \newline
-  $\ResugarTy{\overline{\Icore}}{p_\Sc{lhs}\To_\Sc{rhs}}\dots = \overline{\Isurf}$. Then:
-
-  \[\saysJ{\overline{\Isurf}}{\Jsurf} \text{ iff }
+  $\ResugarTy{\overline{\Icore}}{p_\Sc{lhs}\To_\Sc{rhs}}\dots = \overline{\Isurf}$.
+  Then for all surface type judgments $\Jsurf$\,:
+  
+  \[\saysJ{\overline{\Isurf}}{\Jsurf} \ \text{ iff }\
   \saysJ{\overline{\Icore}}{\Desugar{\Jsurf}} \]
 \end{theorem}
 \begin{proof}
@@ -1267,7 +1273,7 @@ algorithm: records and lists needed builtin support, as described in
 \cref{sec:rtype-arity}, and subtyping required adding subtyping constraints,
 as well as a new \Code{t-sub-premise} rule.\marginpar{%
 The \Code{t-sub-premise} rule is like \Code{t-premise}, but for
-  subtyping judgements instead of type judgements.
+  subtyping judgments instead of type judgments.
 }
 References (pg. 167) would have required changing the form of
 judgments, from $\saysT{\Gamma}{e}{t}$ to
@@ -1304,7 +1310,7 @@ the resulting type rule.
 \paragraph{Upcast}
 The \Code{upcast} sugar (\cref{fig:rtype-examples-2}) converts an expression
 to a supertype of its type via $\eta$-expansion. Notice that the core
-language type system contains subtyping judgements, as mentioned in
+language type system contains subtyping judgments, as mentioned in
 \cref{sec:rtype-eval-type}.
 
 
