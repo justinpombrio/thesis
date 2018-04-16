@@ -52,7 +52,7 @@ can think of this as statically lifting a ``lightweight semantics'' of
 the language. Thus it is a precursor to lifting other notions of semantics
 (such as lifting type-checking rules, as we do in the next chapter)
 though of course the mechanics of doing so will depend heavily on the
-semantics itself.
+notion of semantics to be considered.
 
 The intended application of this work is as follows:
 \begin{enumerate}
@@ -108,10 +108,10 @@ our technique.
 We will begin by building up to our scope inference technique via two
 worked examples.
 \textbf{They are slightly simplified for expository purposes}. 
-\Cref{sec:rscope-rules} describes the generalization, and
+\Cref{sec:rscope-rules} describes the full version, and
 \cref{sec:rscope-for-example,sec:rscope-named-let-example}
 provide examples.
-(While the generalization is sometimes important, it has no effect on the
+(While the full version of the technique is sometimes important, it has no effect on the
 examples of this section.)
 
 \subsection{Example: Single-arm Let}
@@ -227,7 +227,7 @@ Thus, since there is a path from $\PVarC$ to $\PVarA$ in the rule's
 In English, this arrow says that the variable declared at $\PVarA$ is
 in scope at the Let's body $\PVarC$, as expected.
 
-There are still some missing arrows, however: there should be down
+There are still some missing arrows, however: there should be up
 arrows to indicate that any declaration in scope at the Let should
 also be in scope at its children. These can be inferred in a similar
 way: whenever there is a path from the root to a pattern variable on the
@@ -591,7 +591,7 @@ any declaration.
 Ambiguous binding may occur, for instance, if two declarations
 have the same name and are both parameters to the same function.
 In this case, a reference in the body of the function would be
-ambiguously bound to both of them.
+ambiguously bound by both of them.
 We also capture the idea of \emph{shadowing}, where a more specific
 declaration hides a less specific declaration:
 
@@ -688,7 +688,7 @@ parameter is that function's body. The axioms for a term $e$ are then:
   it has the same name as and is in scope of, provided such a unique
   element exists. Again, if there is no (unique) most specific
   declaration, we will say that the reference is \emph{ambiguously
-    bound}.
+    bound} by those declarations.
 %% \item[Renamability]
 %%   The scope of a declaration is determined solely by the shape
 %%   of the term it is in (and, in particular, not by the name of any
@@ -852,7 +852,7 @@ The previous section presented definitions for \emph{representing} the
 scoping of a term. It did not, however, say how to \emph{determine}
 the scoping of a term, i.e., what the specific preorder should be. In
 this section, we give a language for specifying \emph{scoping rules}
-that, given a term, determine a preorder over its variables.
+that, given a term, determine a scoping preorder over its variables.
 
 \subsection{Scoping Rules: Simplified}
 
@@ -915,7 +915,9 @@ which implies that, at a minimum:
 \]
 
 This places a set of requirements on the scoping rules for Lambda,
-Let*, and Bind. For instance, $\RefnX[3] \< \DeclX[1]$ can only be
+Let*, and Bind (assuming per \cref{sec:rscope-prelim} that scoping
+rules are as local as possible). For instance, $\RefnX[3] \<
+\DeclX[1]$ can only be
 achieved if $\RefnX[3] \< \ConstRm{Bind} \< \ConstRm{Let*} \< \DeclX[1]$.
 Continuing this way gives the requirements (shown both pictorially and
 textually):
@@ -987,9 +989,8 @@ of the subterms of $e$. With this in mind, we offer four kinds of bindings:\foot
   grammars disallow cycles, however, while our preorders allow them.
 }
 \begin{enumerate}
-\item[A.] \SpecBind{j}{i}: A term may make its $i$'th child's bindings
-  available in its $j$'th child. If so, any declarations
-  \emph{exported} by child $i$ will be \emph{imported} by child $j$.
+\item[A.] \SpecBind{j}{i}: A term may make all declarations
+  \emph{exported} by its $i$th child be \emph{imported} by its $j$th child.
 \item[B.] \SpecImpt{i}: A term's $i$'th child may import its
   parent's declarations. If so, it \emph{imports} the declarations \emph{imported}
   by its parent. (This is almost universal:
@@ -997,7 +998,7 @@ of the subterms of $e$. With this in mind, we offer four kinds of bindings:\foot
   also be in scope at its children. However, we do allow a term to
   hide all bindings from its child, if it so desires.)
 \item[C.] \SpecExpt{i}: A term's $i$'th child may export its
-  declarations to its parent. If so, the term \emph{exports} child $j$'s
+  declarations to its parent. If so, the term \emph{exports} child $i$'s
   \emph{exports}.
 \item[D.] \SpecSelf: A term may take the declarations it
   \emph{imported}, and \emph{export} them. (This is not terribly useful
@@ -1132,11 +1133,11 @@ Rules SD-Import, SD-Export, SD-Bind, and S-ReExport capture the
 direct meaning of the scoping rules.
 S-Refl, S-Refl2, and SD-Trans give the transitive reflexive
 closure.
-SD-Decl allows declarations to extend the current scope.
+S-Decl says that declarations extend the current scope.
 S-Lift says that facts learned about a subterm remain true in
 the whole term.
 
-\begin{figure}[ht]
+\begin{figure}[h!t]
   \begin{flushleft}
     \hspace{5em}\TypeLabel{\SaysScope{e}{a}{b}}
   \end{flushleft}
@@ -1420,7 +1421,7 @@ More precisely, given a core language with scoping rules $\SigmaCore$,
 and a desugaring $\Desugar{}$, our algorithm finds scoping rules $\SigmaSurf$
 that preserves $\alpha$-equivalence (\cref{thm:rscope-hygiene}), so that:
 \[ \SaysScopeEqa[\SigmaSurf]{e}{e'} \text{\quad implies\quad }
-   \SaysScopeEqa[\SigmaCore]{\Desugar{e})}{\Desugar{e'})}
+   \SaysScopeEqa[\SigmaCore]{\Desugar{e}}{\Desugar{e'}}
 \]
 Furthermore, $\SigmaSurf$ will be least, so that if
 $\SigmaSurf'$ also has this property, then
@@ -1494,7 +1495,8 @@ about desugaring, and then the algorithm.
 To briefly recap, we assume that desugaring is given by a set of
 rewrite rules of the form $p \To p'$, where $p$ and $p'$ are patterns:
 \begin{Table}
-pattern $p$ &$::=$& $\Value$ & primitive value \\
+pattern $p$ &$::=$& $\PVarA$ & pattern variable \\
+  &$|$& $\Value$ & primitive value \\
   &$|$& $\Node{C}{p_1 \dd p_n}$ & \Sc{ast} node \\
   &$|$& $\Refn[i]{x}$  & variable reference \\
   &$|$& $\Decl[i]{x}$  & variable declaration
