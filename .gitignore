@@ -30,8 +30,10 @@ texput.log
 sugars/haskell/main
 sugars/rust/target
 examples
+example
 safety
 power
+thomas_example
 img/*.pdf
 thesis.pdf
 *~
