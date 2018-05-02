@@ -475,8 +475,8 @@
 % Ports
 \definecolor{imColor}{rgb}{0.0 0.36 0.84}
 \definecolor{exColor}{rgb}{0.63 0.0 0.0}
-\newcommand{\ImSymb}{{\color{imColor}\downarrow}}
-\newcommand{\ExSymb}{{\color{exColor}\uparrow}}
+\newcommand{\ImSymb}{{\color{imColor}\uparrow}}
+\newcommand{\ExSymb}{{\color{exColor}\downarrow}}
 \newcommand{\im}{\ImSymb}
 \newcommand{\ex}{\ExSymb}
 \newcommand{\ImSymbCirc}{\ImSymb}
@@ -521,7 +521,7 @@
 \newcommand{\SigmaSurf}{\Sigma_\mathit{surf}}
 
 % Judgements
-\newcommand{\SaysScope}[3]{\Sigma,#1 \vdash #2 \< #3}
+\newcommandx*{\SaysScope}[4][1=\Sigma]{#1,#2 \vdash #3 \< #4}
 \newcommand{\SaysScopeNot}[3]{\Sigma,#1 \not\vdash #2 \< #3}
 \newcommand{\SaysScopeBound}[3]{\Sigma,#1 \vdash #2 \Bound #3}
 \newcommand{\SaysScopeNotBound}[3]{\Sigma,#1 \not\vdash #2 \Bound #3}
@@ -1003,15 +1003,10 @@
 \part{Desugaring}
 \include{chapters/taxonomy}
 \include{chapters/notation}
-%\include{chapters/well-formedness}
 \part{Resugaring}
 \include{chapters/resugar-eval}
 \include{chapters/resugar-scope}
 \include{chapters/resugar-types}
-%\include{chapters/implementation}
-%\include{chapters/conclusion} % &future work
-%\part{Appendix}
-%\include{chapters/appendix}
 
 \bibliographystyle{plain}
 \bibliography{justin}

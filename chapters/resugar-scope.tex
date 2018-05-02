@@ -1432,11 +1432,12 @@ The general algorithm for scope inference is given in
 about desugaring, and then the algorithm.
 
 \begin{figure*}
+\begin{Wide}
 \begin{LongTable}
   $\displaystyle \Op{inferScope}{\Sigma,\,\{p_i \To p_i'\}_{i \in 1..n}}$
   &$\Defeq$&
-  Let $\SigmaSurf = \displaystyle \Op{solve}{\Sigma,\,
-    \bigcup_{i \in 1..n} \Op{genConstrs}{p_i \To p_i'}}$ \\
+  Let $\SigmaSurf = \displaystyle
+  \Op{solve}{\Sigma,\,\{\Op{genConstrs}{p_i \To p_i'}\}_{i \in 1..n}}$ \\
   && $\Op{checkScope}{\SigmaSurf,\,\{p_i \To p_i'\}_{i \in 1..n}}$ \\
   && Return $\SigmaSurf$
   \vspace{0.9em} \\
@@ -1444,20 +1445,29 @@ about desugaring, and then the algorithm.
   &$\Defeq$&
   $\displaystyle \left\{
   \Op{genConstr}{a \< b,\;p \To p'} \right\}_{a,b \in H}$ \\
-  &&where $H = \PVars{p} \cup \PVars{p'} \cup \{\Root\}$
+  &&\parbox{10cm}{
+  where $H = \PVars{p} \cup \PVars{p'} \cup \{\Root\}$
+  and where the omitted port signs on $a$ and $b$ are filled in as
+    described in \cref{def:rscope-scope-eqv}}
   \vspace{0.9em} \\
   $\Op{genConstr}{a \< b,\; p \To p'}$
   &$\Defeq$&
-  $\left(\Op{genConj}{a \< b,\; p}, \Op{genConj}{a \< b,\; p'}\right)$ \\
-  &&where $(p, q)$ means a constraint ``$p$ iff $q$''
+  $\Op{genConj}{a \< b,\; p} \text{ iff } \Op{genConj}{a \< b,\; p'}$ \\
+  && (This is a constraint of the form
+  $f_1 \wedge ... \wedge f_m \text{ iff } f'_1 \wedge ... \wedge f'_{m'}$.)
+%  $\left(\Op{genConj}{a \< b,\; p}, \Op{genConj}{a \< b,\; p'}\right)$ \\
+%  &&where $(x, y)$ means a constraint ``$x$ iff $y$''
   \vspace{0.9em} \\
   $\Op{genConj}{a \< b,\; p}$
-  &$\Defeq$&
-  Smallest $\SigmaSurf$ such that $\SaysScope{p}{a}{b}$. \\
-  && (To compute this, take the premises of
-     the (unique) \\
-  && derivation of $\SaysScope{p}{a}{b}$ using the \\
-  && Algorithmic Scope Checking rules (\cref{fig:rscope-SD}).)
+  &$\Defeq$& Find a derivation $D$ of 
+    $\SaysScope[\Sigma]{p}{a}{b}$ where $\Sigma$ is unknown, using \vspace{0.2em}\\
+  &&\parbox{10cm}{
+    the Algorithmic Scope Checking rules (\cref{fig:rscope-SD}). This
+    can be accomplished since the rules are syntax-directed over $p$. \\
+    Return the conjunction of the premises of $D$. \\
+    (These premises will be facts of the form
+    $(i, j) \in \Sigma[C]$, and their conjunction is both necessary
+      and sufficient for $\SaysScope[\Sigma]{p}{a}{b}$ to hold.)}
   \vspace{0.9em} \\
   $\displaystyle \Op{solve}{\SigmaCore,\,constraints}$
   &$\Defeq$&
@@ -1465,13 +1475,21 @@ about desugaring, and then the algorithm.
     Initialize $\SigmaSurf$ = $\SigmaCore$ \\
     Until fixpoint:
     \begin{itemize}
-    \item If a fact $F$ in a constraint is in $\SigmaSurf$: \\
-      \Indent Delete $F$ from the constraint
-    \item If one side of a constraint is empty: \\
-      \Indent Delete the constraint \\
-      \Indent Add the other side to $\SigmaSurf$ \\
+    \item If a constraint has the form
+      $f_1 \wedge ... \wedge f_m \text{ iff } f'_1 \wedge ... \wedge f'_{m'}$ \\
+      and some $f_i$ (or $f'_i$) is true in $\SigmaSurf$: \\
+      \Indent Delete $f_i$ (or $f'_i$) from the constraint
+%    \item If a fact $F$ in a constraint is in $\SigmaSurf$: \\
+%      \Indent Delete $F$ from the constraint
+    \item If a constraint has the form
+      $f_1 \wedge ... \wedge f_m \text{ iff } true$, or the form \\
+      $true \text{ iff } f_1 \wedge ... \wedge f_m$
+      (where $true$ is the empty conjunction): \\
+      \Indent Delete the constraint from $constraints$ \\
+      \Indent Add $f_i$ to $\SigmaSurf$ for each $f_1,...,f_m$ \\
       \Indent\Indent (maintaining transitive closure)
-    \item If any fact in $\SigmaSurf$ is in the complement of $\SigmaCore$: \\
+    \item If at any point $(i, j) \in \SigmaSurf[C]$, where $C$ is \\
+      in the core language but $(i, j) \not\in \SigmaCore[C]$: \\
       \Indent ERROR: Reject this sugar
     \end{itemize}
     Return $\SigmaSurf$
@@ -1480,14 +1498,15 @@ about desugaring, and then the algorithm.
   $\displaystyle \Op{checkScope}{\Sigma,\,\{p_i \To p_i'\}_{i \in 1..n}}$
   &$\Defeq$&
   For each rule $p \To p'$: \\
-  &&\quad Assert that if $\SaysScope{p}{a}{b}$
+  &&\quad Check that if $\SaysScope{p}{a}{b}$
           and $a \in p'$ then $b \in p'$ \\
           && \Indent (otherwise ERROR) \\
-  &&\quad Assert that each reference $\RefnX \in p'$ is bound by a \\
+  &&\quad Check that each reference $\RefnX \in p'$ is bound by a \\
           && \Indent unique declaration $\DeclX \in p'$
 \end{LongTable}
 \caption{Scope Inference Algorithm}
 \label{fig:rscope-resugar}
+\end{Wide}
 \end{figure*}
 
 \subsection{Assumptions about Desugaring} \label{sec:rscope-des-assumptions}
@@ -1542,6 +1561,7 @@ For example, in $p_0[p[e_1,...,e_n]]$, $\PVar_i$ bounds $e_i$, and $p$ (the root
 bounds $p_0$. In general, we will call this property
 \emph{scope-equivalence}:
 \begin{definition}[Scope-equivalence of patterns] \WhitePhantom{.}\\ %NEWLINE
+  \label{def:rscope-scope-eqv}
   $\SaysScopeEqv{p}{p'}$ means that
   $\Forall{a, b \in \{\PVar_1,...,\PVar_n,\Root\}}$
   \[ \SaysScope{p}{a}{b} \text{ iff } \SaysScope{p'}{a}{b} \]
@@ -1617,8 +1637,8 @@ for Let:
 \end{LongTable}
 One of the necessary constraints says that:
 \begin{Table}
-&& $\SaysScope{\NodeRm{Let}{\PVarA\;\PVarB\;\PVarC}}{\PVarA}{\PVarB}$ \\
-&iff& $\SaysScope{\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\PVarC}\;\PVarB}}{\PVarA}{\PVarB}$
+&& $\SaysScope{\NodeRm{Let}{\PVarA\;\PVarB\;\PVarC}}{\im{}\PVarA}{\ex{}\PVarB}$ \\
+&iff& $\SaysScope{\NodeRm{Apply}{\NodeRm{Lambda}{\PVarA\;\PVarC}\;\PVarB}}{\im{}\PVarA}{\ex{}\PVarB}$
 \end{Table}
 
 Each side of this ``iff'' has a unique derivation using the
@@ -3247,7 +3267,12 @@ In fact, Flatt's notion of scope can be expressed as a preorder,
 as we show in \cref{sec:rscope-sos}.
 
 Neron et al. describe \emph{scope graphs}, which are also based on a
-similar view, but have a more complicated set of definitions~\cite{neron-scope}.
+similar view, but have a more complicated set of definitions~\cite{neron-scope}.\footnote{
+For example, Neron et al.'s work has seven inference rules for determining where a
+reference is bound (\emph{given} a scope graph),
+whereas we have the single rule that a reference $\RefnX$ is bound by
+$\min \St{\DeclXi}{\RefnX \< \DeclXi}$ (\emph{given} a scope preorder).
+}
 Unlike {\sap}, however, scope graphs include mechanisms for handling
 module scope, which gives it the ability to model both modules and
 also other constructs like objects and field lookup.
@@ -3314,7 +3339,8 @@ There are many more binding specification
 languages~\cite{aczel-church-rosser,pottier-caml,nabl}.
 We have chosen what we believe to be a representative sample for
 comparison. We have shown that our binding specification language
-compares favorably in expressiveness, while simultaneously being
+has at least a comparable level of expressiveness,
+while simultaneously being
 simple enough to enable scope inference.
 
 \section{Discussion and Conclusion}
