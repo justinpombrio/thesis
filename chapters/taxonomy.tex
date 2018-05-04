@@ -8,17 +8,17 @@ TODO
 \item More examples
 \item Define 'metalanguage' before it is used.
 \item Update all languages to the latest testing methods. Done for: Rust.
+\item Fix order between table and listing. Probably alphabetical.
 \end{itemize}
 
 There are a bewildering variety of desugaring systems.  In this
-chapter, we categorize them into a taxonomy.
+chapter, we categorize a representative set of them into a taxonomy.
 
-We stretch this taxonomy to include systems that aren't quite
+We stretch this taxonomy to include some systems that aren't quite
 desugaring systems, but that are closely associated with
 them. Notably, we discuss staged metaprogramming systems, which (i)
-operate on code at run-time, rather than compile-time; (ii) have
-to explicitly, rather than implicitly, desugar code; and (iii)
-cannot deconstruct (e.g., perform case analysis on) syntax.
+operate on code at run-time, rather than compile-time, and (ii) have
+to explicitly, rather than implicitly, desugar code.
 
 \section{A Sugar Taxonomy}
 
@@ -40,10 +40,10 @@ There are many dimensions by which desugaring mechanisms vary:
       to outermost} (\Sc{io}), or from \emph{outermost to innermost}
     (\Sc{oi})?
   \item[Phase] \emph{When} does desugaring occur? Is it at compilation time,
-    or at evaluation time (as in staged metaprogramming
+    or at run-time (as in staged metaprogramming
     systems)?\marginpar{%
     As previously noted, if the ``phase'' at which desugaring happens
-    is evaluation time, then the system isn't really a desugaring system,
+    is run-time, then the system isn't really a desugaring system,
     though it may be similar enough to warrent our classification of it.}
 \end{description}
 We will consider four dimensions related to the \emph{expressiveness}
@@ -76,15 +76,18 @@ We will also consider four dimensions related to \emph{safety}:
 
 %% Staged metaprogramming also involves user-defined sugars, but instead
 %% of desugaring as a separate phase, code is constructed, composed, and
-%% eventually \Code{eval}'ed at runtime. MetaOCaml is a prototypical
+%% eventually \Code{eval}'ed at run-time. MetaOCaml is a prototypical
 %% staged metaprogramming language: the metalanguage is MetaOCaml itself,
 %% the desugaring order is inside-out (reflecting the evaluation
-%% order of OCaml), and its sugars are user-defined and are expanded at runtime.
+%% order of OCaml), and its sugars are user-defined and are expanded at run-time.
 %% This thesis is really about sugars that are expanded
 %% at compile time---so staged metaprogramming systems are technically out of scope---but
 %% they are closely enough related that we include them in the taxonomy.
 
-We now discuss each of these dimensions in more detail.
+We next discuss each of these dimensions in detail. After that,
+\cref{table:taxonomy-table} measures a number of desugaring systems
+along these dimensions, and \cref{sec:taxonomy-systems} discusses
+these desugaring systems.
 
 \subsection{Representation}
 
@@ -108,7 +111,20 @@ these in \ref{sec:taxonomy-cpre}.
 
 There are variations among tree representations as well: desugaring
 rules may work over the concrete syntax of the language, or over its
-abstract syntax. We discuss this further in [REF].
+abstract syntax. The \emph{concrete} syntax of a language is its
+syntax as seen by the programmer, e.g. \Code{f(1)} for a function
+application. The \emph{abstract} syntax is the internal representation
+of that syntax, which for this example might (e.g.) be
+\Code{(apply (id f) 1)}. Concrete syntax might seem similar to a
+text-based representation, but there is an important distinction:
+\Code{f(1} in a textual representation is part of a term, but
+there is no such thing as \Code{f(1} in the concrete syntax: it is
+ill-formed.
+
+Overall, this is a \emph{very loose} categorization of
+representations: we are placing a wide variety of possible
+representations into a few large buckets.
+
 
 \subsection{Authorship: Language-defined or User-defined}
 
@@ -128,47 +144,53 @@ users the power to extend the language. As a consequence, when
 this extended language is shared, other users must contend with it,
 which may be a gift or a burden, depending on its quality.
 
-[TODO: Consider moving the rest of this prose into a different section.]
+%% [TODO: Consider moving the rest of this prose into a different section.]
 
-When sugars are user-defined, it raises difficulties with tools such
-as editors that need to support the new syntax. For example, if sugars
-are language-defined then an editor can just support the full
-language. If they are user-defined, however, how can an editor provide
-correct indentation, syntax highlighting, etc.? % TODO: rewrite this paragraph
+%% When sugars are user-defined, it raises difficulties with tools such
+%% as editors that need to support the new syntax. For example, if sugars
+%% are language-defined then an editor can just support the full
+%% language. If they are user-defined, however, how can an editor provide
+%% correct indentation, syntax highlighting, etc.? % TODO: rewrite this paragraph
 
-Different languages work around this problem in different ways.
+%% Different languages work around this problem in different ways.
 
-Lisps partly avoid this problem by having two ``layers'' of syntax.
-The lower layer is simply s-expressions, and ensures that parentheses
-are well-balanced (and that there are no tokenization errors).
-The higher layer checks that the s-expression makes syntactic sense.
-For example, \Code{(define x 1} is invalid at both layers,
-\Code{(define ((x)) 1)} is valid at the first layer but not at the
-second, and \Code{(define x 1)} is valid at both layers.
-This can be called \emph{bicameral syntax}[CITE: plai], by analogy to legislative
-houses that are split into a lower and upper level.
+%% Lisps partly avoid this problem by having two ``layers'' of syntax.
+%% The lower layer is simply s-expressions, and ensures that parentheses
+%% are well-balanced (and that there are no tokenization errors).
+%% The higher layer checks that the s-expression makes syntactic sense.
+%% For example, \Code{(define x 1} is invalid at both layers,
+%% \Code{(define ((x)) 1)} is valid at the first layer but not at the
+%% second, and \Code{(define x 1)} is valid at both layers.
+%% This can be called \emph{bicameral syntax}[CITE: plai], by analogy to legislative
+%% houses that are split into a lower and upper level.
 
-This separation of concerns makes it easy for editors to support the
-\emph{first} layer of syntax, which cannot be modified by syntactic
-sugar, while ignoring the second, which can. Doing so only
-\emph{partly} avoids the problem. For example, the DrRacket editor for
-Racket [CITE] allows indentation schemes to be set on a per-macro
-basis (because different syntactic forms, while purely parenthetical,
-still have varying nesting patterns that should be indented
-differently), and it displays arrows showing where variables are bound
-by being macro-aware and expanding the program (see [REF]).
+%% This separation of concerns makes it easy for editors to support the
+%% \emph{first} layer of syntax, which cannot be modified by syntactic
+%% sugar, while ignoring the second, which can. Doing so only
+%% \emph{partly} avoids the problem. For example, the DrRacket editor for
+%% Racket [CITE] allows indentation schemes to be set on a per-macro
+%% basis (because different syntactic forms, while purely parenthetical,
+%% still have varying nesting patterns that should be indented
+%% differently), and it displays arrows showing where variables are bound
+%% by being macro-aware and expanding the program (see [REF]).
 
-[FILL: SugarJ, other examples]
-[FILL: Spoofax, language workbenches: tie editor to language]
+%% [FILL: SugarJ, other examples]
+%% [FILL: Spoofax, language workbenches: tie editor to language]
 
 
 \subsection{Metalanguage}
 
 The \emph{metalanguage} is the language that the sugars are written
-in. It could be the same language that programs are written in, a
-different (but still general purpose) language, or a \Sc{dsl}
-especially for sugars (such as the pattern-based
-\Code{define-syntax-rule} \Sc{dsl} we've been using for examples).
+in. There are a number of common possibilities:
+\begin{itemize}
+\item The metalanguage may be the host language itself.
+\item The metalanguage may be the implementation language of the
+  compiler (which is frequently the same language).
+\item The metalanguage may be a set of pattern-based rules in the general
+style of Scheme's \Code{syntax-rules}. In \cref{table:taxonomy-table},
+we use ``rules'' as a shorthand for ``a set of pattern-based
+desugaring rules''.
+\end{itemize}
 
 
 \subsection{Desugaring Order}\label{sec:taxonomy-order}
@@ -176,7 +198,7 @@ especially for sugars (such as the pattern-based
 % GRAMMARS WITH MACRO-LIKE PRODUCTIONS (Fischer)
 
 There are two major desugaring strategies used in desugaring systems.
-They loosely correspond to eager and lazy runtime evaluation, but
+They loosely correspond to eager and lazy run-time evaluation, but
 differ in some important ways, so we will instead refer
 to them by their original names [CITE]: Outside-in (\Sc{oi}) and
 Inside-out (\Sc{io}) desugaring:\marginpar{
@@ -218,13 +240,25 @@ Inside-out (\Sc{io}) desugaring:\marginpar{
 \end{description}
 
 
-\subsection{Phase}
+\subsection{Time of Expansion}
 
-The \emph{phase} of a desugaring system is \emph{when} desugaring
-happens. This is typically at compile-time, but it doesn't have to be.
-For example, staged metaprogramming systems construct and evaluate
-programs at run-time [TODO: test], and Racket macros can run at an
-arbitrary number of different phases [REF].
+We distinguish between three different ``times'' of expansion:
+\begin{description}
+\item[Run] means that ``sugars'' are actually expanded at run-time.
+  This only occurs for metaprogramming systems, which are not true
+  desugaring systems.
+\item[Compile] means that sugars are always expanded in a separate
+  phase before the program runs. (To be more precise, the phases that
+  occur in order are (i) desugar, (ii) compile, and (iii) run. We
+  describe this as ``compile'' for simplicity and because
+  ``compile-time'' is a well-established phrase.)
+\item[Many] Racket macros can run at an arbitrary number of different
+  phases, including at compile-time and at run-time.
+\end{description}
+
+\subsection{Number of Phases}
+
+[TODO: remove this?]
 
 \subsection{Expressiveness}
 
@@ -239,7 +273,9 @@ system:
   values (e.g., numbers) as parameters.
 \item[Result] What kind of syntax can a sugar desugar to? Can it be
   any syntactic category, or is it more limited, e.g., to expressions
-  only?
+  only? For example, C++ templates can only desugar into definitions,
+  such as function definitions or struct definitions. They cannot
+  desugar into (e.g.) expressions.
 \item[Deconstruction] Sugars are given syntax as parameters. Can they
   deconstruct this syntax (e.g., by case analysis) or must
   they treat it parametrically (i.e., only compose it)?
@@ -253,7 +289,7 @@ system:
 \item[Sugar-defining Sugars] Can sugars define sugars? That is, can a
   sugar expand into the definition of another sugar?
 \end{description}
-Of course, three measures isn't enough to fully capture how expressive
+Of course, four measures isn't enough to fully capture how expressive
 a desugaring system is! However, it should give a rough idea of the
 situations in which it is appropriate to use.
 
@@ -340,7 +376,7 @@ let sugar() = .<3 + "four">.;;
     sugar---even though the sugar is never used.
 \end{description}
 
-\section{Applying the Taxonomy to Desugaring Systems}
+\section{Applying the Taxonomy to Desugaring Systems}\label{sec:taxonomy-systems}
 
 In this section, we apply the taxonomy to a number of desugaring systems.
 
@@ -377,7 +413,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & IO
     & compile
     & one
-    & type* & declaration* & yes* & no
+    & type* & declaration* & yes* & yes
     & yes & NA & NA & no
     \\
     MetaOCaml
@@ -387,7 +423,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & IO
     & run
     & many
-    & expr & expr & no & FILL
+    & expr & expr & no & yes
     & yes & yes & yes & yes
     \\
     Haskell Templates
@@ -397,8 +433,18 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & IO
     & compile
     & many
-    & any & any & yes & FILL
+    & any & any & yes & no
     & yes & TODO & no & no
+    \\
+    Haskell Sugars
+    & abstract
+    & language
+    & rules
+    & OI
+    & compile
+    & one
+    & any & any & yes & no
+    & yes & yes & FILL & FILL
     \\
     Julia Macros
     & concrete/abstract
@@ -407,7 +453,7 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & OI
     & compile
     & many*
-    & any & any & yes & FILL
+    & any & any & yes & yes
     & yes & no & no & NA
     \\
     Rust Macros
@@ -427,9 +473,10 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & OI
     & compile*
     & many
-    & any & any & yes & FILL
+    & any & any & yes & yes
     & partly* & yes & no & no
-    \\ Scheme Macros
+    \\
+    Scheme Macros
     & concrete
     & user
     & Scheme
@@ -438,15 +485,46 @@ In this section, we apply the taxonomy to a number of desugaring systems.
     & many
     & any & any & yes & FILL
     & partly* & yes & no & NA
-    \\ McMicMac
-    & %concrete$\to$\Sc{ir}
-    & %user
-    & %rules
-    & %OI
-    & %compile
-    & %one?
-    & %any & yes & any & no
-    & %no & yes & no & NA
+    \\
+    McMicMac
+    & concrete$\to$\Sc{ir}
+    & language
+    & rules
+    & OI
+    & compile
+    & one
+    & any & yes & any & no
+    & no & yes & no & NA
+    \\
+    Eval. Resugaring
+    & abstract
+    & either
+    & rules
+    & OI
+    & compile
+    & one
+    & any & any & yes & no
+    & yes & yes & no & NA
+    \\
+    Scope Resugaring
+    & abstract
+    & either
+    & rules
+    & OI
+    & compile
+    & one
+    & any & any & yes & no
+    & yes & yes & yes & NA
+    \\
+    Type Resugaring
+    & abstract
+    & either
+    & rules
+    & OI
+    & compile
+    & one
+    & any & any & yes & no
+    & yes & yes & yes & yes
   \end{tabular}
   \caption{Taxonomization of Desugaring Systems. (Categories with
     asterisks are described further in that desugaring system's
@@ -588,21 +666,20 @@ a template see the concrete type (e.g. \Code{int}) that is passed to
 it, even if this type is the result of another template expansion.
 
 
-\subsection{Rust Macros} \label{sec:taxonomy-rust}
-
-%https://doc.rust-lang.org/1.2.0/book/macros.html
-NOTE: This is about Rust's regular macros, not Rust's ``procedural'' macros.
-
-
 \subsection{Haskell Templates} \label{sec:taxonomy-haskell}
 
 %https://hackage.haskell.org/package/template-haskell-2.10.0.0/docs/Language-Haskell-TH-Syntax.html#t:Lit
 %https://stackoverflow.com/questions/10857030/whats-so-bad-about-template-haskell
+[FILL]
 NOTES:
 \begin{itemize}
   \item Must be defined in separate file
 \end{itemize}
 
+
+\subsection{Haskell Sugars}
+
+[FILL]
 
 \subsection{MetaOCaml} \label{sec:taxonomy-metaocaml}
 
@@ -610,10 +687,10 @@ MetaOCaml is a \emph{multi-stage programming} extension to OCaml. This
 means that it provides three new constructs to the language:
 \begin{description}
 \item[Brakcets] (written \Code{.< $\cdots$ >.}) Quote an expression,
-  producing a syntax value at runtime.
+  producing a syntax value at run-time.
 \item[Escape] (written \Code{.$\sim$}) Splice values into a quotation.
 \item[Run] (written \Code{.!}, or \Code{run}) Given a syntax value at
-  runtime, evaluate it.
+  run-time, evaluate it.
 \end{description}
 Thus this code:
 \begin{Codes}
@@ -636,12 +713,20 @@ vastly safer than the other desugaring systems we surveyed.
 The \emph{downside} to multi-stage programming is that it is not a
 full-fledged desugaring system. It cannot introduce new syntax, it
 cannot deconstruct syntax, and its ``desugaring'' happens explicitly
-at runtime via calls to \Code{run}. For all of these reasons,
+at run-time via calls to \Code{run}. For all of these reasons,
 multi-staged programming is best viewed as a way of more efficiently
 organizing computation rather than as a means of extending a language.
 
 
 \subsection{McMicMac Micros} \label{sec:taxonomy-mcmicmac}
+
+% The author says:
+% - macro/micro split important
+% - internal representation is enriched s-exprs (as in Racket)
+% - Use case: want to change how argument lists work
+%             but there is no such thing as an argument list in Schem
+%             thus have to change define, let, etc. etc.
+%             with micros, easy
 
 Krishnamurthi describes a desugaring system called
 McMicMac~\cite{sk:mcmicmac} that is based on a combination of macros
@@ -669,8 +754,8 @@ operate on source code, but are not well-suited for macros.
 
 Scheme had one of the first macro systems [CITE]. Its
 \Code{syntax-rules} macros introduced pattern-based desugaring
-[CHECK,CITE], started the research into macro hygiene [TODO: lisps in
-  general, not Scheme specifically, rephrase][CITE], and set
+[CHECK,CITE], started the research into macro hygiene [TODO:
+  relationship between original Lisp and Scheme?][CITE], and set
 the tone for desugaring systems to come, including all of this work.
 
 \subsection{Racket Macros}
@@ -690,8 +775,12 @@ Dozens of languages have been defined this way, including:
 Given the way Racket's macros are used, they are best viewed as
 compiler extensions more than simply syntactic sugar.
 
+For an overview of the aspirations of Racket and its macro system, see
+the Racket Manifesto[CITE].
+
 \subsection{Rust Macros}
 
+%https://doc.rust-lang.org/1.2.0/book/macros.html
 Rust has a hygienic macro system with pattern-based rules similar to
 Scheme's \Code{syntax-rules}. Rust also has a second
 ``\emph{procedural}'' macro system. This secondary macro system allows
@@ -704,8 +793,31 @@ further.
 
 Julia macros are written as Julia functions, and can construct and
 deconstruct arbitrary syntax. They are mostly unhygienic. (The user
-guide discusses hygiene, but in testing the macro system is unhygienic
+guide discusses hygiene, but in testing the macro system appears to be unhygienic
 outside of the specific situations described.) Beyond this, Julia also
-allows arbitrary runtime metaprogramming: constructing,
-deconstructing, and evaluating code at runtime.
+allows arbitrary run-time metaprogramming: constructing,
+deconstructing, and evaluating code at run-time.
 \Cref{table:taxonomy-table} describes only Julia's macro system.
+
+\subsection{Resugaring Systems}
+
+\Cref{table:taxonomy-table} lists our three resugaring systems. This
+is referring to the \emph{kinds of desugaring systems} that these
+resugaring approaches support. There are two interesting aspects worth
+discussing.
+
+First, while the resugaring systems appear to do well on the
+expressiveness front, there is a limitation hidden in the metalanguage
+being ``rules''.  While many of the other desugaring systems provide
+an ``escape hatch'' out of their ``rules'' allowing arbitrary code to
+run during the desugaring process, our resugaring work strictly
+requires pattern-based rules.
+
+Second, the safety guarantees are provided by a mix of the
+\emph{desugaring} and \emph{resugaring} systems. Each of the resugaring
+systems is marked as ``syntax safe'' and ``hygienic'', because those
+are assumptions it makes about the desugaring system it is built on
+top of. Scope resugaring is additionally marked as ``scope safe'',
+because scope resugaring would \emph{reject} any sugar that was not
+scope safe. Likewise, type resugaring would reject any sugar that was
+not type safe (and as a result any sugar that was not scope safe).
