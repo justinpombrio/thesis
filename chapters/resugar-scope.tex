@@ -543,7 +543,7 @@ to be encoded into fixed-arity constructs.
   We define scope in terms of a perorder.
   A \emph{preorder} ($\<$) is a reflexive and transitive relation. It
   need not be anti-symmetric, however, so it is possible that $a \< b$
-  and $b \< a$ for distinct $a$ and $b$.
+  and $b \< a$ for distinct $a$ and $b$. (This happens, for example, in letrec.)
 We capture scope as a preorder on a term $e$ as follows:
 
 \begin{definition}[Scope]\label{def:rscope-scope}
@@ -618,7 +618,7 @@ behaves as one would expect.
 Second, we show (\cref{sec:rscope-sos}) that the notion of scope used in
 ``Binding as Sets of Scopes''~\cite{flatt:scope} obeys our {\sap}
 definitions, for an appropriate choice of preorder $(\<)$.
-Finally, we introduce a second, very intuitive definition of
+Finally, in \cref{sec:rscope-sas}, we introduce a second, very intuitive definition of
 scope called {\sas}, and show that it is equivalent to {\sap} up to
 a normalization.
 
@@ -704,7 +704,9 @@ are based on the relations ``in scope of'' and
 well to {\sas}.
 
 Furthermore, the two axiomatizations of scope we have presented are closely
-related. In fact, {\sap} is simply a normalized form of {\sas}.
+related. In fact, {\sap} is simply a normalized form of {\sas}:
+there can be more than one scope set that leads to the same scope
+preorder (with the same binding and shadowing).
 To begin with, either form can be converted to the other.
 
 \paragraph{\textit{Conv1}: From {\sap} to {\sas}}
@@ -1001,8 +1003,8 @@ of the subterms of $e$. With this in mind, we offer four kinds of bindings:\foot
   declarations to its parent. If so, the term \emph{exports} child $i$'s
   \emph{exports}.
 \item[D.] \SpecSelf: A term may take the declarations it
-  \emph{imported}, and \emph{export} them. (This is not terribly useful
-  in practice, but we offer it for completion.)
+  \emph{imported}, and \emph{export} them. (We do not know of any
+  examples of this in the wild, but we offer it for completion.)
 \end{enumerate}
 These four kinds of paths may be represented graphically,
 showing imports as $\ImSymbCirc$ and exports as $\ExSymbCirc$:
@@ -1097,7 +1099,7 @@ Here $i$ represents the $i$th child term,
 $\Exp$ represents the parent term's exports, and
 $\Imp$ represents the parent term's imports.
 We will call pairs in the relation (e.g., $(1,\,\Imp)$) \emph{facts},
-and will equate them with their description in our binding
+and will denote them with their description in our binding
 language (so that $(1,\,\Imp) = \SpecImpt{1}$).
 The sign on the port on $i$ can be determined knowing that the fact it is part of must be
 one of the four kinds of bindings described in \cref{sec:rscope-the-solution}.
@@ -3272,6 +3274,9 @@ For example, Neron et al.'s work has seven inference rules for determining where
 reference is bound (\emph{given} a scope graph),
 whereas we have the single rule that a reference $\RefnX$ is bound by
 $\min \St{\DeclXi}{\RefnX \< \DeclXi}$ (\emph{given} a scope preorder).
+We also have rules in \cref{fig:rscope-SD} to determine the scope
+preorder, but these do not relate to anything in Neron et al.'s paper,
+which takes the scope graph as given.
 }
 Unlike {\sap}, however, scope graphs include mechanisms for handling
 module scope, which gives it the ability to model both modules and
@@ -3339,7 +3344,7 @@ There are many more binding specification
 languages~\cite{aczel-church-rosser,pottier-caml,nabl}.
 We have chosen what we believe to be a representative sample for
 comparison. We have shown that our binding specification language
-has at least a comparable level of expressiveness,
+has a comparable level of expressiveness with most such systems,
 while simultaneously being
 simple enough to enable scope inference.
 

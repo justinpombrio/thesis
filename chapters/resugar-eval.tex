@@ -240,7 +240,7 @@ invocation, i.e., to obtain the surface evaluation sequence:
 \SurfStep true
 \end{Codes}
 Thus, we let sugar authors make part of a rule's \Sc{rhs}
-visible by prefixing it with \Code{!}. Here, writing the second
+transparent by prefixing it with \Code{!}. Here, writing the second
 \Code{Or} rule as:
 \begin{Codes}
 Let([Binding("t", x)],
@@ -403,7 +403,7 @@ expressions conventionally allow choice, we encode it using multiple
 rules, making the pattern language simpler.
 
 While we have found this definition of patterns suitably powerful for a
-wide variety of sugars---including all those discussed in this paper---our
+wide variety of sugars---including all those discussed in this chapter---our
 approach is not dependent on the exact definition. The precise
 requirements for the transformation language are given in
 \cref{sec:reval-proofs}.
@@ -421,7 +421,7 @@ that binds the pattern's pattern variables. This environment may be
 environment is a mapping from pattern variables $\PVarA$ to bindings $b$,
 where each \emph{binding} is either a term $e$, a \emph{list binding}
 $\BList{b_1 \dd b_n}$, or an \emph{ellipsis binding}
-$\BList{b_1 \dd b_n\ \Ell{b_e}}$. A pattern variable within ellipses is
+$\BList{b_1 \dd b_n\ \Ell{b}}$. A pattern variable within ellipses is
 bound to a list binding $\BList{b_1 \dd b_n}$ instead of a list term
 $[b_1 \dd b_n]$ because they behave slightly differently under
 substitution. Ellipsis bindings are similar, but needed only during
@@ -441,7 +441,7 @@ $\gamma_2$. The matching and substitution algorithms are given in
 \[\begin{array}{lcll}
 b &:=& e                &\text{(term)} \\
   &|&  \BList{b_1 \dd b_n}  &\text{(list binding)} \\
-  &|&  \BList{b_1 \dd b_n\,\Ell{b_e}} &\text{(ellipsis binding)} \\ \\
+  &|&  \BList{b_1 \dd b_n\,\Ell{b}} &\text{(ellipsis binding)} \\ \\
 \gamma &:=& \{\PVarA \to b,\,...\} \\
 \end{array}\]
 \caption{Bindings}
@@ -455,17 +455,17 @@ b &:=& e                &\text{(term)} \\
 \Match{e}{\PVarA} &=& \{\PVarA \to e\} \\
 \Match{[e_1 \dd e_n]}{[p_1 \dd p_n]} &=&
   \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\
-\Match{[e_1 \dd e_n \dd e_{n+k}]}{[p_1 \dd p_n \Ell{p_e}]} &=&
+\Match{[e_1 \dd e_n \dd e_{n+k}]}{[p_1 \dd p_n \Ell{p}]} &=&
   \bigcup_{i=1..n} (\Match{e_i}{p_i}) \cup
-  merge([\Match{e_{n+i}}{p_e}]_{i=1..k}) \\
+  merge([\Match{e_{n+i}}{p}]_{i=1..k}) \\
 \Match{\Node{C}{e_1 \dd e_n}}{\Node{C}{p_1 \dd p_n}} &=&
   \bigcup_{i=1..n} (\Match{e_i}{p_i}) \\ \\
 
 \Subs{\gamma}{\Value}        &=& \Value \\
 \Subs{\gamma}{\VarX}        &=& \VarX \\
 \Subs{\gamma}{[p_1 \dd p_n]}    &=& [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n}] \\
-\Subs{\gamma}{[p_1 \dd p_n \Ell{p_e}]} &=&
-  [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n\,\DoublePlus\,split(\gamma, p_e)} \\
+\Subs{\gamma}{[p_1 \dd p_n \Ell{p}]} &=&
+  [\Subs{\gamma}{p_1} \dd \Subs{\gamma}{p_n\,\DoublePlus\,split(\gamma, p)} \\
     &&\text{(where } \DoublePlus \text{ is concatenation)} \\
 \Subs{\{\dd,\PVarA \to b,\dd\}}{\PVarA} &=& toTerm(b) \\
 \Subs{\gamma}{\Node{C}{p_1 \dd p_n}} &=&
@@ -474,7 +474,7 @@ b &:=& e                &\text{(term)} \\
 \multicolumn{3}{l}{merge([\{\PVarA_1 \to b_{11} \dd \PVarA_n \to b_{n1}\}
     \dd \{\PVarA_1 \to b_{1k} \dd \PVarA_n \to b_{nk}\}])} \\
 \multicolumn{3}{l}{\quad=\quad \{\PVarA_1 \to \BList{b_{11} \dd b_{1k}} \dd
-  \PVarA_n \BList{b_{n1} \dd b_{nk}}\}} \\ \\
+  \PVarA_n \to \BList{b_{n1} \dd b_{nk}}\}} \\ \\
 
 \multicolumn{3}{l}{split(\{\PVarA_1 \to \BList{b_{11} \dd b_{1k}} \dd 
   \PVarA_n \to \BList{b_{n1} \dd b_{nk}}\}, p)} \\
@@ -520,7 +520,7 @@ seen in the next section).
 
 The definitions we have given for matching and substitution are not
 well-behaved for all patterns. Even the crucial property that
-$\Subs{(\Match{e}{p})}{e} = e$ whenever $\Match{e}{p}$ exists fails to hold in certain
+$\Subs{(\Match{e}{p})}{p} = e$ whenever $\Match{e}{p}$ exists fails to hold in certain
 situations, such as when a pattern's ellipsis contains no pattern variables (e.g.,
 $(\Ell{3})$). For this reason and others, we require a number of criteria
 to hold for the \Sc{lhs} and \Sc{rhs} of each rule. Except for the
@@ -587,8 +587,7 @@ our system in exchange for breaking the symmetry between expansion and
 unexpansion. Because pattern variables may be dropped in the \Sc{rhs}, the
 unexpansion of a term $e'$ takes an additional argument---the term $e$
 that was originally expanded---with which to bind pattern variables in $p_i$ that do not
-appear in $p_i'$. Formally,\marginpar{For example, 
-}
+appear in $p_i'$. Formally,
 \[\begin{array}{lllll}
   \Unexpand{(j, e')}{e} &=&
     ((e \match p_j) \compose (e' \match p_j')) \subs p_j
@@ -610,7 +609,8 @@ from the output of expansion.
 \subsubsection{Overlapping Rules}
 \label{sec:reval-overlapping}
 
-When multiple rules overlap, the Emulation property may be violated.
+When multiple rules overlap (i.e., when two different rules could apply to the same term),
+the Emulation property may be violated.
 For illustration,
 suppose a core language contains a \Code{MaxAcc} primitive
 that takes a list of numbers and a starting maximum, and in each reduction
@@ -685,9 +685,9 @@ rule expansion and unexpansion.
 
 As noted in
 \cref{sec:reval-trading}, it is sometimes desirable to make sugar-produced
-terms visible to the user. {\Resugarer} allows sugar authors to do so by
+terms transparent to the user. {\Resugarer} allows sugar authors to do so by
 prefixing a term with `\Code{!}'. Each {\MacBodyf} tag contains a boolean
-indicating whether it was made visible in this way; we will call these tags
+indicating whether it was made transparent in this way; we will call these tags
 \emph{transparent} or \emph{opaque}, as appropriate.
 
 {\MacHeadf} tags serve a dual role. First, they store the index of the
@@ -811,11 +811,11 @@ the queue. The tree structure can be reconstructed with additional
 bookkeeping.
 
 We have a complete implementation of {\Resugarer}, in
-which all examples from this paper were run. It uses a user-written
+which all examples from this chapter were run. It uses a user-written
 \emph{grammar file} that specifies grammars for both the core and surface
 syntax, and a set of rewrite rules. Though the grammars and rewrite rules
 mimic the syntax used by Stratego~\cite{stratego}, the rules obey the semantics described in this
-paper. The rules are also checked against the well-formedness criteria of
+chapter. The rules are also checked against the well-formedness criteria of
 \cref{sec:reval-wf}, thus ensuring that our results hold. {\Resugarer} is available at:
 \begin{center}
 \url{http://cs.brown.edu/research/plt/dl/resugaring/v1/}
@@ -1133,7 +1133,7 @@ well-formedness criteria of \cref{sec:reval-wf}.
 Our formalization does not, however, address tags or ellipsis patterns.
 It would be straightforward to add tags. Handling ellipses, though, would
 require significantly more work: when patterns may contain ellipses,
-substitution becomes non-compositional. For instance,
+substitution is no longer compositional on $p$. For instance,
 $\gamma \subs [\Ell{p}]$ is not a function of $\gamma \subs p$.
 
 
@@ -1292,7 +1292,7 @@ visualizer; the underlying core evaluation took 264 steps.
 Pyret, shown in \cref{sec:reval-pyret-example}, is a new language. It makes
 heavy use of syntactic sugar to emulate the syntax of other programming
 languages like Python. This sugar was implemented by people other than
-this paper's authors, and written as a manual compiler, not as a set
+this thesis's author, and written as a manual compiler, not as a set
 of rules; it was also implemented without any attention paid to the
 limitations of this work. Thus, the language makes for a good case
 study for the expressiveness of our work.
@@ -1452,7 +1452,7 @@ user-defined code.
 During \emph{resugaring}, it may look like there are no
 sugar-introduced variables, since the \Sc{lhs}s of desugaring rules
 cannot contain variables. However, it is possible for the \Sc{lhs} of
-a rule to drop a pattern variable, when that pattern variable is bound
+a rule to drop a pattern variable when that pattern variable is bound
 to a variable, thus indirectly dropping the variable. For example,
 take the desugaring rule:
 \[\DesugarRule{(Lambda $\PVarA$.\ $\PVarB$ * 0)}{(Lambda $\PVarA$.\ 0)}\]
@@ -1546,7 +1546,7 @@ system~\cite{expansion-passing-style}.
 Clements~\cite[page 53]{clements:thesis} implements an algebraic
 stepper (similar to ours) for Racket---a language that has
 macros---and thus faces precisely the same problem we address in this
-paper. That work, however, side-steps these issues by handling a
+chapter. That work, however, side-steps these issues by handling a
 certain fixed set of macros specially (those in the ``Beginner
 Student'' language) and otherwise showing only expanded code.
 On the other hand, it proves that its method of instrumenting a program to
