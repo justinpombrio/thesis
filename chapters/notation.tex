@@ -155,3 +155,24 @@ supports ellipses (which allow matching zero or more repetitions of a
 pattern), and the scope resugaring chapter is agnostic to the order of
 desugaring (which is assumed to be \Sc{oi} here). However, all
 chapters handle at least these kinds of sugars.
+
+\subsection{Relationship to Term Rewriting Systems}
+
+A set of pattern-based desugaring rules can be viewed as a term
+rewriting system~\cite{trs}. Two of the main questions studied about
+term rewriting systems is how to tell whether they are
+\emph{confluent}, and whether they \emph{terminate}. Confluence asks:
+if rewrites are applied in an arbitrary order, are they guaranteed to
+eventually produce the same result? The main mechanism for studying
+this is \emph{critical pairs}~\cite{critical-pairs},
+which capture the situations in which rewrite rules overlap. In
+practice, however, desugaring systems tend to fix a desugaring order
+(e.g. \Sc{oi}), making the quesiton of confluence moot.
+
+Likewise, there is literature on determining whether a set of rewrite
+rules always terminates (which is undecidable in
+general)~\cite{trs-termination-undecidable}. This could be used to
+check whether desugaring is guaranteed to halt (with potential false
+positives). Termination checking is not necessary for
+\emph{resugaring}, however: term resugaring, scope rule resugaring,
+and type rule resugaring all halt, even if desugaring itself may not.

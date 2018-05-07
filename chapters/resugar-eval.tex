@@ -712,8 +712,9 @@ with respect to a {\rulelist}, and will now define \emph{recursive}
 expansion and unexpansion, a.k.a. desugaring and resugaring.
 To desugar a complete core term,
 recursively traverse it in-order,\marginpar{%
-Other desugaring orders, e.g., bottom-up instead of top-down, are
-  possible; we follow the precedent set by Scheme macros.}
+  In other words, we are assuming OI desugaring order. Other orders
+  (e.g., IO) are possible, but less common. See
+  \cref{sec:taxonomy-order} for an overview.}
 applying $\Expandf$ at each node:
 \[\begin{array}{lcl}
 \ExpandRec{\Value} \!&=&\! \Value \\
@@ -734,7 +735,8 @@ applying $\Expandf$ at each node:
 \end{array}\]
 
 Resugaring can be performed by traversing a term, this
-time performing $\Unexpand{(i, e)}{\gamma}$ for any term $e$ tagged with
+time performing \\ %NEWLINE
+$\Unexpand{(i, e)}{\gamma}$ for any term $e$ tagged with
 $\MacHead{i}{\gamma}$. Thus $\UnexpandRecf$ identifies the specific sugars
 that need to be unexpanded by finding {\MacHeadf} tags, and delegates the
 sugar-specific unexpansions---which include eliminating {\MacBodyf}
@@ -790,9 +792,9 @@ A surface reduction sequence for a deterministic language can now be
 computed as follows:
 \begin{Codes}
 def showSurfaceSequence(s):
-  let c = desugar*(s)
+  let c = \(\Desugar{}\)(s)
   while c can take a reduction step:
-    let s' = resugar*(c)
+    let s' = \(\Resugar{}\)(c)
     if s': emit(s')
     c := step(c)
 \end{Codes}
@@ -1247,7 +1249,18 @@ The \Code{Automaton} macro had the same problem until we made some
 small, semantics-preserving refactorings: lifting some identifiers
 into \Code{Let} bindings, and adding \Code{!} on recursive
 annotations. \Cref{fig:reval-automaton} shows a run in Redex's evaluation
-visualizer; the underlying core evaluation took 264 steps.
+visualizer; the underlying core evaluation took 264 steps.\footnote{%
+It may be concerning that this figure appears to contain unbound
+identifiers, such as \Code{M} and \Code{init}. These are actually the
+names of function values, as determined by Racket. (These names can be
+obtained by calling \Code{object-name} on the function.) We could
+instead have simply displayed function values generically---e.g.\ as
+\Code{\#<procedure>}---but that would have resulted in a more opaque
+evaluation sequence. A better method might have been to explicitly
+show the environment, in which \Code{M} and \Code{init} are bound.
+Finding the best way to present the surface evaluation sequence is an
+interesting research question and outside the scope of this thesis.}
+
 
 \begin{figure}
   \mbox{}\hfill\includegraphics[width=0.45\columnwidth]{img/automaton-example}\hfill\mbox{}
@@ -1491,7 +1504,7 @@ language, which will lead to a stronger notion of hygiene.
 
 \section{Related Work}
 
-There is a long history of trying relate compiled code back to its
+There is a long history of trying to relate compiled code back to its
 source. This problem is especially pronounced in debuggers for
 optimizing compilers, where the structure of the source can be altered
 significantly~\cite{hennessy-debugging}. Most of this literature

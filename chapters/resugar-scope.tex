@@ -243,7 +243,7 @@ the same should hold true on the \textsc{lhs}:
       {C}{\tikzChild{$\PVarB$}}
       {D}{\tikzChild{$\PVarC$}}}
   \begin{tikzEdges}
-    \tikzEdgeL{B}{D};
+    \tikzEdgeLL{B}{D};
     \tikzEdge{A}{B};
     \tikzEdge{A}{C};
     \tikzEdge{A}{D};
@@ -265,7 +265,7 @@ It will have the following grammar:
   & ``Let-bind $b$ in $e$'' \\
   &$|$& $\ldots$ \\
   $b$ &$::=$& $\NodeRm{Bind}{\DeclX\;e\;b}$
-  & ``Bind $\DeclX$ to $e$, and bind $b$'' \\
+  & ``Bind $\DeclX$ to $e$, and export $b$'s bindings'' \\
   &$|$&   $\ConstRm{EndBinds}$
   & ``No more bindings''
 \end{Table}
@@ -511,7 +511,7 @@ more tractable:
   \item Each kind of term has a fixed arity. (Indefinite arity is
     possible using a list encoding, as in Let* above.)
 \end{itemize}
-
+  
 The last two of these assumptions are already reflected in our
 definition of (\textsc{ast}) terms in \cref{sec:formal-term}.
 For convenience, we repeat that definition here:
@@ -3269,14 +3269,16 @@ In fact, Flatt's notion of scope can be expressed as a preorder,
 as we show in \cref{sec:rscope-sos}.
 
 Neron et al. describe \emph{scope graphs}, which are also based on a
-similar view, but have a more complicated set of definitions~\cite{neron-scope}.\footnote{
+similar view, but have a more complicated set of definitions~\cite{neron-scope}.\footnote{%
 For example, Neron et al.'s work has seven inference rules for determining where a
 reference is bound (\emph{given} a scope graph),
 whereas we have the single rule that a reference $\RefnX$ is bound by
 $\min \St{\DeclXi}{\RefnX \< \DeclXi}$ (\emph{given} a scope preorder).
 We also have rules in \cref{fig:rscope-SD} to determine the scope
 preorder, but these do not relate to anything in Neron et al.'s paper,
-which takes the scope graph as given.
+which takes the scope graph as given. For work related to
+\cref{fig:rscope-SD}, see the next section ``Binding Specification
+Languages''.
 }
 Unlike {\sap}, however, scope graphs include mechanisms for handling
 module scope, which gives it the ability to model both modules and
@@ -3348,7 +3350,7 @@ has a comparable level of expressiveness with most such systems,
 while simultaneously being
 simple enough to enable scope inference.
 
-\section{Discussion and Conclusion}
+\section{Discussion and Future Work}
 We have presented what we believe is the first algorithm for
 inferring scoping rules through syntactic sugar. It makes use
 of our description of scope as a preorder in
@@ -3358,14 +3360,33 @@ in \cref{sec:rscope-impl} show that all of the aspects of this work
 are able to deal with many interesting scoping constructs from real
 languages.
 
-We see three clear directions in which to try to extend scope
-inference. First, support for ellipses in sugar definitions would make
-writing sugars easier. Second, allowing named imports and exports---\`a
-la Ott~\cite{sewell-ott-jfp}---would make sugars like \texttt{do}
-inferable.  Third, modules---\`a la Scope Graphs~\cite{neron-scope}---are
-necessary for inferring scope for modules and for classes. These last
-two changes are relatively straightforward extensions to our binding
-language, but research questions when applied to scope inference.
+We see a number of directions in which to try to extend scope inference:
+\begin{itemize}[noitemsep]
+  \item Support for ellipses in sugar definitions would make writing
+    sugars easier.
+  \item Allowing named imports and exports---\`a la
+    Ott~\cite{sewell-ott-jfp}---would make sugars like \texttt{do}
+    inferable. It could also help with the fact that value bindings
+    and type bindings often flow differently.  For example, in Java
+    field names are visible in subclasses while type parameters are
+    not. With named imports, each syntactic construct could
+    effectively have two scope rules---one for values and one for
+    types---and they could be inferred separately.
+  \item References are not always bound to a single declaration.  For
+    example, if a method is overloaded, then a reference to that
+    method is bound to both method definitions, with the actual
+    binding determined at runtime.  While we do allow a reference to
+    be bound to multiple declarations (\cref{def:rscope-ambig}), we
+    consider it an error. However, it would be useful to be able to
+    declare when a reference may legally be bound to more than one
+    declaration.
+  \item Modules---\`a la Scope Graphs~\cite{neron-scope}---are
+    necessary for inferring scope for modules and for classes. These
+    last two changes are relatively straightforward extensions to our
+    binding language, but research questions when applied to scope
+    inference.
+\end{itemize}
+
 
 \newpage
 

@@ -534,6 +534,13 @@ In this section, we apply the taxonomy to a number of desugaring systems.
 \end{SidewaysTable}
 \clearpage
 
+% Sugars that I was able to find in the c language, as defined by the spec:
+%   E1[E2] === (*((E1)+(E2)))
+%   ++E === (E+=1)
+%   !E === (0==E)
+% There are not sugar:
+%   (&E)->MOS === E.MOS
+%   &*E === E
 
 \subsection{C Preprocessor} \label{sec:taxonomy-cpre}
 \Desc{Version: gcc v6.3.0}

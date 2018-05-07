@@ -1579,6 +1579,15 @@ As a result, they need to type check after desugaring.
 % In contrast, SweetT infers a type for \Code{of-one} that expects a
 % function of type \Code{String $\to$ A}, which would instead blame \Code{add1}.
 
+Lerner et al.'s \Sc{Seminal}~\cite{seminal} is a system for generating
+error messages in an unusual way: if a program fails to type check,
+then it searches for one or more small modification to the program
+such that it \emph{would} type check, and presents these to the
+programmer as suggested changes. This approach could work just as well
+in the presence of syntactic sugar (as long as the search for program
+modifications can be done over the surface language) and so this
+could be an alternative source of feedback in such cases.
+
 Fish and Shivers' Ziggurat~\cite{ziggurat} is a framework for defining a
 hierarchy of language levels, that makes it easy to attach static
 analysis of any sort to each level. However, it does not analyze the
