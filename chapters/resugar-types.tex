@@ -386,6 +386,9 @@ Roughly speaking, these assumptions are:
     derivations.)
   \item Finally, SweetT's unification algorithm must be able to handle
     the sugars given. \Cref{sec:rtype-arity} gives an example of extending it.
+    Additionally, our implementation supports directly recursive sugars
+    (as shown in \cref{sec:rtype-recursion}), but not sugars that are
+    defined in terms of other sugars.
 \end{itemize}
 
 The rest of this section describes these assumptions in more
@@ -436,10 +439,7 @@ notation we will use throughout the chapter.
   \item[$\saysVD{\overline{I}}{\seq{J}}{J}$] to mean that there is a
     derivation that proves $J$ with unproven leaves $J_i$.
   \item[$(\Subs{\gamma}{p})$] to denote applying substitution $\gamma$
-    to expression $p$. To substitute into a
-    type judgment, substitute into its parts (likewise for type environments):
-    \[\Subs{\gamma}{(\saysT{\Gamma}{p}{t})} \quad=\quad
-      \saysT{(\Subs{\gamma}{\Gamma})}{(\Subs{\gamma}{p})}{(\Subs{\gamma}{t})} \]
+    to pattern $p$.
   \end{description}
 }\caption{Notation explanation}
 \label{fig:rtype-notation}  
@@ -765,7 +765,7 @@ correctly (see \cref{assumption:rtype-resugaring}).
   \begin{proof}
   Split on the ``iff''.
 
-  \textbf{Forward implication (``soundness'').}
+  \textbf{Forward implication (``soundness''):}
   Induct on the derivation proving that $\saysJ{\overline{\Isurf}}{\Jsurf}$.
   Let $\seq{J}/J_0 = \ResugarTy{\overline{\Icore}}{\_}$ be the rule in $\Isurf$
   used to prove $\Jsurf$, and let $\gamma$ be the substitution such
@@ -822,7 +822,7 @@ correctly (see \cref{assumption:rtype-resugaring}).
 
   Thus $\saysJ{\overline{\Icore}}{\Desugar{\Jsurf}}$ by \refass{composition}.
   
-  \textbf{Reverse implication (``completeness'').}
+  \textbf{Reverse implication (``completeness''):}
   Induct on the derivation proving that $\saysJ{\overline{\Icore}}{\Desugar{\Jsurf}}$.
   Let $\seq{J}/J_0 = \ResugarTy{\overline{\Icore}}{\_}$ be the rule in $\overline{\Isurf}$
   for the (outermost) sugar in $\Jsurf$'s expression,

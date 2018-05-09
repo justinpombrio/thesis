@@ -616,7 +616,7 @@ and shadowing because the definitions are analogous.}
   has the same name as and is more specific than. Formally, $\DeclXi$
   shadows $\DeclXj$ when:
   \[ \DeclXi \Bound \DeclXj \Defeq
-  \DeclXj \in \min \St{\DeclXk}{i \neq k \text{ and } \DeclXi \< \DeclXk}
+  \DeclXj \in \min \St{\DeclXk}{\DeclXi \< \DeclXk} \text{ and } \DeclXj \not\< \DeclXi
   \]
 \end{definition}
 
@@ -636,7 +636,7 @@ a normalization.
 
 \begin{lemma}[Shadowing]
   If one declaration shadows another, then a reference in scope of the
-  shadowing declaration cannot be unambiguously bound by the shadowed declaration.
+  shadowing declaration cannot be bound by the shadowed declaration.
 \end{lemma}
 \begin{proof}
   Suppose that $\DeclXj$ shadows $\DeclXi$ ($\DeclXj$ is the shadowing
@@ -644,8 +644,7 @@ a normalization.
   $\RefnXk$ is in scope of $\DeclXj$.
   By definition, $\RefnXk$ will be bound by
   $\min \St{\DeclXl}{\RefnXk \< \DeclXl}$.  But $\RefnXk \<
-  \DeclXj \< \DeclXi$, so $\DeclXi$ cannot be in this set (assuming
-  that $\RefnXk$ is not ambiguously bound), and $\RefnXk$
+  \DeclXj \< \DeclXi$, and $\DeclXj \not\< \DeclXi$, so $\DeclXi$ cannot be in this set, and $\RefnXk$
   cannot be bound by $\DeclXi$.
 \end{proof}
 
@@ -1306,7 +1305,8 @@ the entire preorder to variables, as captured by the following rule:
   \[
     \hspace{5em}
     \inference[S-Shadow]
-        {\DeclX[j] \in \min \St{\DeclX[k]}{i \neq k \text{ and } \SaysScope{e}{\DeclX[i]}{\DeclX[k]}}}
+        {\DeclX[j] \in \min \St{\DeclX[k]}{\SaysScope{e}{\DeclX[i]}{\DeclX[k]}}
+          \text{ and } \SaysScopeNot{e}{\DeclX[j]}{\DeclX[i]}}
         {\SaysScopeBound{e}{\DeclX[i]}{\DeclX[j]}}
   \]
   These definitions form a scope preorder:
