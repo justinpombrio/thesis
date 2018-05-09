@@ -256,7 +256,10 @@ we will assign it a globally fresh type variable, using the rule \Code{t-premise
 in a sense incomplete: it serves as a placeholder for a subderivation
 that would be filled in if the pattern variable were instantiated.
 Using this rule finishes the derivation, giving the bottom derivation
-in \cref{fig:rtype-or}.
+in \cref{fig:rtype-or}. Notice that \Code{t-premise} can be used to
+prove $\saysTtt{\Gamma}{$\alpha$}{A}$, because $\alpha$ is a pattern
+variable, but cannot be used to prove $\saysTtt{\Gamma,x:A}{x}{A}$,
+because \Code{x} is not a pattern variable.
 
 \begin{figure*}[t]
   \begin{Wide}
@@ -298,8 +301,8 @@ in \cref{fig:rtype-or}.
   Top: an incomplete derivation.
   Bottom: a complete derivation, using \Code{t-premise}.
 }
-\end{Wide}
 \label{fig:rtype-or}
+\end{Wide}
 \end{figure*}
 
 As seen, pattern variables introduce type variables. Solving for these
@@ -382,7 +385,7 @@ Roughly speaking, these assumptions are:
     (\cref{sec:rtype-req-resugar}). (As must Redex, which we use to find
     derivations.)
   \item Finally, SweetT's unification algorithm must be able to handle
-    the sugars given. \cref{sec:rtype-arity} gives an example of extending it.
+    the sugars given. \Cref{sec:rtype-arity} gives an example of extending it.
 \end{itemize}
 
 The rest of this section describes these assumptions in more
@@ -738,8 +741,12 @@ using \refass{unique-sugar}:
 
 \subsection{Main Theorem}
 
-Given the requirements of this section, type resugaring obeys
-\cref{goal:rtype-faithful}:
+We now prove that---given the requirements of this section---type
+resugaring obeys \cref{goal:rtype-faithful}. This theorem applies to
+the core of our approach, but ignores some details for simplicity: for
+example, it ignores the fact that type rules may have side conditions,
+and it assumes by fiat that our derivation search process works
+correctly (see \cref{assumption:rtype-resugaring}).
 \begin{theorem} \label{thm:rtype-faithful}
   Grant assumptions 1--5 from this section,
   let $\Lang = p_\Sc{lhs}\To_\Sc{rhs}\dots$,
@@ -1017,8 +1024,6 @@ Furthermore, this is the most general rule we can make:
 \cref{goal:rtype-abstraction} states that surface type rules must never
 mention core constructs, so \texttt{t-premise} can allow judgments over
 surface terms but nothing more.
-
-
 
 
 \subsection{Fresh Variables} \label{sec:rtype-fresh}
@@ -1588,7 +1593,7 @@ in the presence of syntactic sugar (as long as the search for program
 modifications can be done over the surface language) and so this
 could be an alternative source of feedback in such cases.
 
-Fish and Shivers' Ziggurat~\cite{ziggurat} is a framework for defining a
+Fisher and Shivers' Ziggurat~\cite{ziggurat} is a framework for defining a
 hierarchy of language levels, that makes it easy to attach static
 analysis of any sort to each level. However, it does not analyze the
 analysis, so it is possible for one level's analysis to conflict

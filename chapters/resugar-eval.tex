@@ -551,7 +551,8 @@ last criterion about ellipses, these requirements were given in
   substitution. (The \emph{depth} of an ellipsis measures how deeply nested
   it is within other ellipses; a top-level ellipsis has depth 1, an
   ellipsis within an ellipsis depth 2, and so forth.) For example,
-  the rule \Code{Bad(x) -> List([x ...])} is invalid.
+  the rule \Code{Bad(x) -> List([x ...])} is invalid, as is
+  \Code{Bad(x) -> List([2 ...])}.
 \end{enumerate}
 The first two restrictions were further justified by our formalization of
 expansion and unexpansion in Coq (\cref{sec:reval-coq}), 
@@ -1368,8 +1369,10 @@ make sense to instead add the feature to the core language.
 Finally, the desugaring for binary operators needed to be modified to show helpful
 surface evaluation sequences. The desugaring follows
 a strategy similar to that of Python, by applying the \Code{\_plus} method
-of the left subexpression to the right subexpression (the \Code{s} terms
-are source locations, used for error-reporting):
+of the left subexpression to the right subexpression:\marginpar{%
+The \Code{s} terms are source locations, used for error-reporting.
+Their propogation could potentially be automated, but we did not
+attempt to do so here.}
 \begin{Codes}
   Op(s, "+", x, y)  ->
     App(s, Bracket(s, x, Str(s, "_plus")), [y]);

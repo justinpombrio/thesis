@@ -10,7 +10,19 @@ language.
 
 This chapter comes from work published in ICFP 2017 under the title
 \emph{Inferring Scope through Syntactic Sugar} (co-authored with
-Shriram Krishnamurthi and Mitchell Wand)~\cite{pombrio-scope}.
+Shriram Krishnamurthi and Mitchell Wand)~\cite{pombrio-scope}.\marginpar{%
+Our notation and terminology in this chapter was influenced by work
+published by Erdweg et al.~\cite{erdweg-hygiene} and Neron et al.~\cite{neron-scope}.
+}
+  
+The next chapter presents type rule resugaring, which subsumes scope
+resugaring: type rules include the type environment $\Gamma$, and thus
+also describe scope. Why not use this instead? There
+are two reasons why it may still be preferrable to resugar scope
+rules: (i) your language may be untyped; and (ii) scope resugaring is
+more general and admits a wider variety of constructs. In addition,
+this chapter's hygiene theorem (\cref{thm:rscope-hygiene}) may be of
+independent interest.
 
 \section{Introduction}
 
@@ -1468,7 +1480,7 @@ about desugaring, and then the algorithm.
     can be accomplished since the rules are syntax-directed over $p$. \\
     Return the conjunction of the premises of $D$. \\
     (These premises will be facts of the form
-    $(i, j) \in \Sigma[C]$, and their conjunction is both necessary
+    $(i, j) \in \Sigma[C]$ for some $i$, $j$, and $C$, and their conjunction is both necessary
       and sufficient for $\SaysScope[\Sigma]{p}{a}{b}$ to hold.)}
   \vspace{0.9em} \\
   $\displaystyle \Op{solve}{\SigmaCore,\,constraints}$
