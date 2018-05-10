@@ -989,17 +989,9 @@ shadowing $\DeclX[1]$). We will call imports and exports \emph{ports}.
 The scoping rules can now be re-interpreted with this in mind. Given a
 term $e$, they will determine a preorder not over the subterms of $e$
 (like we have presented it so far), but instead over the \emph{ports}
-of the subterms of $e$. With this in mind, we offer four kinds of bindings:\footnote{
-  There is a close analogy between ports and attributes in attribute
-  grammars~\cite{knuth-attribute-grammar}:
-  namely, imports are analogous to inherited
-  attributes and exports are analogous to synthesized attributes.
-  The paths between imports and exports that are allowed by our
-  binding language (e.g., child export to parent export, but not
-  child export to parent import) are precisely the relationships
-  between inherited and synthesized attributes that are allowed in
-  attribute grammars. Most algorithms for evaluating attribute
-  grammars disallow cycles, however, while our preorders allow them.
+of the subterms of $e$. With this in mind, we offer four kinds of bindings:\marginpar{%
+See \cref{sec:rscope-related-scope} for a comparison of our binding
+language to attribute grammars.
 }
 \begin{enumerate}
 \item[A.] \SpecBind{j}{i}: A term may make all declarations
@@ -3302,6 +3294,7 @@ this chapter and consider this a problem for
 future work.
 
 \paragraph{Binding Specification Languages}
+\label{sec:rscope-related-binding}
 
 Our preorder-based binding specification language is novel, but
 similar in expressiveness to many others.  It is perhaps most similar
@@ -3362,6 +3355,16 @@ has a comparable level of expressiveness with most such systems,
 while simultaneously being
 simple enough to enable scope inference.
 
+There is a close analogy between our ports and attributes in attribute
+grammars~\cite{knuth-attribute-grammar}: namely, imports are analogous
+to inherited attributes and exports are analogous to synthesized
+attributes.  The paths between imports and exports that are allowed by
+our binding language (e.g., child export to parent export, but not
+child export to parent import) are precisely the relationships between
+inherited and synthesized attributes that are allowed in attribute
+grammars. Most algorithms for evaluating attribute grammars disallow
+cycles, however, while our preorders allow them.
+
 \section{Discussion and Future Work}
 We have presented what we believe is the first algorithm for
 inferring scoping rules through syntactic sugar. It makes use
@@ -3395,7 +3398,7 @@ We see a number of directions in which to try to extend scope inference:
   \item Modules---\`a la Scope Graphs~\cite{neron-scope}---are
     necessary for inferring scope for modules and for classes. These
     last two changes are relatively straightforward extensions to our
-    binding language, but research questions when applied to scope
+    binding language, but are research questions when applied to scope
     inference.
 \end{itemize}
 
