@@ -26,7 +26,7 @@
 % Make sure to introduce:
 %   expansion
 % Make sure to search for:
-%   TODO, REF, CITE, Pombrio, qqq
+%   TODO, REF, CITE, CHECK, Pombrio, qqq
 
 \RequirePackage{silence} % :-\
     \WarningFilter{scrbook}{Usage of package `titlesec'}
@@ -477,6 +477,8 @@
 \definecolor{exColor}{rgb}{0.63 0.0 0.0}
 \newcommand{\ImSymb}{{\color{imColor}\uparrow}}
 \newcommand{\ExSymb}{{\color{exColor}\downarrow}}
+\newcommand{\ImSymbBackwards}{{\color{imColor}\downarrow}}
+\newcommand{\ExSymbBackwards}{{\color{exColor}\uparrow}}
 \newcommand{\im}{\ImSymb}
 \newcommand{\ex}{\ExSymb}
 \newcommand{\ImSymbCirc}{\ImSymb}
@@ -991,7 +993,7 @@
   \noindent To the NSF, which partially funded all of this work.\\
 
   \noindent To the many \emph{anonymous, unpaid} reviewers who gave me
-  \emph{very detailed} feedback on my work.
+  very detailed feedback on my work.
 
 \afterpreface
 

@@ -1588,10 +1588,11 @@ Lerner et al.'s \Sc{Seminal}~\cite{seminal} is a system for generating
 error messages in an unusual way: if a program fails to type check,
 then it searches for one or more small modification to the program
 such that it \emph{would} type check, and presents these to the
-programmer as suggested changes. This approach could work just as well
-in the presence of syntactic sugar (as long as the search for program
-modifications can be done over the surface language) and so this
-could be an alternative source of feedback in such cases.
+programmer as suggested changes. At a high-level, \Sc{Seminal} has a
+similar goal to type resugaring: it presents suggested modifications
+in terms of the program that the programmer wrote, rather than (as per
+type inference) presenting type errors in terms of a mismatch between
+type annotations that the programmer did not write.
 
 Fisher and Shivers' Ziggurat~\cite{ziggurat} is a framework for defining a
 hierarchy of language levels, that makes it easy to attach static

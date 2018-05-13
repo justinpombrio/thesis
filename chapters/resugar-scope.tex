@@ -1010,7 +1010,41 @@ language to attribute grammars.
   examples of this in the wild, but we offer it for completion.)
 \end{enumerate}
 These four kinds of paths may be represented graphically,
-showing imports as $\ImSymbCirc$ and exports as $\ExSymbCirc$:
+showing imports as $\ImSymbCirc$ and exports as $\ExSymbCirc$\footnote{%
+In a potentially confusing change, these port arrows are drawn in the
+opposite direction as the port arrows in the paper this chapter is
+based on~\cite{pombrio-scope}. Why the change?
+
+In the paper, imports were drawn as $\ImSymbBackwards$ and exports as
+$\ExSymbBackwards$. As a result, in the diagram the up arrow B
+connected two downward-pointing import arrows, and the down arrow C
+connected two upward-pointing export arrows. Eelco Visser pointed out
+how confusing this was, so we switched it.
+
+Relatedly, why do our (solid/green) binding arrows go in the direction
+they do? Some considerations suggest that they should go from
+reference to declaration (which is what we settled on):
+\begin{itemize}
+  \item They should go the intuitive way, and flow from the natural
+    question to ask (where is this reference bound?) to its answer
+    (here is the binding declaration).
+  \item They should be consistent with related work, and go in the
+    same direction as the arrows in Scope Graphs~\cite{neron-scope}.
+\end{itemize}
+
+Other considerations suggest that they go in the opposite direction
+(from declaration to reference):
+\begin{itemize}
+  \item They should go the intuitive way, and flow in the same
+    direction as values do: first a value is bound to a declaration,
+    and then later that value is propogated to its reference.
+  \item They should be consistent with related work, and match the
+    arrows that the DrRacket editor~\cite{drscheme} draws between
+    references and declarations.
+\end{itemize}
+
+It was a difficult choice, and could reasonably have gone in the other direction.
+}:
 
 \begin{center}
 \begin{tikzScopeDiagram}
@@ -3281,11 +3315,11 @@ $\min \St{\DeclXi}{\RefnX \< \DeclXi}$ (\emph{given} a scope preorder).
 We also have rules in \cref{fig:rscope-SD} to determine the scope
 preorder, but these do not relate to anything in Neron et al.'s paper,
 which takes the scope graph as given. For work related to
-\cref{fig:rscope-SD}, see the next section ``Binding Specification
+\cref{fig:rscope-SD}, see the next section on ``Binding Specification
 Languages''.
 }
 Unlike {\sap}, however, scope graphs include mechanisms for handling
-module scope, which gives it the ability to model both modules and
+module scope, which gives them the ability to model both modules and
 also other constructs like objects and field lookup.
 Our {\sap} binding language can actually be extended to
 handle modules, but doing so breaks our transitivity
@@ -3375,7 +3409,8 @@ in \cref{sec:rscope-impl} show that all of the aspects of this work
 are able to deal with many interesting scoping constructs from real
 languages.
 
-We see a number of directions in which to try to extend scope inference:
+There are a number of weaknesses in our binding language that it would
+be useful to ameliorate:
 \begin{itemize}[noitemsep]
   \item Support for ellipses in sugar definitions would make writing
     sugars easier.
@@ -3390,16 +3425,18 @@ We see a number of directions in which to try to extend scope inference:
   \item References are not always bound to a single declaration.  For
     example, if a method is overloaded, then a reference to that
     method is bound to both method definitions, with the actual
-    binding determined at runtime.  While we do allow a reference to
-    be bound to multiple declarations (\cref{def:rscope-ambig}), we
-    consider it an error. However, it would be useful to be able to
-    declare when a reference may legally be bound to more than one
-    declaration.
-  \item Modules---\`a la Scope Graphs~\cite{neron-scope}---are
-    necessary for inferring scope for modules and for classes. These
-    last two changes are relatively straightforward extensions to our
-    binding language, but are research questions when applied to scope
-    inference.
+    binding determined at runtime. In \cref{def:rscope-ambig}, we
+    define a reference that is bound to multiple declarations to be
+    \emph{ambiguously bound}, and we consider this to be an error.
+    It would be useful to be able to relax this restriction in certain
+    circumstances, and infer during scope inference when it should be
+    relaxed for a particular sugar.
+  \item The ability to group several bindings together into a single
+    namespace---\`a la \emph{module declarations} in Scope
+    Graphs~\cite{neron-scope}---is necessary for inferring scope for
+    modules and for classes. This change is a relatively
+    straightforward extensions to our binding language, but is a
+    research question when applied to scope inference.
 \end{itemize}
 
 
