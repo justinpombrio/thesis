@@ -9,7 +9,7 @@ Deconstruction: yes
 Desugaring Order: IO
 Phases: one
 Syntax safe: yes
-Hygienic: ???
+Hygienic: no
 Scope safe: no
 Type safe: no
 

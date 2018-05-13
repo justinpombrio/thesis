@@ -49,3 +49,20 @@ module Templates where
   -- Checking if quotations can be nested. (It's easy to construct, but hard to run?)
   phases :: Q (Q Exp)
   phases = return $ return $ LitE (StringL "two phases")
+
+  -- Can use either abstract or concrete syntax
+  testAbstract :: Q Exp
+  testAbstract = return $ AppE (AppE (VarE '(+)) (LitE (IntegerL 1))) (LitE (IntegerL 2))
+
+  testConcrete :: Q Exp
+  testConcrete = [| 1 + 2 |]
+
+  -- Hygiene test
+  unhygienic :: Q Pat -> Q Exp -> Q Exp
+  unhygienic v body =
+    [| let x = "macro" in
+       let $(v) = "user" in
+       do
+         putStrLn ("macro->" ++ show x)
+         let x = "macro" in $(body)
+    |]
