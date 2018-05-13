@@ -37,6 +37,8 @@
 @string{holics = {Handbook of Logic in Computer Science}}
 @string{cpiaa = {Computational Problems in Abstract Algebra}}
 @string{iria = {Institut de recherche d'informatique et d'automatique}} % predecessor of Inria?
+@string{swat = {Symposium on Switching and Automata Theory}}
+@string{hopl = {ACM SIGPLAN conference on History of programming languages}}
 
 @techreport{plt-tr1,
  author = {Matthew Flatt and PLT},
@@ -45,6 +47,30 @@
  institution = {PLT Inc.},
  year = {June 7, 2010},
  note = {\url{racket-lang.org/tr1/}}
+}
+
+@inproceedings{racket-manifesto,
+  title = {The Racket Manifesto},
+  author = {Matthias Felleisen and Robert Bruce Findler and Matthew
+            Flatt and Shriram Krishnamurthi and Eli Barzilay and
+            Jay Mccarthy and Sam Tobin-Hochstadt},
+  booktitle = snapl,
+  year = {2015},
+  publisher = {Dagstuhl Publishing},
+  doi = {https://doi.org/10.4230/LIPIcs.SNAPL.2015.113}
+}
+
+@misc{typed-racket,
+  title = {The Typed Racket Reference}
+  author = {Sam Tobin-Hochstadt and Vincent St-Amour and
+            Eric Dobson and Asumu Takikawa},
+  note = {\url{https://docs.racket-lang.org/ts-reference/index.html}}
+}
+
+@misc{scribble,
+  title = {Scribble: The Racket Documentation Tool},
+  author = {Matthew Flatt and Eli Barzilay},
+  note = {\url{https://docs.racket-lang.org/scribble/index.html}}
 }
 
 @techreport{gdp:struct-op-sem,
@@ -320,6 +346,16 @@ note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pd
   address = {New York, NY, USA}
 }
 
+@inproceedings{haskell-templates,
+  title = {Template Meta-programming for Haskell},
+  author = {Tim Sheard and Simon Peyton Jones},
+  booktitle = haskell,
+  year = {2002},
+  doi = {https://doi.org/10.1145/636517.636528},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
 @inproceedings{Wyvern-TSL,
   author = {Omar, Cyrus and Kurilova, Darya and Nistor, Ligia
             and Chung, Benjamin and Potanin, Alex and Aldrich, Jonathan},
@@ -374,7 +410,17 @@ note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pd
   acmid = {41632},
   publisher = {ACM},
   address = {New York, NY, USA},
-} 
+}
+
+@inproceedings{macros-that-work,
+  author = {William Clinger and Jonathan Rees},
+  title = {Macros that work},
+  booktitle = popl,
+  year = {1991},
+  doi = {https://doi.org/10.1145/99583.99607},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
 
 @techreport{syntax-case,
   author = {Dybvig, Kent R.},
@@ -759,7 +805,7 @@ note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pd
 }
 
 @article{syntactic-sugar,
-  author = {Landin, Pter J.},
+  author = {Landin, Peter J.},
   title = {The Mechanical Evaluation of Expressions},
   journal = {The Computer Journal},
   year = {1964},
@@ -1308,4 +1354,57 @@ note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pd
   institution = iria,
   year = {March, 1978},
   number = {283}
+}
+
+@inproceedings{expansion-order,
+  author = {Michael J. Fischer},
+  title = {Grammars with macro-like productions},
+  booktitle = swat,
+  year = {1968},
+  doi = {https://doi.org/10.1109/SWAT.1968.12},
+  publisher = {IEEE},
+  address = {Washington, DC, USA}
+}
+
+@misc{cpp,
+  author = {Free Software Foundation},
+  title = {The {C} Preprocessor},
+  year = {2018},
+  note = {\url{https://gcc.gnu.org/onlinedocs/cpp/}}
+}
+
+
+@techreport{c-standard,
+  title = {Programming languages — {C}},
+  year = {2011},
+  number = {N1570},
+  institution = {ISO/IEC},
+  note = {(ISO/IEC 9899:201x draft) \url{http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf}}
+}
+
+@techreport{cpp-standard,
+  title = {Working Draft, Standard for Programming Language {C++}},
+  year = {2017},
+  number = {N4659},
+  institution = {ISO/IEC},
+  note = {\url{http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf}}
+}
+
+@book{lisp15,
+  title = {{LISP 1.5} Programmer's Manual},
+  author = {John McCarthy and Paul W. Abrahams and Daniel J. Edwards
+            and Timothy P. Hart and Michael I. Levin},
+  publisher = {MIT Press},
+  year = {1985},
+  isbn = {0-262-13011-4}
+}
+
+@inproceedings{evolution-of-lisp,
+  title = {The Evolution of Lisp},
+  author = {Guy L. Steele Jr. and Richard P. Gabriel},
+  booktitle = hopl,
+  year = {1993},
+  doi = {https://doi.org/10.1145/155360.155373}
+  publisher = {ACM},
+  address = {New York, NY, USA}
 }
