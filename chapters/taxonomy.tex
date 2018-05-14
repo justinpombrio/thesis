@@ -1,14 +1,5 @@
 \chapter{Desugaring in the Wild}\label{chap:taxonomy}
 
-\textbf{This chapter is under development.}
-
-TODO
-\begin{itemize}
-\item State version of each system discussed
-\item More examples
-\item Update all languages to the latest testing methods.
-\end{itemize}
-
 There are a bewildering variety of desugaring systems.  In this
 chapter, we categorize a representative set of them into a taxonomy.
 
@@ -552,6 +543,7 @@ s-expression that run at compile-time. They were unhygienic, as the
 notion of hygiene had not yet been worked out.
 
 \subsection{Scheme Macros}
+\Desc{Version: R5RS, as implemented in Racket v6.10.1}
 
 The Scheme language~\cite{scheme5} was the first to introduce pattern-based
 desugaring rules, and hygienic macro expansion~\cite{hygienic-macros}. It set
@@ -560,6 +552,7 @@ fact that we have so little to say about Scheme's macros is testament
 to how standard its view of macros has become.
 
 \subsection{Racket Macros}
+\Desc{Version: Racket v6.10.1}
 
 Racket~\cite{plt-tr1} has an extremely powerful and heavily used macro
 system. It is part and parcel of the language: Racket is meant to be a
@@ -681,6 +674,7 @@ fixed from within the paradigm. \emph{Overall, code transformations
   should never operate at the level of text (or token streams).}
 
 \subsection{C++ Templates} \label{sec:taxonomy-cpp}
+\Desc{Version: g++ v4.8.4}
 
 % http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf
 C++ templates~\cite{cpp-standard} are not general-purpose sugars,
@@ -751,6 +745,7 @@ a template see the concrete type (e.g. \Code{int}) that is passed to
 it, even if this type is the result of another template expansion.
 
 \subsection{Haskell Templates} \label{sec:taxonomy-haskell}
+\Desc{Version: GHC v7.6.3}
 
 %https://hackage.haskell.org/package/template-haskell-2.10.0.0/docs/Language-Haskell-TH-Syntax.html#t:Lit
 %https://stackoverflow.com/questions/10857030/whats-so-bad-about-template-haskell
@@ -789,6 +784,7 @@ given by the following transformation:
 \end{verbatim}
 
 \subsection{Rust Macros}
+\Desc{Version: 1.24.0-nightly}
 
 %https://doc.rust-lang.org/1.2.0/book/macros.html
 Rust has a hygienic macro system with pattern-based rules similar to
@@ -800,6 +796,7 @@ only to add custom \Code{derive} traits---so we do not discuss it
 further.
 
 \subsection{Julia Macros}
+\Desc{Version: FILL}
 
 Julia macros are written as Julia functions, and can construct and
 deconstruct arbitrary syntax. They are mostly unhygienic. (The user
