@@ -33,7 +33,7 @@ There are many dimensions by which desugaring mechanisms vary:
     systems)?\marginpar{%
     As previously noted, if the ``phase'' at which desugaring happens
     is run-time, then the system isn't really a desugaring system,
-    though it may be similar enough to warrent our classification of it.}
+    though it may be similar enough to warrant our classification of it.}
 \end{description}
 We will consider four dimensions related to the \emph{expressiveness}
 of desugaring systems:
@@ -57,7 +57,7 @@ We will also consider four dimensions related to \emph{safety}:
 \end{description}
 
 We next discuss each of these dimensions in detail. After that,
-\cref{table:taxonomy-table} measures a number of desugaring systems
+\cref{table:taxonomy-table} assesses a number of desugaring systems
 along these dimensions, and \cref{sec:taxonomy-systems} discusses
 these desugaring systems.
 
@@ -171,7 +171,7 @@ desugaring rules''.
 % GRAMMARS WITH MACRO-LIKE PRODUCTIONS (Fischer)
 
 There are two major desugaring strategies used in desugaring systems.
-They loosely correspond to eager and lazy run-time evaluation, but
+They loosely correspond to call-by-value and call-by-name run-time evaluation strategies, but
 differ in some important ways, so we will instead refer
 to them by their original names: Outside-in (\Sc{oi}) and
 Inside-out (\Sc{io}) desugaring:~\cite{expansion-order}\marginpar{
@@ -180,11 +180,11 @@ Inside-out (\Sc{io}) desugaring:~\cite{expansion-order}\marginpar{
   ignore it.
 }
 \begin{description}
-\item[\Sc{Outside-in}:] \Sc{oi} desugaring is superficially similar to lazy
+\item[\Sc{Outside-in}:] \Sc{oi} desugaring is superficially similar to call-by-name
   evaluation, in that desugaring proceeds from the outside in.
-  However, there is one crucial difference: in lazy evaluation, if a
-  function uses (e.g., does case analysis on) one of its (lazy)
-  arguments, that forces the evaluation of that argument. In contrast,
+  However, there is one crucial difference: in call-by-name evaluation, if a
+  function uses (e.g., does case analysis on) one of its
+  arguments, that causes that argument to be evaluated. In contrast,
   if an \Sc{oi} sugar does case analysis on one of its
   parameters (which are pieces of syntax), it does not force that
   parameter to be desugared! Rather, the case analysis happens on the
@@ -286,7 +286,7 @@ Safety and expressiveness are counterpoints. Safety comes from the
     Thus we will call the C Preprocessor \emph{syntactically unsafe}.
     In contrast, a syntactically safe desugaring system would raise an
     error on such a sugar definition, \emph{even if that sugar was
-      never used}. This is analogous to type checking: a type checker
+      never used}. This is roughly analogous to type checking: a type checker
     will warn that a function definition contains a type error even
     if that function is never used.
   \item[Hygiene] Unlike the other safety properties discussed here,
@@ -362,10 +362,8 @@ entries of this table come primarily from test cases, which are
 available at \url{https://github.com/justinpombrio/thesis}, in the
 \Code{sugars} folder.
 
-
 \begin{SidewaysTable}
   \small
-  \hspace{-4em}
   \begin{tabular}{l|c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c
       @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c
       @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c @{\hspace{1em}} c}
@@ -383,7 +381,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     Early Lisp Macros
     & abstract
     & user
-    & lisp
+    & Lisp
     & OI(?)
     & compile
 %    & one
@@ -530,23 +528,25 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     ``pattern-based desugaring rules'', a la \Code{syntax-rules}.)}
   \label{table:taxonomy-table}
 \end{SidewaysTable}
-\clearpage
 
 
 \subsection{Early Lisp Macros}
 
-Early versions of Lisp~\cite{lisp15,evolution-of-lisp} introduced
+Early versions of Lisp~\cite{special-forms-in-lisp,evolution-of-lisp,lisp15,maclisp}
+slowly worked their way toward macros. They first introduced
 the \Code{eval} operator (which takes an s-expression as an argument
-at runtime, and interprets it as code), and then later macros.
-These macros were arbitrary lisp functions from s-expression to
-s-expression that run at compile-time. They were unhygienic, as the
-notion of hygiene had not yet been worked out.
+at runtime, and interprets it as code); then fexprs (functions whose
+arguments are passed to them without first being evaluated); then
+quasiquotations~\cite{quasiquote}; and finally macros.
+These macros were arbitrary Lisp functions from s-expression to
+s-expression that run at compile-time. They were unhygienic; indeed,
+even the notation of hygiene had yet to be worked out.
 
 \subsection{Scheme Macros}
 \Desc{Version: R5RS, as implemented in Racket v6.10.1}
 
 The Scheme language~\cite{scheme5} was the first to introduce pattern-based
-desugaring rules, and hygienic macro expansion~\cite{hygienic-macros}. It set
+desugaring rules~\cite{macro-by-example}, and hygienic macro expansion~\cite{hygienic-macros}. It set
 the stage for desugaring systems to come, including this thesis. The
 fact that we have so little to say about Scheme's macros is testament
 to how standard its view of macros has become.
@@ -585,9 +585,9 @@ the Racket Manifesto~\cite{racket-manifesto}.
 
 Krishnamurthi et al. describe a desugaring system called
 McMicMac~\cite{sk:mcmicmac} that is based on a combination of macros
-and \emph{micros}, and built on top of Scheme. While macros perform a
-source-to-source transformations, \emph{macros} transform source code
-to \Sc{ir} (an ``intermediate representation'' used by the compiler).
+and \emph{micros}, and built on top of Scheme. While macros perform an
+\Sc{ast}-to-\Sc{ast} transformations, \emph{macros} transform the \Sc{ast}
+to an \Sc{ir} (an ``intermediate representation'' used by the compiler).
 Relevantly, the \Sc{ir} is treated as data and cannot contain macros
 or micros, and is thus not recursively desugared.
 
@@ -602,8 +602,7 @@ Micros extend macros in a couple of ways:
     these vocabularies can be composed.
 \end{itemize}
 
-Overall, McMicMac aims to make it easier to write programs that
-operate on source code, but are not well-suited for macros.
+In summary, McMicMac promotes micros, which are a generalization of macros.
 
 
 % Sugars that I was able to find in the c language, as defined by the spec:

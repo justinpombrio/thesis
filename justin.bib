@@ -39,6 +39,8 @@
 @string{iria = {Institut de recherche d'informatique et d'automatique}} % predecessor of Inria?
 @string{swat = {Symposium on Switching and Automata Theory}}
 @string{hopl = {ACM SIGPLAN conference on History of programming languages}}
+@string{pepm = {ACM SIGPLAN Workshop on Partial Evaluation and Program Manipulation}}
+@string{lafp = {ACM Conference on LISP and Functional Programming}}
 
 @techreport{plt-tr1,
  author = {Matthew Flatt and PLT},
@@ -50,7 +52,7 @@
 }
 
 @inproceedings{racket-manifesto,
-  title = {The Racket Manifesto},
+  title = {The {Racket} Manifesto},
   author = {Matthias Felleisen and Robert Bruce Findler and Matthew
             Flatt and Shriram Krishnamurthi and Eli Barzilay and
             Jay Mccarthy and Sam Tobin-Hochstadt},
@@ -61,7 +63,7 @@
 }
 
 @misc{typed-racket,
-  title = {The Typed Racket Reference}
+  title = {The {Typed Racket} Reference},
   author = {Sam Tobin-Hochstadt and Vincent St-Amour and
             Eric Dobson and Asumu Takikawa},
   note = {\url{https://docs.racket-lang.org/ts-reference/index.html}}
@@ -398,7 +400,7 @@ note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pd
 }
 
 @inproceedings{macro-by-example,
-  author = {Kohlbecker, E. E. and Wand, M.},
+  author = {Kohlbecker, Eugene E. and Wand, Mitchell},
   title = {Macro-by-example: Deriving syntactic transformations from their
                    specifications},
   booktitle = popl,
@@ -475,7 +477,7 @@ note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pd
  author = {Kohlbecker, Eugene and Friedman, Daniel P. and Felleisen,
                   Matthias and Duba, Bruce},
  title = {Hygienic Macro Expansion},
- booktitle = {ACM Conference on LISP and Functional Programming},
+ booktitle = lafp,
  year = {1986},
  isbn = {0-89791-200-4},
  location = {Cambridge, Massachusetts, USA},
@@ -1409,12 +1411,39 @@ note = {\newline\url{http://www.meta-environment.org/doc/books/syntax/sdf/sdf.pd
   isbn = {0-262-13011-4}
 }
 
+@misc{maclisp,
+  title = {The Revised Maclisp Manual},
+  author = {Kent M. Pitman},
+  year = {2007},
+  note = {\url{http://www.maclisp.info/pitmanual/}}
+}
+
+@inproceedings{special-forms-in-lisp,
+  title = {Special forms in {Lisp}},
+  author = {Kent M. Pitman},
+  booktitle = lafp,
+  year = {1980},
+  doi = {https://doi.org/10.1145/800087.802804},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
 @inproceedings{evolution-of-lisp,
   title = {The Evolution of Lisp},
   author = {Guy L. Steele Jr. and Richard P. Gabriel},
   booktitle = hopl,
   year = {1993},
   doi = {https://doi.org/10.1145/155360.155373}
+  publisher = {ACM},
+  address = {New York, NY, USA}
+}
+
+@inproceedings{quasiquote,
+  author = {Alan Bawden},
+  title = {Quasiquotation in Lisp},
+  year = {1999},
+  booktitle = pepm,
+  doi = {http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.22.1290},
   publisher = {ACM},
   address = {New York, NY, USA}
 }
