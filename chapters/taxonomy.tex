@@ -234,13 +234,9 @@ We distinguish between three different ``times'' of expansion:
   occur in order are (i) desugar, (ii) compile, and (iii) run. We
   describe this as ``compile'' for simplicity and because
   ``compile-time'' is a well-established phrase.)
-\item[Many] Racket macros can run at an arbitrary number of different
+\item[Variety] Racket macros can run at an arbitrary number of different
   phases, including at compile-time and at run-time.
 \end{description}
-
-\subsection{Number of Phases}
-
-[TODO: remove this?]
 
 \subsection{Expressiveness}
 
@@ -387,7 +383,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & \rot{Metalanguage}
     & \rot{Desugaring Order}
     & \rot{Time of Expansion}
-    & \rot{Number of Phases}
+%    & \rot{Number of Phases}
     & \rot{Arguments} & \rot{Result} & \rot{Deconstruction} & \rot{Macro-defining Macros}
     & \rot{Syntax Safe} & \rot{Hygienic} & \rot{Scope Safe} & \rot{Type Safe}
     \\ \hline
@@ -399,7 +395,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & lisp
     & OI(?)
     & compile
-    & one
+%    & one
     & any & any & yes & yes
     & yes & no & no & NA
     \\
@@ -409,7 +405,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & Scheme
     & OI
     & compile
-    & many
+%    & many
     & any & any & yes & yes
     & partly* & yes & no & NA
     \\
@@ -418,8 +414,8 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & user
     & Racket
     & OI
-    & compile*
-    & many
+    & variety
+%    & many
     & any & any & yes & yes
     & partly* & yes & no & no
     \\
@@ -429,7 +425,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & OI
     & compile
-    & one
+%    & one
     & any & yes & any & no
     & no & yes & no & NA
     \\ \hline
@@ -441,7 +437,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & IO
     & compile
-    & one
+%    & one
     & any & any & no & no
     & no & no & no & no
     \\
@@ -451,7 +447,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & IO
     & compile
-    & one
+%    & one
     & type* & declaration* & yes* & yes
     & yes & NA & NA & no
     \\
@@ -461,7 +457,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & Haskell
     & IO
     & compile
-    & many
+%    & many
     & any & any & yes & no
     & yes & no & no & no
     \\
@@ -471,7 +467,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & OI
     & compile
-    & one
+%    & one
     & any & any & yes & no
     & yes & no & no & NA
     \\
@@ -481,7 +477,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & OI
     & compile
-    & one
+%    & one
     & any & any & yes & yes
     & no & yes & no & no
     \\
@@ -491,7 +487,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & Julia
     & OI
     & compile
-    & many*
+%    & many*
     & any & any & yes & yes
     & yes & no & no & NA
     \\
@@ -501,7 +497,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & OCaml
     & IO
     & run
-    & many
+%    & many
     & expr & expr & no & yes
     & yes & yes & yes & yes
     \\ \hline
@@ -513,7 +509,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & OI
     & compile
-    & one
+%    & one
     & any & any & no & no
     & yes & yes & no & NA
     \\
@@ -523,7 +519,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & OI
     & compile
-    & one
+%    & one
     & any & any & yes & no
     & yes & yes & yes & NA
     \\
@@ -533,7 +529,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & rules
     & OI
     & compile
-    & one
+%    & one
     & any & any & yes & no
     & yes & yes & yes & yes
   \end{tabular}
