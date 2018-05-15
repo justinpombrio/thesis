@@ -1594,6 +1594,20 @@ in terms of the program that the programmer wrote, rather than (as per
 type inference) presenting type errors in terms of a mismatch between
 type annotations that the programmer did not write.
 
+Wyk et al. introduce \emph{forwarding} for attribute
+grammars~\cite{attribute-grammar-forwarding}.  Forwarding is a kind of
+inheritance. With it, instead of specifying all of its attributes
+directly, a node in the \Sc{ast} can instead opt to \emph{forward}
+some of them to \emph{a new node of its own construction}. If the
+original node is thought of as a surface node, and the new node is
+thought of as a core node, then this is a kind of desugaring, and
+(some of) the attributes of the core node are automatically propogated
+to the surface node. Thus, if these forwarded attributes include scope
+or type information, then the surface node's scope or type has been
+defined to be the scope or type of its ``desugaring''. Notice that
+this differs from resugaring, though: we lift scope \emph{rules} (in
+the previous chapter), and type \emph{rules} (in this chapter).
+
 Fisher and Shivers' Ziggurat~\cite{ziggurat} is a framework for defining a
 hierarchy of language levels, that makes it easy to attach static
 analysis of any sort to each level. However, it does not analyze the

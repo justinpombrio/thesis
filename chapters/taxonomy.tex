@@ -291,20 +291,20 @@ Safety and expressiveness are counterpoints. Safety comes from the
     if that function is never used.
 
     Lisps (i.e., languages with parenthetical syntax) have an
-    interesting relationship to syntactic safety because they have two
+    interesting relationship to syntactic safety because they generally have two
     ``layers'' of syntax.
     The lower layer is simply s-expressions, and ensures that parentheses
     are well-balanced (and that there are no tokenization errors).
     The higher layer checks that the s-expression makes syntactic sense.
-    For example, \Code{(define x 1} is invalid at both layers,
+    For example, in Scheme, \Code{(define x 1} is invalid at both layers,
     \Code{(define ((x)) 1)} is valid at the first layer but not at the
     second, and \Code{(define x 1)} is valid at both layers.
     This can be called \emph{bicameral syntax}~\cite[page 13]{plai}, by analogy to legislative
     houses that are split into a lower and upper level.
 
-    As a result, it is possible for a lisp's macro system to respect
+    As a result, it is possible for a Lisp's macro system to respect
     the lower layer of syntax, but not the higher layer. And in fact
-    all of the lisps we assessed fall into this category. We write
+    all of the Lisps we assessed fall into this category. We write
     this in the table as ``partly'' syntax safe.
 
   \item[Hygiene] Unlike the other safety properties discussed here,
