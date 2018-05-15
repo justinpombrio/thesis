@@ -2,7 +2,7 @@
 
 A PhD thesis (in progress) by Justin Pombrio at Brown University.
 
-Here is [the pdf](https://github.com/justinpombrio/thesis/blob/master/resugaring-thesis.pdf).
+Here is [the pdf](https://github.com/justinpombrio/thesis/raw/master/resugaring-thesis.pdf).
 
 This thesis is formatted using:
 
