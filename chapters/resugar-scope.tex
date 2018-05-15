@@ -3303,24 +3303,13 @@ expressed by Flatt in ``Binding as Sets of Scopes''~\cite{flatt:scope}.\marginpa
 In fact, Flatt's notion of scope can be expressed as a preorder,
 as we show in \cref{sec:rscope-sos}.
 
-Neron et al. describe \emph{scope graphs}, which are also based on a
-similar view, but have a more complicated set of definitions~\cite{neron-scope}.\footnote{%
-For example, Neron et al.'s work has seven inference rules for determining where a
-reference is bound (\emph{given} a scope graph),
-whereas we have the single rule that a reference $\RefnX$ is bound by
-$\min \St{\DeclXi}{\RefnX \< \DeclXi}$ (\emph{given} a scope preorder).
-We also have rules in \cref{fig:rscope-SD} to determine the scope
-preorder, but these do not relate to anything in Neron et al.'s paper,
-which takes the scope graph as given. For work related to
-\cref{fig:rscope-SD}, see the next section on ``Binding Specification
-Languages''.
-}
-Unlike {\sap}, however, scope graphs include mechanisms for handling
+Neron et al. describe \emph{scope graphs}, which are based on a
+similar view, but are more general. For example, they include mechanisms for handling
 module scope, which gives them the ability to model both modules and
 also other constructs like objects and field lookup.
-Our {\sap} binding language can actually be extended to
-handle modules, but doing so breaks our transitivity
-assumption, which we need to infer scope, so we have left it out of
+While our {\sap} binding language can be extended to
+handle modules, doing so breaks the transitivity
+assumption that we need to infer scope, so we have left it out of
 this chapter and consider this a problem for
 future work.
 

@@ -171,11 +171,11 @@ desugaring rules''.
 % GRAMMARS WITH MACRO-LIKE PRODUCTIONS (Fischer)
 
 There are two major desugaring strategies used in desugaring systems.
-They loosely correspond to call-by-value and call-by-name run-time evaluation strategies, but
+They loosely correspond to the call-by-value and call-by-name run-time evaluation strategies, but
 differ in some important ways, so we will instead refer
 to them by their original names: Outside-in (\Sc{oi}) and
-Inside-out (\Sc{io}) desugaring:~\cite{expansion-order}\marginpar{
-  You can also ask whether desugaring proceeds left-to-right or
+Inside-out (\Sc{io}) desugaring:~\cite{expansion-order}\marginpar{%
+You can also ask whether desugaring proceeds left-to-right or
   right-to-left. However, this is a comparatively minor detail, so we
   ignore it.
 }
@@ -184,7 +184,7 @@ Inside-out (\Sc{io}) desugaring:~\cite{expansion-order}\marginpar{
   evaluation, in that desugaring proceeds from the outside in.
   However, there is one crucial difference: in call-by-name evaluation, if a
   function uses (e.g., does case analysis on) one of its
-  arguments, that causes that argument to be evaluated. In contrast,
+  arguments, it causes that argument to be evaluated. In contrast,
   if an \Sc{oi} sugar does case analysis on one of its
   parameters (which are pieces of syntax), it does not force that
   parameter to be desugared! Rather, the case analysis happens on the
@@ -196,13 +196,13 @@ Inside-out (\Sc{io}) desugaring:~\cite{expansion-order}\marginpar{
   In the most extreme case, it may be impossible
   to even tell where the innermost sugars are, so \Sc{oi} is the only
   possible desugaring order.
-\item[\Sc{Inside-out}:] \Sc{io} desugaring is similar to eager evaluation: the
+\item[\Sc{Inside-out}:] \Sc{io} desugaring is similar to call-by-value evaluation: the
   innermost sugars desugar first. The above paragraph suggested that
   \Sc{io} order may not be possible, but there are a number of common
   settings in which it is: (i) the syntax that sugars can introduce is
   limited enough that you can always tell where nested sugars are;
-  (iii) sugars act on the \Sc{ast} rather than on concrete syntax; or
-  (ii) sugars cannot deconstruct their parameters, so the desugaring
+  (ii) sugars act on the \Sc{ast} rather than on concrete syntax; or
+  (iii) sugars cannot deconstruct their parameters, so the desugaring
   order is largely irrelevant anyways. In these settings, \Sc{io}
   order has the advantage of being more analogous to evaluation (which
   developers are quite familiar with). It is
@@ -440,7 +440,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & type* & declaration* & yes* & yes
     & yes & NA & NA & no
     \\
-    Haskell Templates
+    Template Haskell
     & concrete/abstract
     & user
     & Haskell
@@ -525,7 +525,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
   \caption{Taxonomization of Desugaring Systems. (Categories with
     asterisks are described further in that desugaring system's
     subsection. Under Metalanguage, ``rules'' means
-    ``pattern-based desugaring rules'', a la \Code{syntax-rules}.)}
+    ``pattern-based desugaring rules'', \`a la \Code{syntax-rules}.)}
   \label{table:taxonomy-table}
 \end{SidewaysTable}
 
@@ -586,7 +586,7 @@ the Racket Manifesto~\cite{racket-manifesto}.
 Krishnamurthi et al. describe a desugaring system called
 McMicMac~\cite{sk:mcmicmac} that is based on a combination of macros
 and \emph{micros}, and built on top of Scheme. While macros perform an
-\Sc{ast}-to-\Sc{ast} transformations, \emph{macros} transform the \Sc{ast}
+\Sc{ast}-to-\Sc{ast} transformations, \emph{micros} transform the \Sc{ast}
 to an \Sc{ir} (an ``intermediate representation'' used by the compiler).
 Relevantly, the \Sc{ir} is treated as data and cannot contain macros
 or micros, and is thus not recursively desugared.
@@ -598,11 +598,10 @@ Micros extend macros in a couple of ways:
     track of the lexical environment, and use it to compute the set of
     free variables of a term.
   \item Micros can be grouped into \emph{vocabularies}, with each
-    vocabulary repreesenting a different kind of transformation, and
+    vocabulary representing a different kind of transformation, and
     these vocabularies can be composed.
 \end{itemize}
-
-In summary, McMicMac promotes micros, which are a generalization of macros.
+Overall, McMicMac promotes micros as a useful generalization of macros.
 
 
 % Sugars that I was able to find in the c language, as defined by the spec:
@@ -625,7 +624,9 @@ the level of text. (More precisely, it operates on a token stream, in
 which the tokens are approximately those of the C language). It is
 usually run before compilation for C or C++ programs, but it is not
 very language specific, and can be used for other purposes as well.
-\Sc{Cpp} is not Turing complete, by a simple mechanism: if a macro
+Unlike the rest of the desugaring systems described in this chapter,
+\Sc{Cpp} is not Turing complete.
+It avoids Turing completeness by a simple mechanism: if a macro
 invokes itself (directly or indirectly), the recursive invocation
 will not be expanded.
 
@@ -736,19 +737,19 @@ C++ templates.
 
 Template expansion uses IO desugaring order. This is important because
 it is possible
-to define both a generic template, that applies most of the time, and
-a specialized template, that applies if a parameter has a particular
+to define both a generic template that applies most of the time, and
+a specialized template that applies if a parameter has a particular
 value. For example, this could be used to make a \Code{HashMap} use a different
 implementation if its keys are \Code{int}s. Thus it is important that
 a template see the concrete type (e.g. \Code{int}) that is passed to
 it, even if this type is the result of another template expansion.
 
-\subsection{Haskell Templates} \label{sec:taxonomy-haskell}
+\subsection{Template Haskell} \label{sec:taxonomy-haskell}
 \Desc{Version: GHC v7.6.3}
 
 %https://hackage.haskell.org/package/template-haskell-2.10.0.0/docs/Language-Haskell-TH-Syntax.html#t:Lit
 %https://stackoverflow.com/questions/10857030/whats-so-bad-about-template-haskell
-Haskell allows user-defined sugars by way of the Haskell Template
+Haskell allows user-defined sugars by way of the Template Haskell
 system~\cite{haskell-templates}. It allows terms to be written either in concrete surface
 syntax:
 \begin{Codes}
@@ -756,14 +757,16 @@ syntax:
 \end{Codes}
 or in abstract surface syntax:
 \begin{Codes}
-  return \$ AppE (AppE (VarE '(+)) (LitE (IntegerL 1))) (LitE (IntegerL 2))
+  return \$ AppE (AppE (VarE '(+))
+                      (LitE (IntegerL 1)))
+                (LitE (IntegerL 2))
 \end{Codes}
 
 It maintains hygiene by requiring terms to be wrapped in a Monad
 (called \Code{Q}) that ensures that introduced variables are given
 fresh names (unless explicitly marked otherwise). However, this can
 easily be broken via quotation brackets (\Code{[| ... |]}), so we
-count Haskell Templates as unhygienic.
+count Template Haskell as unhygienic.
 
 
 \subsection{Haskell Sugars}
@@ -781,6 +784,9 @@ given by the following transformation:
                        in concatMap ok l
   [e | let decls, Q] = let decls in [e | Q]
 \end{verbatim}
+We will use this sugar as a case study for both resugaring scope rules
+(\cref{sec:list-rscope-example}) and resugaring type rules
+(\cref{sec:rtype-eval-case}).
 
 \subsection{Rust Macros}
 \Desc{Version: 1.24.0-nightly}
@@ -788,9 +794,9 @@ given by the following transformation:
 %https://doc.rust-lang.org/1.2.0/book/macros.html
 Rust has a hygienic macro system with pattern-based rules similar to
 Scheme's \Code{syntax-rules}. Rust also has a second
-``\emph{procedural}'' macro system. This secondary macro system allows
-macros to be written as arbitrary Rust functions. However, it is only
-used in very specific circumstances---at the time of this writing,
+``procedural'' macro system. This secondary macro system allows
+macros to be written as arbitrary Rust functions. However, it can only
+be used in very specific circumstances---at the time of this writing,
 only to add custom \Code{derive} traits---so we do not discuss it
 further.
 
@@ -820,7 +826,7 @@ Thus this code:
 \begin{Codes}
 open Runcode;;
 open Printf;;
-let x = .<printf(``k'')>. in !. .<(.~x; .~x)>.;;
+let x = .<printf("k")>. in !. .<(.~x; .~x)>.;;
 \end{Codes}
 prints \Code{kk}. This method of programming is called
 \emph{multi-stage} because these quotations can be arbitrarily
