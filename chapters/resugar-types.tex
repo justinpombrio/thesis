@@ -262,7 +262,7 @@ variable, but cannot be used to prove $\saysTtt{\Gamma,x:A}{x}{A}$,
 because \Code{x} is not a pattern variable.
 
 \begin{figure*}[t]
-  \begin{Wide}
+%  \begin{Wide}
     \small
   \raggedright
 %An incomplete derivation for \Code{or}:
@@ -302,7 +302,7 @@ because \Code{x} is not a pattern variable.
   Bottom: a complete derivation, using \Code{t-premise}.
 }
 \label{fig:rtype-or}
-\end{Wide}
+%\end{Wide}
 \end{figure*}
 
 As seen, pattern variables introduce type variables. Solving for these
@@ -1206,7 +1206,7 @@ can search for derivations of it.
   by repeating a type variable, SweetT instead requires that the
   rule be written using two different type variables, with an
   equality constraint between them---thus making the
-  unification explicit.\marginpar{%
+  unification explicit.\footnote{%
 This is necessary because re-using the same type variable would
     invoke Redex's pattern-matching algorithm. This is usually
     sufficient, because Redex is meant to type a complete term.
