@@ -1,6 +1,8 @@
 # Resugaring: Lifting Languages through Syntactic Sugar
 
-A PhD thesis (in progress) by Justin Pombrio at Brown University
+A PhD thesis (in progress) by Justin Pombrio at Brown University.
+
+Here is [the pdf](https://github.com/justinpombrio/thesis/blob/master/resugaring-thesis.pdf).
 
 This thesis is formatted using:
 
