@@ -807,7 +807,7 @@ obtain one.
 For a nondeterministic language, the aim is to lift an evaluation tree
 instead of an evaluation sequence. The set of nodes in the surface tree
 can be found by keeping a queue of as-yet-unexplored core terms,
-initialized to contain just \Code{desugar(s)}, and repeatedly dequeing a
+initialized to contain just \Code{desugar(s)}, and repeatedly dequeuing a
 core term and checking whether it can be resugared. If it can, add its
 resugaring to the node set, and either way add the core terms it can step to to the end of
 the queue. The tree structure can be reconstructed with additional
@@ -1371,7 +1371,7 @@ surface evaluation sequences. The desugaring follows
 a strategy similar to that of Python, by applying the \Code{\_plus} method
 of the left subexpression to the right subexpression:\marginpar{%
 The \Code{s} terms are source locations, used for error-reporting.
-Their propogation could potentially be automated, but we did not
+Their propagation could potentially be automated, but we did not
 attempt to do so here.}
 \begin{Codes}
   Op(s, "+", x, y)  ->
@@ -1478,7 +1478,7 @@ variable $\PVarB$, thereby re-introducing the \Code{x} in the body of
 the Lambda.
 
 Is this re-introduced variable bound by the outer \Code{x}?
-Surprisingly, it is not. The key point is that \emph{in the absense of
+Surprisingly, it is not. The key point is that \emph{in the absence of
   surface-language scoping rules, where a variable is bound in a
   surface term is defined by the desugaring of that term.}
 Since the inner \Code{x} is dropped during desugaring, it has no
