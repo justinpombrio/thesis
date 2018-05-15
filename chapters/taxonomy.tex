@@ -28,7 +28,7 @@ There are many dimensions by which desugaring mechanisms vary:
     importantly, are nested sugars desugared from the \emph{innermost
       to outermost} (\Sc{io}), or from \emph{outermost to innermost}
     (\Sc{oi})?
-  \item[Phase] \emph{When} does desugaring occur? Is it at compilation time,
+  \item[Time of Expansion] \emph{When} does desugaring occur? Is it at compilation time,
     or at run-time (as in staged metaprogramming
     systems)?\marginpar{%
     As previously noted, if the ``phase'' at which desugaring happens
@@ -38,20 +38,20 @@ There are many dimensions by which desugaring mechanisms vary:
 We will consider four dimensions related to the \emph{expressiveness}
 of desugaring systems:
 \begin{description}
-  \item[Parameter] Can a sugar take an
+  \item[Parameters] Can a sugar take an
     arbitrary expression as a parameter, or only a primitive value?
-  \item[Deconstruction] If it can take an expression, can it
-    deconstruct it, or only use it parametrically?
   \item[Result] Do sugars exclusively produce expressions, or can they
     produce any kind of syntax?
+  \item[Deconstruction] If it can take an expression, can it
+    deconstruct it, or only use it parametrically?
   \item[Sugar-defining Sugars] Can sugars define other sugars?
 \end{description}
 We will also consider four dimensions related to \emph{safety}:
 \begin{description}
-  \item[Syntax Safety] Can desugaring produce syntactically invalid
+  \item[Syntactic Safety] Can desugaring produce syntactically invalid
     code?
-  \item[Scope Safety] Can a sugar produce an unbound variable?
   \item[Hygiene] Can a sugar accidentally capture a variable?
+  \item[Scope Safety] Can a sugar produce an unbound variable?
   \item[Type Safety] Can a sugar produce code that contains a type
     error?
 \end{description}
@@ -289,6 +289,24 @@ Safety and expressiveness are counterpoints. Safety comes from the
       never used}. This is roughly analogous to type checking: a type checker
     will warn that a function definition contains a type error even
     if that function is never used.
+
+    Lisps (i.e., languages with parenthetical syntax) have an
+    interesting relationship to syntactic safety because they have two
+    ``layers'' of syntax.
+    The lower layer is simply s-expressions, and ensures that parentheses
+    are well-balanced (and that there are no tokenization errors).
+    The higher layer checks that the s-expression makes syntactic sense.
+    For example, \Code{(define x 1} is invalid at both layers,
+    \Code{(define ((x)) 1)} is valid at the first layer but not at the
+    second, and \Code{(define x 1)} is valid at both layers.
+    This can be called \emph{bicameral syntax}~\cite[page 13]{plai}, by analogy to legislative
+    houses that are split into a lower and upper level.
+
+    As a result, it is possible for a lisp's macro system to respect
+    the lower layer of syntax, but not the higher layer. And in fact
+    all of the lisps we assessed fall into this category. We write
+    this in the table as ``partly'' syntax safe.
+
   \item[Hygiene] Unlike the other safety properties discussed here,
     hygiene~\cite{hygienic-macros} is not about the error behavior of the desugaring
     system.  Instead, it is about how desugaring treats variables. As
@@ -373,7 +391,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & \rot{Desugaring Order}
     & \rot{Time of Expansion}
 %    & \rot{Number of Phases}
-    & \rot{Arguments} & \rot{Result} & \rot{Deconstruction} & \rot{Macro-defining Macros}
+    & \rot{Parameters} & \rot{Result} & \rot{Deconstruction} & \rot{Sugar-defining Sugars}
     & \rot{Syntax Safe} & \rot{Hygienic} & \rot{Scope Safe} & \rot{Type Safe}
     \\ \hline
     \textbf{Lisps}
@@ -382,11 +400,11 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & abstract
     & user
     & Lisp
-    & OI(?)
+    & OI
     & compile
 %    & one
     & any & any & yes & yes
-    & yes & no & no & NA
+    & partly & no & no & NA
     \\
     Scheme Macros
     & concrete
@@ -396,7 +414,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & compile
 %    & many
     & any & any & yes & yes
-    & partly* & yes & no & NA
+    & partly & yes & no & NA
     \\
     Racket Macros
     & concrete
@@ -406,9 +424,9 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & variety
 %    & many
     & any & any & yes & yes
-    & partly* & yes & no & no
+    & partly & yes & no & no
     \\
-    McMicMac
+    McMicMac Micros
     & concrete$\to$\Sc{ir}
     & language
     & rules
@@ -416,7 +434,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & compile
 %    & one
     & any & yes & any & no
-    & no & yes & no & NA
+    & partly & yes & no & NA
     \\ \hline
     \textbf{Non-Lisps}
     \\
@@ -437,7 +455,7 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
     & IO
     & compile
 %    & one
-    & type* & declaration* & yes* & yes
+    & type* & declaration* & yes & yes
     & yes & NA & NA & no
     \\
     Template Haskell
@@ -533,14 +551,14 @@ available at \url{https://github.com/justinpombrio/thesis}, in the
 \subsection{Early Lisp Macros}
 
 Early versions of Lisp~\cite{special-forms-in-lisp,evolution-of-lisp,lisp15,maclisp}
-slowly worked their way toward macros. They first introduced
+introduced over time a variety of macro-like features, including:
 the \Code{eval} operator (which takes an s-expression as an argument
-at runtime, and interprets it as code); then fexprs (functions whose
-arguments are passed to them without first being evaluated); then
-quasiquotations~\cite{quasiquote}; and finally macros.
+at runtime, and interprets it as code); fexprs (functions whose
+arguments are passed to them without first being evaluated);
+quasiquotations~\cite{quasiquote}; and macros.
 These macros were arbitrary Lisp functions from s-expression to
 s-expression that run at compile-time. They were unhygienic; indeed,
-even the notation of hygiene had yet to be worked out.
+even the notion of hygiene had yet to be worked out.
 
 \subsection{Scheme Macros}
 \Desc{Version: R5RS, as implemented in Racket v6.10.1}
@@ -586,7 +604,7 @@ the Racket Manifesto~\cite{racket-manifesto}.
 Krishnamurthi et al. describe a desugaring system called
 McMicMac~\cite{sk:mcmicmac} that is based on a combination of macros
 and \emph{micros}, and built on top of Scheme. While macros perform an
-\Sc{ast}-to-\Sc{ast} transformations, \emph{micros} transform the \Sc{ast}
+\Sc{ast}-to-\Sc{ast} transformation, \emph{micros} transform the \Sc{ast}
 to an \Sc{ir} (an ``intermediate representation'' used by the compiler).
 Relevantly, the \Sc{ir} is treated as data and cannot contain macros
 or micros, and is thus not recursively desugared.
@@ -625,7 +643,7 @@ which the tokens are approximately those of the C language). It is
 usually run before compilation for C or C++ programs, but it is not
 very language specific, and can be used for other purposes as well.
 Unlike the rest of the desugaring systems described in this chapter,
-\Sc{Cpp} is not Turing complete.
+\Sc{cpp} is not Turing complete.
 It avoids Turing completeness by a simple mechanism: if a macro
 invokes itself (directly or indirectly), the recursive invocation
 will not be expanded.
