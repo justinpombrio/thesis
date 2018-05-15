@@ -1,4 +1,4 @@
-# Resugaring: Restoring the Abstractions that Syntactic Sugar is Supposed to Provide
+# Resugaring: Lifting Languages through Syntactic Sugar
 
 A PhD thesis (in progress) by Justin Pombrio at Brown University
 
